@@ -253,6 +253,21 @@ header{display:flex;align-items:center;padding:6px 10px;background:var(--surface
 .pin-actions{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;}
 .pin-place{font-size:8px;color:var(--muted);padding:6px 14px;border-top:1px solid var(--border);flex-shrink:0;font-style:italic;}
 
+
+/* BUSCADOR RSS */
+#m-rss .md{border-color:var(--green);}
+.rss-item{padding:9px;border:1px solid var(--border);border-left:2px solid var(--green);margin-bottom:6px;border-radius:2px;cursor:pointer;transition:all .2s;}
+.rss-item:hover{background:rgba(0,255,136,.04);}
+.rss-item.sel{background:rgba(0,255,136,.08);border-left-color:var(--green);}
+.rss-tit{font-size:10px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:3px;}
+.rss-meta{display:flex;justify-content:space-between;font-size:7px;color:var(--muted);}
+.rss-badge{font-size:6px;padding:1px 4px;border-radius:1px;font-family:Orbitron,monospace;}
+.rss-loading{text-align:center;padding:20px;font-family:Orbitron,monospace;font-size:8px;color:var(--muted);}
+
+/* BTN BORRAR EN POPUP */
+.lpbtn-del{background:rgba(255,34,85,.15);color:var(--seg);border:1px solid var(--seg);padding:3px 8px;font-family:Orbitron,monospace;font-size:7px;cursor:pointer;border-radius:2px;margin-top:5px;width:100%;}
+.lpbtn-del:hover{background:rgba(255,34,85,.3);}
+
 /* TOAST */
 #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#030810;border:1px solid var(--green);color:var(--green);padding:8px 16px;font-family:'Orbitron',monospace;font-size:8px;letter-spacing:1px;border-radius:3px;z-index:4000;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;box-shadow:0 0 14px rgba(0,255,136,.2);}
 #toast.err{border-color:var(--seg);color:var(--seg);box-shadow:0 0 14px rgba(255,34,85,.2);}
@@ -281,6 +296,7 @@ header{display:flex;align-items:center;padding:6px 10px;background:var(--surface
     <button class="ntab" id="tab-stats" onclick="setVista('stats')">📊 STATS</button>
   </div>
   <div class="acts">
+    <button class="abtn" style="background:rgba(0,255,136,.12);color:var(--green);border:1px solid var(--green);" onclick="abrirRSS()">📡</button>
     <button class="abtn abtn-url" onclick="abrirURL()">🔗</button>
     <button class="abtn abtn-ia" onclick="abrirIA()">🤖</button>
     <button class="abtn abtn-add" onclick="abrirManual(null)">+</button>
@@ -516,7 +532,7 @@ header{display:flex;align-items:center;padding:6px 10px;background:var(--surface
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
 // ── FIREBASE CONFIG ─────────────────────────────────────────────
 const firebaseConfig = {
@@ -640,6 +656,7 @@ function crearPopup(ev) {
     <div class="lpdesc">${ev.descripcion||''}</div>
     ${distH}
     <div class="lpmeta"><span>${ev.fuente||''} | ${fecha}</span>${linkH}</div>
+    <button class="lpbtn-del" onclick="borrarEvento('${ev.id}')">🗑 ELIMINAR ESTE EVENTO</button>
   </div>`;
 }
 
@@ -922,28 +939,42 @@ window.togglePB=togglePB; window.setPBT=setPBT;
 
 // ── GEMINI API ───────────────────────────────────────────────────
 async function llamarGemini(prompt) {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,{
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.1}})
-  });
-  const data = await res.json();
-  // Manejo robusto de respuesta
-  if(!data.candidates || !data.candidates[0]) {
-    const motivo = data.promptFeedback?.blockReason || 'Sin respuesta de Gemini';
-    throw new Error('Gemini bloqueó la solicitud: ' + motivo);
+  // Usar 1.5-flash que tiene filtros menos agresivos para noticias
+  const modelos = [
+    'gemini-1.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-pro'
+  ];
+  let ultimoError = null;
+  for(const modelo of modelos) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${GEMINI_KEY}`,{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          contents:[{parts:[{text:prompt}]}],
+          generationConfig:{temperature:0.1, maxOutputTokens:800},
+          safetySettings:[
+            {category:'HARM_CATEGORY_HARASSMENT',threshold:'BLOCK_NONE'},
+            {category:'HARM_CATEGORY_HATE_SPEECH',threshold:'BLOCK_NONE'},
+            {category:'HARM_CATEGORY_SEXUALLY_EXPLICIT',threshold:'BLOCK_NONE'},
+            {category:'HARM_CATEGORY_DANGEROUS_CONTENT',threshold:'BLOCK_NONE'}
+          ]
+        })
+      });
+      const data = await res.json();
+      if(!data.candidates || !data.candidates[0]) {
+        ultimoError = data.promptFeedback?.blockReason || 'Sin respuesta';
+        continue; // intentar siguiente modelo
+      }
+      const txt = data.candidates[0].content?.parts?.[0]?.text || '';
+      if(!txt) { ultimoError = 'Sin texto'; continue; }
+      const match = txt.match(/\{[\s\S]*?\}/);
+      if(!match) { ultimoError = 'Sin JSON'; continue; }
+      const clean = match[0].replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g,' ');
+      return JSON.parse(clean);
+    } catch(e) { ultimoError = e.message; continue; }
   }
-  const txt = data.candidates[0].content?.parts?.[0]?.text || '';
-  if(!txt) throw new Error('Gemini no devolvió texto');
-  // Extraer JSON aunque venga con texto extra alrededor
-  const match = txt.match(/\{[\s\S]*\}/);
-  if(!match) throw new Error('No se encontró JSON en la respuesta de Gemini');
-  try {
-    return JSON.parse(match[0]);
-  } catch(e) {
-    // Intentar limpiar y parsear de nuevo
-    const clean = match[0].replace(/[\x00-\x1F\x7F]/g,' ').replace(/,\s*}/g,'}').replace(/,\s*]/g,']');
-    return JSON.parse(clean);
-  }
+  throw new Error('No se pudo procesar la noticia: ' + ultimoError);
 }
 
 // ── MODAL URL ────────────────────────────────────────────────────
@@ -958,9 +989,11 @@ async function extraer() {
   const btn = document.getElementById('b-ext');
   btn.textContent='⏳ EXTRAYENDO...'; btn.disabled=true;
   try {
-    const r = await llamarGemini(`Analiza esta noticia de Irapuato, Guanajuato, México y responde SOLO JSON sin markdown:
-{"titulo":"título corto (máx 80 chars)","tipo":"seguridad|accidente|evento|rumor","lugar":"lugar específico","colonia":"nombre de colonia","resumen":"2-3 oraciones","lat":número entre 20.640-20.730,"lng":número entre -101.415 y -101.310,"confianza":"alta|media|baja"}
-NOTICIA: """${txt}"""`);
+    // Truncar texto a 1500 chars para evitar filtros de Gemini
+    const txtCorto = txt.length > 1500 ? txt.slice(0,1500) + '...' : txt;
+    const r = await llamarGemini(`Eres un asistente periodístico. Extrae datos estructurados de esta nota informativa de Irapuato, Guanajuato. Responde ÚNICAMENTE con JSON válido sin markdown ni explicaciones:
+{"titulo":"titular periodístico corto","tipo":"seguridad|accidente|evento|rumor","lugar":"calle o colonia mencionada","colonia":"nombre de colonia","resumen":"qué ocurrió en 2 oraciones","lat":latitud numérica Irapuato 20.64-20.73,"lng":longitud numérica -101.41 a -101.31,"confianza":"alta|media|baja"}
+NOTA: """${txtCorto}"""`);
     urlRes = {...r, url:document.getElementById('u-link').value.trim()};
     document.getElementById('ur-tit').textContent = r.titulo||'';
     document.getElementById('ur-tipo').value = r.tipo||'rumor';
@@ -1005,9 +1038,10 @@ async function analizar() {
   const btn = document.getElementById('b-ana');
   btn.textContent='⏳ ANALIZANDO...'; btn.disabled=true;
   try {
-    const r = await llamarGemini(`Analiza este texto de Irapuato y responde SOLO JSON sin markdown:
-{"titulo":"título corto (máx 80 chars)","tipo":"seguridad|accidente|evento|rumor","lugar":"lugar específico","colonia":"nombre de colonia","resumen":"2-3 oraciones","lat":número entre 20.640-20.730,"lng":número entre -101.415 y -101.310,"confianza":"alta|media|baja"}
-TEXTO: """${txt}"""`);
+    const txtCorto2 = txt.length > 1500 ? txt.slice(0,1500) + '...' : txt;
+    const r = await llamarGemini(`Eres un asistente periodístico. Extrae datos de este texto informativo de Irapuato. Responde ÚNICAMENTE JSON válido sin markdown:
+{"titulo":"titular corto","tipo":"seguridad|accidente|evento|rumor","lugar":"calle o lugar específico","colonia":"colonia mencionada","resumen":"qué ocurrió en 2 oraciones","lat":latitud 20.64-20.73,"lng":longitud -101.41 a -101.31,"confianza":"alta|media|baja"}
+TEXTO: """${txtCorto2}"""`);
     iaRes = r;
     document.getElementById('r-tit').textContent = r.titulo||'';
     document.getElementById('r-tipo').value = r.tipo||'rumor';
@@ -1088,6 +1122,138 @@ async function guardar(ev) {
     alert('Error al guardar. Verifica conexión.');
   }
 }
+
+
+// ── BORRAR EVENTO ─────────────────────────────────────────────────
+async function borrarEvento(id) {
+  if(!confirm('¿Borrar este evento del mapa?')) return;
+  try {
+    await deleteDoc(doc(db, 'eventos', id));
+    if(markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
+    toast('✓ Evento eliminado','ok',2000);
+  } catch(e) {
+    toast('Error al borrar: '+e.message,'err',3000);
+  }
+}
+window.borrarEvento=borrarEvento;
+
+// ── RSS BUSCADOR ──────────────────────────────────────────────────
+const RSS_FUENTES = {
+  sol: {
+    nombre:'El Sol de Irapuato',
+    // Usar proxy CORS gratuito para leer RSS
+    url:'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://oem.com.mx/elsoldeirapuato/feed/'),
+  },
+  am: {
+    nombre:'AM Guanajuato',
+    url:'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.am.com.mx/guanajuato/rss.xml'),
+  },
+  correo: {
+    nombre:'Periódico Correo',
+    url:'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://periodicocorreo.com.mx/feed/'),
+  }
+};
+
+let rssItems = [];
+let rssSelIdx = null;
+let rssFuenteActual = 'sol';
+
+function abrirRSS() {
+  document.getElementById('m-rss').classList.add('on');
+  cargarRSS('sol');
+}
+function cerrarRSS() { document.getElementById('m-rss').classList.remove('on'); rssItems=[]; rssSelIdx=null; }
+window.abrirRSS=abrirRSS; window.cerrarRSS=cerrarRSS;
+
+function selFuenteRSS(el) {
+  document.querySelectorAll('#rss-fuentes .tc').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  cargarRSS(el.getAttribute('data-src'));
+}
+window.selFuenteRSS=selFuenteRSS;
+
+async function cargarRSS(fuente) {
+  rssFuenteActual = fuente;
+  rssSelIdx = null;
+  document.getElementById('b-rss-agregar').style.display='none';
+  const lista = document.getElementById('rss-lista');
+  lista.innerHTML = '<div class="rss-loading">⏳ Cargando noticias...</div>';
+  try {
+    const src = RSS_FUENTES[fuente];
+    const res = await fetch(src.url, {signal: AbortSignal.timeout(8000)});
+    const txt = await res.text();
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(txt, 'application/xml');
+    const items = [...xml.querySelectorAll('item')].slice(0,15);
+    if(items.length === 0) { lista.innerHTML='<div class="rss-loading">Sin noticias disponibles en este momento.</div>'; return; }
+    rssItems = items.map((item,i) => ({
+      idx:i,
+      titulo: item.querySelector('title')?.textContent?.trim() || 'Sin título',
+      desc: item.querySelector('description')?.textContent?.replace(/<[^>]*>/g,'').trim().slice(0,300) || '',
+      link: item.querySelector('link')?.textContent?.trim() || '',
+      fecha: item.querySelector('pubDate')?.textContent?.trim() || '',
+      fuente: src.nombre
+    }));
+    // Filtrar solo las de Irapuato
+    const deIrapuato = rssItems.filter(it =>
+      (it.titulo+it.desc).toLowerCase().includes('irapuato') ||
+      (it.titulo+it.desc).toLowerCase().includes('santiaguito') ||
+      (it.titulo+it.desc).toLowerCase().includes('guanajuato')
+    );
+    const mostrar = deIrapuato.length > 0 ? deIrapuato : rssItems;
+    lista.innerHTML = mostrar.map(it=>`
+      <div class="rss-item" id="rss-${it.idx}" onclick="selRSS(${it.idx})">
+        <div class="rss-tit">${it.titulo}</div>
+        <div class="rss-meta">
+          <span>${it.fuente}</span>
+          <span>${it.fecha ? new Date(it.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : ''}</span>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    lista.innerHTML = `<div class="rss-loading" style="color:var(--seg)">⚠ No se pudo cargar el feed.<br><span style="font-size:7px;color:var(--muted)">Verifica conexión a internet.</span></div>`;
+  }
+}
+
+function selRSS(idx) {
+  rssSelIdx = idx;
+  document.querySelectorAll('.rss-item').forEach(el=>el.classList.remove('sel'));
+  const el = document.getElementById('rss-'+idx);
+  if(el) el.classList.add('sel');
+  document.getElementById('b-rss-agregar').style.display='inline-block';
+}
+window.selRSS=selRSS;
+
+async function agregarDesdeRSS() {
+  if(rssSelIdx===null) return;
+  const item = rssItems.find(it=>it.idx===rssSelIdx);
+  if(!item) return;
+  const btn = document.getElementById('b-rss-agregar');
+  btn.textContent='⏳ ANALIZANDO...'; btn.disabled=true;
+  try {
+    const texto = item.titulo + '. ' + item.desc;
+    const txtCorto = texto.length>1200 ? texto.slice(0,1200)+'...' : texto;
+    const r = await llamarGemini(`Eres un asistente periodístico. Extrae datos de esta nota de Irapuato. Responde ÚNICAMENTE JSON sin markdown:
+{"titulo":"titular corto","tipo":"seguridad|accidente|evento|rumor","lugar":"calle o lugar específico en Irapuato","colonia":"colonia","resumen":"qué ocurrió en 2 oraciones","lat":latitud 20.64-20.73,"lng":longitud -101.41 a -101.31,"confianza":"alta|media|baja"}
+NOTA: """${txtCorto}"""`);
+    // Geocodificar con pin
+    await geoConPin(r.lugar||'Irapuato', parseFloat(r.lat)||GEO.cLat, parseFloat(r.lng)||GEO.cLng, async pos=>{
+      await guardar({
+        titulo:r.titulo||item.titulo, tipo:r.tipo||'evento',
+        fuente:RSS_FUENTES[rssFuenteActual].nombre,
+        lugar:r.lugar||'Irapuato',
+        colonia:r.colonia||extraColonia(r.lugar||''),
+        descripcion:r.resumen||item.desc.slice(0,300),
+        url:item.link||'', lat:pos.lat, lng:pos.lng, viaIA:true
+      });
+      toast('✓ Noticia agregada al mapa','ok',3000);
+      cerrarRSS();
+    });
+  } catch(e) {
+    toast('Error: '+e.message,'err',4000);
+  } finally { btn.textContent='🤖 ANALIZAR Y AGREGAR →'; btn.disabled=false; }
+}
+window.agregarDesdeRSS=agregarDesdeRSS;
+
 
 // ── TOAST ─────────────────────────────────────────────────────────
 function toast(msg, tipo, dur) {
