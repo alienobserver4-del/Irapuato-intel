@@ -549,6 +549,33 @@ header{display:flex;flex-direction:column;background:var(--surface);border-botto
 <!-- FIREBASE + LEAFLET -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<script>
+// Script de seguridad: si Firebase o el módulo JS fallan, mostrar la app de todas formas
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    var loading = document.getElementById('loading');
+    var app = document.getElementById('app');
+    if(loading && loading.style.display !== 'none') {
+      loading.style.display = 'none';
+      if(app) { app.style.display = 'flex'; }
+      // Intentar inicializar el mapa si existe
+      if(window._map) { window._map.invalidateSize(); }
+    }
+  }, 4000);
+});
+// Capturar errores JS y mostrar la app si hay crash
+window.addEventListener('error', function(e) {
+  console.error('JS Error:', e.message);
+  var loading = document.getElementById('loading');
+  var app = document.getElementById('app');
+  if(loading && loading.style.display !== 'none') {
+    document.getElementById('load-msg').textContent = 'ERROR: ' + e.message.slice(0,50);
+    document.getElementById('load-msg').style.color = '#ff2255';
+  }
+});
+</script>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
@@ -597,6 +624,7 @@ let periodStats = 365;
 // ── MAPA ────────────────────────────────────────────────────────
 const map = L.map('map', {center:[GEO.cLat,GEO.cLng], zoom:14, zoomControl:false, attributionControl:true});
 L.control.zoom({position:'topright'}).addTo(map);
+window._map = map;
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19
 }).addTo(map);
@@ -634,7 +662,7 @@ setTimeout(()=>{
     document.getElementById('app').style.display = 'flex';
     setTimeout(()=>map.invalidateSize(), 200);
   }
-}, 6000);
+}, 3000);
 
 // ── GEOCODIFICACIÓN ─────────────────────────────────────────────
 async function geocodificar(lugar) {
@@ -944,12 +972,6 @@ window.renderStats = renderStats;
 function setPStat(d) { periodStats=d; renderStats(); }
 window.setPStat = setPStat;
 
-function extraColonia(lugar) {
-  const m = lugar.match(/Col\.\s*([^,]+)/i)||lugar.match(/Colonia\s*([^,]+)/i);
-  if(m) return 'Col. '+m[1].trim();
-  const p = lugar.split(',');
-  return p[p.length-1].trim()||lugar.slice(0,25)||'Sin colonia';
-}
 
 // ── BOTTOM PANEL ─────────────────────────────────────────────────
 function togglePB() { pbOpen=!pbOpen; document.getElementById('pbottom').classList.toggle('col',!pbOpen); }
@@ -989,6 +1011,14 @@ async function llamarGemini(prompt) {
   }
   // Gemini no disponible — retornar null para activar modo manual
   return null;
+}
+
+
+function extraColonia(lugar) {
+  const m = lugar.match(/Col\.\s*([^,]+)/i)||lugar.match(/Colonia\s*([^,]+)/i);
+  if(m) return 'Col. '+m[1].trim();
+  const p = lugar.split(',');
+  return p[p.length-1].trim()||lugar.slice(0,25)||'Sin colonia';
 }
 
 // Clasificación local cuando Gemini falla
