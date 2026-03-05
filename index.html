@@ -1021,10 +1021,7 @@ async function extraerURL(){
   const btn=document.getElementById('btn-extraer');
   btn.textContent='⏳ EXTRAYENDO...';btn.disabled=true;
   try{
-    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,
-        messages:[{role:"user",content:`Analiza esta noticia de Irapuato, Guanajuato, México y responde SOLO con JSON válido sin markdown:
+    const prompt=`Analiza esta noticia de Irapuato, Guanajuato, México y responde SOLO con JSON válido sin markdown:
 {
   "titulo": "título descriptivo corto (máx 80 chars)",
   "tipo": "seguridad|accidente|evento|rumor",
@@ -1038,10 +1035,14 @@ async function extraerURL(){
 Tipos: seguridad=robos/violencia/crimen, accidente=choques/viales, evento=actividades/noticias positivas, rumor=no verificado.
 Si no hay lugar específico usa lat:20.6795 lng:-101.3540.
 NOTICIA:
-"""${texto}"""`}]})
+"""${texto}"""`;
+    const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBEOLcxYFZFk6_IM4iZ9WjeLoUJi1RgAnw",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
     });
     const data=await res.json();
-    const r=JSON.parse(data.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim());
+    const rawText=data.candidates[0].content.parts[0].text;
+    const r=JSON.parse(rawText.replace(/```json|```/g,'').trim());
     urlResultado={...r,url:urlVal};
     document.getElementById('ur-titulo').textContent=r.titulo||'Sin título';
     document.getElementById('ur-tipo').value=r.tipo||'rumor';
@@ -1102,15 +1103,16 @@ async function analizar(){
   const btn=document.getElementById('btn-analizar');
   btn.textContent='⏳ ANALIZANDO...';btn.disabled=true;
   try{
-    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,
-        messages:[{role:"user",content:`Analiza este texto de Irapuato y responde SOLO JSON sin markdown:
+    const prompt2=`Analiza este texto de Irapuato y responde SOLO JSON sin markdown:
 {"titulo":"título corto (máx 80 chars)","tipo":"seguridad|accidente|evento|rumor","lugar":"lugar específico","colonia":"nombre de colonia","resumen":"2-3 oraciones","lat":número entre 20.640-20.730,"lng":número entre -101.415 y -101.310,"confianza":"alta|media|baja"}
-TEXTO: """${texto}"""`}]})
+TEXTO: """${texto}"""`);
+    const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBEOLcxYFZFk6_IM4iZ9WjeLoUJi1RgAnw",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({contents:[{parts:[{text:prompt2}]}]})
     });
     const data=await res.json();
-    const r=JSON.parse(data.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim());
+    const rawText2=data.candidates[0].content.parts[0].text;
+    const r=JSON.parse(rawText2.replace(/```json|```/g,"").trim());
     iaResultado=r;
     document.getElementById('r-titulo').textContent=r.titulo||'Sin título';
     document.getElementById('r-tipo').value=r.tipo||'rumor';
