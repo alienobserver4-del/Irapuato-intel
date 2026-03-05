@@ -712,7 +712,7 @@ function crearIcono(tipo, viaIA, cercano) {
 
 function crearPopup(ev) {
   const c = COLORES[ev.tipo]||COLORES.rumor;
-  const fecha = ev.fecha?.toDate ? ev.fecha.toDate().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+  const fecha = (ev.fecha && ev.fecha.toDate) ? ev.fecha.toDate().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—';
   const distH = miPos ? `<div class="lpdist" style="color:${c}">📡 ${fmtD(dist(miPos.lat,miPos.lng,ev.lat,ev.lng))} de ti</div>` : '';
   const linkH = ev.url ? `<a href="${ev.url}" target="_blank" class="lplink">↗ VER NOTICIA</a>` : '';
   return `<div>
@@ -732,7 +732,7 @@ function actualizarHeat() {
   if(heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
   const corte = periodStats > 0 ? Date.now() - periodStats*86400000 : 0;
   const pts = eventos
-    .filter(ev => ev.tipo==='seguridad' && ev.lat && ev.lng && (periodStats===0 || (ev.fecha?.toDate?ev.fecha.toDate().getTime():0) >= corte))
+    .filter(ev => ev.tipo==='seguridad' && ev.lat && ev.lng && (periodStats===0 || (ev.(fecha && fecha.toDate)?ev.fecha.toDate().getTime():0) >= corte))
     .map(ev => [ev.lat, ev.lng, 1.0]);
   if(pts.length === 0) return;
   heatLayer = L.heatLayer(pts, {
@@ -746,7 +746,7 @@ function getF() {
   const corte = filtroDias > 0 ? Date.now() - filtroDias*86400000 : 0;
   return eventos.filter(ev => {
     const tipoOk = filtroTipo==='todos' || ev.tipo===filtroTipo;
-    const t = ev.fecha?.toDate ? ev.fecha.toDate().getTime() : Date.now();
+    const t = (ev.fecha && ev.fecha.toDate) ? ev.fecha.toDate().getTime() : Date.now();
     return tipoOk && (filtroDias===0 || t>=corte);
   });
 }
@@ -885,7 +885,7 @@ window.filtrarT = filtrarT;
 function renderLista() {
   const f = getF();
   const html = f.map(ev=>{
-    const fecha = ev.fecha?.toDate ? ev.fecha.toDate().toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : '—';
+    const fecha = ev.(fecha && fecha.toDate) ? ev.fecha.toDate().toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : '—';
     const lnk = ev.url ? `<a href="${ev.url}" target="_blank" class="elink">↗ ver noticia</a>` : '';
     return `<div class="ecard" data-t="${ev.tipo}" onclick="enfocar('${ev.id}')">
       <div class="ech"><span class="etipo">${(ev.tipo||'').toUpperCase()}${ev.viaIA?'<span class="bia">IA</span>':''}</span><span class="efecha">${fecha}</span></div>
@@ -939,7 +939,7 @@ window.enfocar = enfocar;
 function renderStats() {
   const corte = periodStats>0 ? Date.now()-periodStats*86400000 : 0;
   const evs = eventos.filter(ev=>{
-    const t = ev.fecha?.toDate ? ev.fecha.toDate().getTime() : 0;
+    const t = (ev.fecha && ev.fecha.toDate) ? ev.fecha.toDate().getTime() : 0;
     return periodStats===0 || t>=corte;
   });
   const segs = evs.filter(e=>e.tipo==='seguridad');
@@ -953,7 +953,7 @@ function renderStats() {
   const sems = [];
   for(let i=3;i>=0;i--){
     const ini=Date.now()-(i+1)*7*86400000, fin=Date.now()-i*7*86400000;
-    sems.push({l:`S-${i+1}`, v:segs.filter(e=>{ const t=e.fecha?.toDate?e.fecha.toDate().getTime():0; return t>=ini&&t<fin; }).length});
+    sems.push({l:`S-${i+1}`, v:segs.filter(e=>{ const t=e.(fecha && fecha.toDate)?e.fecha.toDate().getTime():0; return t>=ini&&t<fin; }).length});
   }
   const maxS = Math.max(...sems.map(s=>s.v),1);
   document.getElementById('stbody').innerHTML=`
@@ -1021,9 +1021,9 @@ async function llamarGemini(prompt) {
       );
       if(!res.ok) continue;
       const data = await res.json();
-      const cand = data?.candidates?.[0];
+      const cand = (data && data.candidates && data.candidates[0]);
       if(!cand) continue;
-      const txt = cand.content?.parts?.[0]?.text || '';
+      const txt = (cand.content && cand.content.parts && cand.content.parts[0] && cand.content.parts[0].text) || '';
       if(!txt) continue;
       const match = txt.match(/\{[\s\S]*?\}/);
       if(!match) continue;
@@ -1053,7 +1053,7 @@ function clasificarLocal(texto) {
   if(palabrasSeg.some(function(p){ return t.indexOf(p) >= 0; })) tipo='seguridad';
   else if(palabrasAcc.some(function(p){ return t.indexOf(p) >= 0; })) tipo='accidente';
   else if(palabrasEve.some(function(p){ return t.indexOf(p) >= 0; })) tipo='evento';
-  else if(/accidente|choque|volcadura|atropell|colisión|derrumbe|incendi|explosi/i.test(t)) tipo='accidente';
+  else if(palabrasAcc.some(function(p){ return t.indexOf(p) >= 0; })) tipo='accidente';
   else if(/festival|feria|concierto|evento|ceremonia|inaugur|aniversario|celebr/i.test(t)) tipo='evento';
 
   // Extraer lugar mencionado
@@ -1282,10 +1282,10 @@ async function cargarRSS(fuente) {
     if(items.length === 0) { lista.innerHTML='<div class="rss-loading">Sin noticias disponibles en este momento.</div>'; return; }
     rssItems = items.map((item,i) => ({
       idx:i,
-      titulo: item.querySelector('title')?.textContent?.trim() || 'Sin título',
-      desc: item.querySelector('description')?.textContent?.replace(/<[^>]*>/g,'').trim().slice(0,300) || '',
-      link: item.querySelector('link')?.textContent?.trim() || '',
-      fecha: item.querySelector('pubDate')?.textContent?.trim() || '',
+      titulo: (item.querySelector('title') ? item.querySelector('title').textContent.trim() : 'Sin título'),
+      desc: (item.querySelector('description') ? item.querySelector('description').textContent.replace(/<[^>]*>/g,'').trim().slice(0,300) : ''),
+      link: (item.querySelector('link') ? item.querySelector('link').textContent.trim() : ''),
+      fecha: (item.querySelector('pubDate') ? item.querySelector('pubDate').textContent.trim() : ''),
       fuente: src.nombre
     }));
     // Filtrar solo las de Irapuato
