@@ -561,9 +561,12 @@ window.addEventListener('load', function() {
     if(loading && loading.style.display !== 'none') {
       loading.style.display = 'none';
       if(app) { app.style.display = 'flex'; }
-      // Intentar inicializar el mapa si existe
-      if(window._map) { window._map.invalidateSize(); }
     }
+    // Inicializar mapa siempre después de mostrar la app
+    setTimeout(function(){
+      if(typeof initMap === 'function') initMap();
+      if(window._map) { window._map.invalidateSize(); }
+    }, 400);
   }, 4000);
 });
 // Capturar errores JS y mostrar la app si hay crash
@@ -623,28 +626,44 @@ let heatLayer = null;
 let periodStats = 365;
 
 // ── MAPA ────────────────────────────────────────────────────────
-const map = L.map('map', {center:[GEO.cLat,GEO.cLng], zoom:14, zoomControl:false, attributionControl:true});
-L.control.zoom({position:'topright'}).addTo(map);
-window._map = map;
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19
-}).addTo(map);
-map.on('click', e => { coordsClick = {lat:e.latlng.lat, lng:e.latlng.lng}; abrirManual(null); });
+// El mapa se inicializa lazy — solo cuando el div #map tiene altura real
+let map = null;
+function initMap() {
+  if(map) return;
+  const el = document.getElementById('map');
+  if(!el || el.offsetHeight < 10) return;
+  map = L.map('map', {center:[GEO.cLat,GEO.cLng], zoom:14, zoomControl:false, attributionControl:true});
+  L.control.zoom({position:'topright'}).addTo(map);
+  window._map = map;
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'\u00a9 OpenStreetMap \u00a9 CARTO', subdomains:'abcd', maxZoom:19
+  }).addTo(map);
+  map.on('click', function(e) { coordsClick = {lat:e.latlng.lat, lng:e.latlng.lng}; abrirManual(null); });
+  renderMarcadores();
+  renderLista();
+  actualizarStats();
+}
 
 // ── FIREBASE LISTENER ───────────────────────────────────────────
 db.collection('eventos').orderBy('fecha','desc').onSnapshot(snap => {
   eventos = snap.docs.map(d => ({id:d.id, ...d.data()}));
   document.getElementById('dbdot').className = 'db-dot ok';
-  document.getElementById('dblbl').textContent = `Firebase OK — ${eventos.length} eventos`;
-  renderMarcadores();
-  renderLista();
-  actualizarStats();
-  if(miPos) renderCercanos();
+  document.getElementById('dblbl').textContent = 'Firebase OK — ' + eventos.length + ' eventos';
   if(document.getElementById('loading').style.display !== 'none'){
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
-    setTimeout(()=>map.invalidateSize(), 200);
   }
+  // Inicializar mapa si aún no existe
+  setTimeout(function(){
+    initMap();
+    if(map) {
+      map.invalidateSize();
+      renderMarcadores();
+      renderLista();
+      actualizarStats();
+      if(miPos) renderCercanos();
+    }
+  }, 300);
 }, err => {
   console.error(err);
   document.getElementById('dbdot').className = 'db-dot err';
@@ -709,6 +728,7 @@ function crearPopup(ev) {
 
 // ── HEATMAP ─────────────────────────────────────────────────────
 function actualizarHeat() {
+  if(!map) return;
   if(heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
   const corte = periodStats > 0 ? Date.now() - periodStats*86400000 : 0;
   const pts = eventos
@@ -732,6 +752,7 @@ function getF() {
 }
 
 function renderMarcadores() {
+  if(!map) return;
   Object.values(markers).forEach(m => map.removeLayer(m));
   markers = {};
   getF().forEach(ev => {
@@ -782,7 +803,7 @@ function detenerGPS() {
 }
 
 function actualizarPos() {
-  if(!miPos) return;
+  if(!map || !miPos) return;
   if(radioCircle) map.removeLayer(radioCircle);
   radioCircle = L.circle([miPos.lat,miPos.lng], {radius:radio, color:'#00ff88', fillColor:'#00ff88', fillOpacity:.04, weight:1, dashArray:'4,4'}).addTo(map);
   if(posMarker) map.removeLayer(posMarker);
@@ -839,7 +860,7 @@ function setVista(v) {
   if(v==='campo') iniciarGPS();
   else detenerGPS();
   if(v==='stats') renderStats();
-  setTimeout(()=>map.invalidateSize(), 150);
+  setTimeout(function(){ initMap(); if(map) map.invalidateSize(); }, 150);
 }
 window.setVista = setVista;
 
@@ -1025,7 +1046,13 @@ function extraColonia(lugar) {
 function clasificarLocal(texto) {
   const t = texto.toLowerCase();
   let tipo = 'rumor';
-  if(/bala|dispar|herido|matan|muri|fallec|homicid|asesinat|ejecut|atac|robo|asalt|secuestr|narcot|cartel|arma|detenid|captur|golpe|cuchillo|apuñal|asesin/i.test(t)) tipo='seguridad';
+  // Clasificación por palabras clave separadas (compatible con todos los navegadores)
+  const palabrasSeg = ['bala','dispar','herido','matan','fallec','homicid','asesinat','ejecut','asalt','robo','secuestr','narcot','cartel','detenid','captur','apunal','asesin','muerto','cadaver','golpe','navaja','cuchillo','armado','tiro'];
+  const palabrasAcc = ['accidente','choque','volcadura','atropell','colision','incendi','explosi','derrumbe'];
+  const palabrasEve = ['festival','feria','concierto','evento','ceremonia','inaugur','aniversario','celebr'];
+  if(palabrasSeg.some(function(p){ return t.indexOf(p) >= 0; })) tipo='seguridad';
+  else if(palabrasAcc.some(function(p){ return t.indexOf(p) >= 0; })) tipo='accidente';
+  else if(palabrasEve.some(function(p){ return t.indexOf(p) >= 0; })) tipo='evento';
   else if(/accidente|choque|volcadura|atropell|colisión|derrumbe|incendi|explosi/i.test(t)) tipo='accidente';
   else if(/festival|feria|concierto|evento|ceremonia|inaugur|aniversario|celebr/i.test(t)) tipo='evento';
 
@@ -1378,7 +1405,7 @@ function checkR() {
   const mob = window.innerWidth < 700;
   document.getElementById('sidebar').style.display = vista!=='campo'&&!mob?'flex':'none';
 }
-window.addEventListener('resize', ()=>{ checkR(); map.invalidateSize(); });
+window.addEventListener('resize', function(){ checkR(); if(map) map.invalidateSize(); });
 checkR();
 
 </script>
