@@ -3,1165 +3,1034 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>IRAPUATO INTEL v7</title>
+<title>IRAPUATO INTEL</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <style>
-:root {
-  --bg:#03050a;
-  --surface:#060d18;
-  --border:#0d2040;
-  --cyan:#00f5ff;
-  --magenta:#ff00aa;
-  --green:#00ff88;
-  --yellow:#ffee00;
-  --text:#c0e8ff;
-  --muted:#1a3050;
-  --seguridad:#ff2255;
-  --accidente:#ffaa00;
-  --evento:#00ccff;
-  --rumor:#3a5a7a;
-  --ia:#aa77ff;
+:root{
+  --bg:#03050a;--surface:#060d18;--border:#0d2040;
+  --cyan:#00f5ff;--magenta:#ff00aa;--green:#00ff88;
+  --text:#c0e8ff;--muted:#1a3050;
+  --seg:#ff2255;--acc:#ffaa00;--eve:#00ccff;--rum:#3a5a7a;--ia:#aa77ff;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;font-family:'Share Tech Mono',monospace;background:var(--bg);color:var(--text);}
-#app{display:flex;flex-direction:column;height:100vh;}
+#app{display:flex;flex-direction:column;height:100dvh;}
 
-/* ── HEADER ── */
-header{display:flex;align-items:center;padding:6px 10px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:6px;min-height:44px;}
+/* HEADER */
+header{display:flex;align-items:center;padding:6px 10px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:6px;}
 .logo{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-.logo-diamond{width:16px;height:16px;background:var(--cyan);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);animation:pulse-d 2s ease-in-out infinite;flex-shrink:0;}
-@keyframes pulse-d{0%,100%{opacity:1}50%{opacity:.5}}
+.diamond{width:14px;height:14px;background:var(--cyan);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);animation:pd 2s ease-in-out infinite;}
+@keyframes pd{0%,100%{opacity:1}50%{opacity:.4}}
 .logo h1{font-family:'Orbitron',monospace;font-size:11px;font-weight:900;letter-spacing:2px;color:var(--cyan);text-shadow:0 0 10px var(--cyan);white-space:nowrap;}
-.logo-sub{display:none;}
+.nav{display:flex;gap:3px;flex:1;justify-content:center;}
+.ntab{padding:5px 8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;border-radius:2px;letter-spacing:0;white-space:nowrap;transition:all .2s;}
+.ntab.on{background:rgba(0,245,255,.12);color:var(--cyan);border-color:var(--cyan);}
+.ntab.campo-on{background:rgba(0,255,136,.12);color:var(--green);border-color:var(--green);}
+.ntab.stats-on{background:rgba(255,0,170,.12);color:var(--magenta);border-color:var(--magenta);}
+.acts{display:flex;gap:3px;flex-shrink:0;}
+.abtn{padding:5px 7px;font-family:'Orbitron',monospace;font-size:8px;font-weight:700;cursor:pointer;border-radius:2px;white-space:nowrap;}
+.abtn-url{background:rgba(255,0,170,.12);color:var(--magenta);border:1px solid var(--magenta);}
+.abtn-ia{background:rgba(170,119,255,.2);color:var(--ia);border:1px solid var(--ia);}
+.abtn-add{background:rgba(0,245,255,.12);color:var(--cyan);border:1px solid var(--cyan);}
 
-.nav-tabs{display:flex;gap:3px;flex:1;justify-content:center;}
-.nav-tab{padding:5px 8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;border-radius:2px;transition:all .2s;letter-spacing:0px;white-space:nowrap;}
-.nav-tab.active{background:rgba(0,245,255,.12);color:var(--cyan);border-color:var(--cyan);text-shadow:0 0 8px var(--cyan);}
-.nav-tab.campo-tab.active{background:rgba(0,255,136,.12);color:var(--green);border-color:var(--green);text-shadow:0 0 8px var(--green);}
-.nav-tab.stats-tab.active{background:rgba(255,0,170,.12);color:var(--magenta);border-color:var(--magenta);}
+/* STATUS BAR */
+#status-bar{display:flex;align-items:center;justify-content:space-between;padding:3px 10px;background:rgba(0,0,0,.4);border-bottom:1px solid var(--border);flex-shrink:0;font-size:8px;color:var(--muted);}
+#db-status{display:flex;align-items:center;gap:4px;}
+.db-dot{width:5px;height:5px;border-radius:50%;background:var(--muted);}
+.db-dot.ok{background:var(--green);box-shadow:0 0 5px var(--green);}
+.db-dot.err{background:var(--seg);}
 
-.header-actions{display:flex;gap:3px;flex-shrink:0;}
-.hbtn{border:none;padding:5px 7px;font-family:'Orbitron',monospace;font-size:8px;font-weight:700;cursor:pointer;border-radius:2px;transition:all .2s;letter-spacing:0px;white-space:nowrap;}
-.hbtn-ia{background:rgba(170,119,255,.2);color:var(--ia);border:1px solid var(--ia);}
-.hbtn-add{background:rgba(0,245,255,.12);color:var(--cyan);border:1px solid var(--cyan);}
-.hbtn-url{background:rgba(255,0,170,.12);color:var(--magenta);border:1px solid var(--magenta);}
+/* ALERTA */
+#alerta{display:none;padding:5px 12px;font-size:9px;text-align:center;font-family:'Orbitron',monospace;flex-shrink:0;border-bottom:1px solid var(--seg);background:rgba(255,34,85,.15);color:var(--seg);}
+#alerta.on{display:block;}
 
-/* ── ALERTA ── */
-#alerta-banner{display:none;padding:5px 14px;font-size:9px;letter-spacing:1px;text-align:center;font-family:'Orbitron',monospace;flex-shrink:0;border-bottom:1px solid var(--seguridad);background:rgba(255,34,85,.15);color:var(--seguridad);}
-#alerta-banner.visible{display:block;}
+/* GPS BAR */
+#gps-bar{display:none;align-items:center;justify-content:space-between;padding:4px 10px;background:rgba(0,255,136,.03);border-bottom:1px solid rgba(0,255,136,.1);flex-shrink:0;gap:6px;flex-wrap:wrap;}
+#gps-bar.on{display:flex;}
+.gdot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+.gdot.fix{background:var(--green);box-shadow:0 0 6px var(--green);animation:gg 1.5s ease-in-out infinite;}
+@keyframes gg{0%,100%{opacity:1}50%{opacity:.3}}
+.ginfo{display:flex;align-items:center;gap:5px;font-size:8px;color:var(--muted);}
+.gcoords{font-size:8px;color:var(--cyan);}
+.rctrl{display:flex;align-items:center;gap:4px;font-size:8px;color:var(--muted);}
+.rctrl input{accent-color:var(--green);width:50px;}
 
-/* ── GPS BAR ── */
-#gps-bar{display:none;align-items:center;justify-content:space-between;padding:4px 12px;background:rgba(0,255,136,.04);border-bottom:1px solid rgba(0,255,136,.15);flex-shrink:0;gap:6px;flex-wrap:wrap;}
-#gps-bar.visible{display:flex;}
-.gps-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:all .3s;}
-.gps-dot.fix{background:var(--green);box-shadow:0 0 8px var(--green);animation:gps-glow 1.5s ease-in-out infinite;}
-@keyframes gps-glow{0%,100%{opacity:1}50%{opacity:.3}}
-.gps-info{display:flex;align-items:center;gap:5px;font-size:8px;color:var(--muted);}
-.gps-coords{font-size:8px;color:var(--cyan);font-family:'Share Tech Mono',monospace;}
-.radio-ctrl{display:flex;align-items:center;gap:4px;font-size:8px;color:var(--muted);}
-.radio-ctrl input{accent-color:var(--green);width:50px;}
-
-/* ── STATS ROW ── */
-.stats-row{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:rgba(6,13,24,.8);}
-.sbox{flex:1;text-align:center;padding:5px 2px;border-right:1px solid var(--border);}
+/* STATS ROW */
+.srow{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:rgba(6,13,24,.8);}
+.sbox{flex:1;text-align:center;padding:4px 2px;border-right:1px solid var(--border);}
 .sbox:last-child{border-right:none;}
-.snum{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--cyan);}
+.snum{font-family:'Orbitron',monospace;font-size:12px;font-weight:700;color:var(--cyan);}
 .slbl{font-size:7px;color:var(--muted);letter-spacing:1px;}
 
-/* ── MAIN ── */
-.main{flex:1;display:flex;overflow:hidden;position:relative;min-height:0;}
-#map{width:100%;height:100%;min-height:0;}
+/* MAIN */
+.main{flex:1;display:flex;min-height:0;overflow:hidden;position:relative;}
 
-/* ── SIDEBAR ── */
-#sidebar{width:255px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
-.sb-filters{padding:8px 10px;border-bottom:1px solid var(--border);}
-.sb-title{font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;font-family:'Orbitron',monospace;}
+/* SIDEBAR */
+#sidebar{width:250px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
+.sf{padding:7px 9px;border-bottom:1px solid var(--border);}
+.st{font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;font-family:'Orbitron',monospace;}
 .chips{display:flex;flex-wrap:wrap;gap:3px;}
-.chip{padding:3px 7px;border:1px solid var(--border);border-radius:2px;font-size:7px;cursor:pointer;transition:all .2s;color:var(--muted);background:transparent;letter-spacing:1px;font-family:'Orbitron',monospace;}
-.chip.active{color:#000;}
-.chip[data-t="todos"].active{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 8px rgba(0,245,255,.4);}
-.chip[data-t="seguridad"].active{background:var(--seguridad);border-color:var(--seguridad);box-shadow:0 0 8px rgba(255,34,85,.4);}
-.chip[data-t="accidente"].active{background:var(--accidente);border-color:var(--accidente);}
-.chip[data-t="evento"].active{background:var(--evento);border-color:var(--evento);}
-.chip[data-t="rumor"].active{background:var(--rumor);border-color:var(--rumor);color:var(--text);}
-
-/* Filtro tiempo */
-.time-filter{padding:6px 10px;border-bottom:1px solid var(--border);}
-.time-chips{display:flex;gap:3px;flex-wrap:wrap;}
-.tchip{padding:2px 6px;border:1px solid var(--border);border-radius:2px;font-size:7px;cursor:pointer;color:var(--muted);background:transparent;font-family:'Orbitron',monospace;letter-spacing:1px;transition:all .2s;}
-.tchip.active{background:rgba(255,0,170,.15);color:var(--magenta);border-color:var(--magenta);}
-
-.ev-list{flex:1;overflow-y:auto;padding:5px;}
-.ev-list::-webkit-scrollbar{width:2px;}
-.ev-list::-webkit-scrollbar-thumb{background:var(--border);}
-.ev-card{padding:7px 9px;border:1px solid var(--border);border-left:2px solid var(--muted);margin-bottom:5px;cursor:pointer;transition:all .2s;border-radius:2px;background:rgba(0,245,255,.01);}
-.ev-card:hover{background:rgba(0,245,255,.05);border-left-color:var(--cyan);}
-.ev-card[data-t="seguridad"]{border-left-color:var(--seguridad);}
-.ev-card[data-t="accidente"]{border-left-color:var(--accidente);}
-.ev-card[data-t="evento"]{border-left-color:var(--evento);}
-.ev-card[data-t="rumor"]{border-left-color:var(--rumor);}
-.ec-head{display:flex;justify-content:space-between;margin-bottom:2px;align-items:center;}
-.ec-tipo{font-size:7px;font-family:'Orbitron',monospace;letter-spacing:1px;padding:1px 4px;border-radius:1px;}
-[data-t="seguridad"] .ec-tipo{background:rgba(255,34,85,.15);color:var(--seguridad);}
-[data-t="accidente"] .ec-tipo{background:rgba(255,170,0,.15);color:var(--accidente);}
-[data-t="evento"] .ec-tipo{background:rgba(0,204,255,.15);color:var(--evento);}
-[data-t="rumor"] .ec-tipo{background:rgba(58,90,122,.2);color:#6a9ab0;}
-.ec-fecha{font-size:7px;color:var(--muted);}
-.ec-titulo{font-size:10px;font-weight:600;line-height:1.3;color:var(--text);margin-bottom:1px;}
-.ec-lugar{font-size:8px;color:var(--muted);}
-.ec-link{font-size:7px;color:var(--cyan);margin-top:2px;display:block;text-decoration:none;opacity:.7;}
-.ec-link:hover{opacity:1;}
-.badge-ia{font-size:6px;background:rgba(170,119,255,.2);color:var(--ia);padding:1px 3px;border-radius:1px;margin-left:2px;}
-
-.sb-legend{padding:7px 10px;border-top:1px solid var(--border);flex-shrink:0;}
-.leg-items{display:flex;flex-direction:column;gap:2px;}
-.leg-item{display:flex;align-items:center;gap:5px;font-size:7px;color:var(--muted);}
+.chip{padding:3px 6px;border:1px solid var(--border);border-radius:2px;font-size:7px;cursor:pointer;color:var(--muted);background:transparent;font-family:'Orbitron',monospace;transition:all .2s;}
+.chip.on{color:#000;}
+.chip[data-t="todos"].on{background:var(--cyan);border-color:var(--cyan);}
+.chip[data-t="seguridad"].on{background:var(--seg);border-color:var(--seg);}
+.chip[data-t="accidente"].on{background:var(--acc);border-color:var(--acc);}
+.chip[data-t="evento"].on{background:var(--eve);border-color:var(--eve);}
+.chip[data-t="rumor"].on{background:var(--rum);border-color:var(--rum);color:var(--text);}
+.tchips{display:flex;gap:3px;flex-wrap:wrap;}
+.tc{padding:2px 5px;border:1px solid var(--border);border-radius:2px;font-size:7px;cursor:pointer;color:var(--muted);background:transparent;font-family:'Orbitron',monospace;transition:all .2s;}
+.tc.on{background:rgba(255,0,170,.15);color:var(--magenta);border-color:var(--magenta);}
+.evlist{flex:1;overflow-y:auto;padding:4px;}
+.evlist::-webkit-scrollbar{width:2px;}
+.evlist::-webkit-scrollbar-thumb{background:var(--border);}
+.ecard{padding:7px 8px;border:1px solid var(--border);border-left:2px solid var(--muted);margin-bottom:4px;cursor:pointer;border-radius:2px;transition:all .2s;}
+.ecard:hover{background:rgba(0,245,255,.04);}
+.ecard[data-t="seguridad"]{border-left-color:var(--seg);}
+.ecard[data-t="accidente"]{border-left-color:var(--acc);}
+.ecard[data-t="evento"]{border-left-color:var(--eve);}
+.ecard[data-t="rumor"]{border-left-color:var(--rum);}
+.ech{display:flex;justify-content:space-between;margin-bottom:2px;align-items:center;}
+.etipo{font-size:7px;font-family:'Orbitron',monospace;padding:1px 3px;border-radius:1px;}
+[data-t="seguridad"] .etipo{background:rgba(255,34,85,.15);color:var(--seg);}
+[data-t="accidente"] .etipo{background:rgba(255,170,0,.15);color:var(--acc);}
+[data-t="evento"] .etipo{background:rgba(0,204,255,.15);color:var(--eve);}
+[data-t="rumor"] .etipo{background:rgba(58,90,122,.2);color:#6a9ab0;}
+.efecha{font-size:7px;color:var(--muted);}
+.etit{font-size:10px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:1px;}
+.elug{font-size:8px;color:var(--muted);}
+.elink{font-size:7px;color:var(--cyan);display:block;text-decoration:none;margin-top:2px;opacity:.7;}
+.bia{font-size:6px;background:rgba(170,119,255,.2);color:var(--ia);padding:1px 3px;border-radius:1px;margin-left:2px;}
+.leg{padding:6px 9px;border-top:1px solid var(--border);flex-shrink:0;}
+.litems{display:flex;flex-direction:column;gap:2px;}
+.li{display:flex;align-items:center;gap:5px;font-size:7px;color:var(--muted);}
 .ldot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 
-/* ── MAP ── */
-.map-wrap{flex:1;position:relative;overflow:hidden;min-height:0;}
+/* MAP */
+.mapwrap{flex:1;position:relative;min-height:0;overflow:hidden;}
+#map{position:absolute;top:0;left:0;right:0;bottom:0;}
 
-/* ── CAMPO PANEL ── */
-#panel-campo{display:none;width:240px;background:var(--surface);border-left:1px solid var(--border);flex-direction:column;overflow:hidden;flex-shrink:0;}
-#panel-campo.visible{display:flex;}
-.pc-title{padding:7px 10px;border-bottom:1px solid var(--border);font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:var(--green);display:flex;justify-content:space-between;align-items:center;}
-.cerca-list{flex:1;overflow-y:auto;padding:5px;}
-.cerca-list::-webkit-scrollbar{width:2px;}
-.cerca-list::-webkit-scrollbar-thumb{background:var(--border);}
-.cerca-card{padding:7px 9px;border:1px solid var(--border);border-left:2px solid var(--muted);margin-bottom:4px;border-radius:2px;cursor:pointer;transition:all .2s;}
-.cerca-card[data-t="seguridad"]{border-left-color:var(--seguridad);}
-.cerca-card[data-t="accidente"]{border-left-color:var(--accidente);}
-.cerca-card[data-t="evento"]{border-left-color:var(--evento);}
-.cerca-card[data-t="rumor"]{border-left-color:var(--rumor);}
-.cc-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;}
-.cc-tipo{font-size:7px;font-family:'Orbitron',monospace;letter-spacing:1px;padding:1px 4px;border-radius:1px;}
-.cc-dist{font-size:9px;font-family:'Orbitron',monospace;font-weight:700;}
-.cc-titulo{font-size:10px;font-weight:600;color:var(--text);line-height:1.3;}
-.cc-lugar{font-size:7px;color:var(--muted);margin-top:1px;}
+/* FAB */
+#fab{position:absolute;bottom:14px;right:12px;width:44px;height:44px;background:rgba(0,255,136,.15);border:1px solid var(--green);border-radius:50%;font-size:18px;cursor:pointer;z-index:600;display:none;align-items:center;justify-content:center;color:var(--green);box-shadow:0 0 14px rgba(0,255,136,.2);}
+#fab.on{display:flex;}
 
-/* ── STATS PANEL ── */
-#panel-stats{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(3,5,10,.95);z-index:900;flex-direction:column;overflow:hidden;}
-#panel-stats.visible{display:flex;}
-.stats-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
-.stats-title{font-family:'Orbitron',monospace;font-size:12px;letter-spacing:3px;color:var(--magenta);text-shadow:0 0 10px var(--magenta);}
-.stats-close{background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 10px;cursor:pointer;font-family:'Orbitron',monospace;font-size:8px;border-radius:2px;}
-.stats-body{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:14px;}
+/* PANEL CAMPO */
+#pcampo{display:none;width:235px;background:var(--surface);border-left:1px solid var(--border);flex-direction:column;overflow:hidden;flex-shrink:0;}
+#pcampo.on{display:flex;}
+.pct{padding:7px 9px;border-bottom:1px solid var(--border);font-family:'Orbitron',monospace;font-size:8px;color:var(--green);display:flex;justify-content:space-between;}
+.clist{flex:1;overflow-y:auto;padding:4px;}
+.clist::-webkit-scrollbar{width:2px;}
+.ccard{padding:7px 8px;border:1px solid var(--border);border-left:2px solid var(--muted);margin-bottom:4px;border-radius:2px;cursor:pointer;}
+.ccard[data-t="seguridad"]{border-left-color:var(--seg);}
+.ccard[data-t="accidente"]{border-left-color:var(--acc);}
+.ccard[data-t="evento"]{border-left-color:var(--eve);}
+.ccard[data-t="rumor"]{border-left-color:var(--rum);}
+.ccr{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;}
+.cctipo{font-size:7px;font-family:'Orbitron',monospace;padding:1px 3px;border-radius:1px;}
+.ccdist{font-size:9px;font-family:'Orbitron',monospace;font-weight:700;}
+.cctit{font-size:10px;font-weight:600;color:var(--text);}
+.cclug{font-size:7px;color:var(--muted);margin-top:1px;}
 
-/* Periodo selector */
-.periodo-sel{display:flex;gap:5px;flex-wrap:wrap;}
-.pbtn{padding:4px 10px;border:1px solid var(--border);border-radius:2px;font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;color:var(--muted);background:transparent;transition:all .2s;letter-spacing:1px;}
-.pbtn.active{background:rgba(255,0,170,.15);color:var(--magenta);border-color:var(--magenta);box-shadow:0 0 8px rgba(255,0,170,.2);}
-
-/* Ranking colonias */
-.ranking-list{display:flex;flex-direction:column;gap:5px;}
-.rank-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:2px;background:rgba(255,34,85,.03);}
-.rank-num{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:var(--magenta);width:20px;flex-shrink:0;}
-.rank-bar-wrap{flex:1;}
-.rank-colonia{font-size:10px;color:var(--text);margin-bottom:3px;}
-.rank-bar{height:4px;border-radius:2px;background:var(--border);overflow:hidden;}
-.rank-fill{height:100%;border-radius:2px;transition:width .8s ease;}
-.rank-count{font-family:'Orbitron',monospace;font-size:9px;color:var(--seguridad);width:30px;text-align:right;flex-shrink:0;}
-
-/* Gráfica barras */
-.chart-wrap{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:3px;padding:10px;}
-.chart-title{font-family:'Orbitron',monospace;font-size:8px;color:var(--muted);letter-spacing:2px;margin-bottom:8px;}
-.bars{display:flex;align-items:flex-end;gap:4px;height:80px;}
-.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+/* STATS PANEL */
+#pstats{display:none;position:absolute;inset:0;background:rgba(3,5,10,.96);z-index:900;flex-direction:column;overflow:hidden;}
+#pstats.on{display:flex;}
+.sth{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.sttitle{font-family:'Orbitron',monospace;font-size:11px;color:var(--magenta);text-shadow:0 0 10px var(--magenta);}
+.stclose{background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 9px;cursor:pointer;font-family:'Orbitron',monospace;font-size:8px;border-radius:2px;}
+.stbody{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:12px;}
+.psel{display:flex;gap:4px;flex-wrap:wrap;}
+.pbtn{padding:4px 9px;border:1px solid var(--border);border-radius:2px;font-family:'Orbitron',monospace;font-size:7px;cursor:pointer;color:var(--muted);background:transparent;transition:all .2s;}
+.pbtn.on{background:rgba(255,0,170,.15);color:var(--magenta);border-color:var(--magenta);}
+.scards{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.scard{padding:9px;border:1px solid var(--border);border-radius:3px;text-align:center;}
+.scnum{font-family:'Orbitron',monospace;font-size:18px;font-weight:700;}
+.sclbl{font-size:7px;color:var(--muted);margin-top:2px;}
+.chart{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:3px;padding:9px;}
+.cht{font-family:'Orbitron',monospace;font-size:7px;color:var(--muted);letter-spacing:2px;margin-bottom:7px;}
+.bars{display:flex;align-items:flex-end;gap:3px;height:70px;}
+.bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;}
 .bar{width:100%;border-radius:2px 2px 0 0;min-height:2px;transition:height .6s ease;}
-.bar-lbl{font-size:6px;color:var(--muted);font-family:'Orbitron',monospace;text-align:center;white-space:nowrap;}
-.bar-val{font-size:7px;color:var(--text);font-family:'Orbitron',monospace;}
+.bl{font-size:6px;color:var(--muted);font-family:'Orbitron',monospace;text-align:center;white-space:nowrap;}
+.bv{font-size:7px;color:var(--text);font-family:'Orbitron',monospace;}
+.rlist{display:flex;flex-direction:column;gap:4px;}
+.ritem{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;}
+.rnum{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;color:var(--magenta);width:18px;}
+.rbw{flex:1;}
+.rcol{font-size:9px;color:var(--text);margin-bottom:2px;}
+.rbar{height:3px;border-radius:2px;background:var(--border);}
+.rfill{height:100%;border-radius:2px;}
+.rcnt{font-family:'Orbitron',monospace;font-size:8px;color:var(--seg);width:25px;text-align:right;}
 
-/* Resumen stats */
-.stats-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
-.stat-card{padding:10px;border:1px solid var(--border);border-radius:3px;text-align:center;}
-.sc-num{font-family:'Orbitron',monospace;font-size:20px;font-weight:700;}
-.sc-lbl{font-size:8px;color:var(--muted);margin-top:2px;letter-spacing:1px;}
+/* BOTTOM PANEL */
+#pbottom{display:none;background:var(--surface);border-top:1px solid var(--border);flex-direction:column;flex-shrink:0;max-height:38vh;}
+#pbottom.on{display:flex;}
+#pbottom.col{max-height:36px;overflow:hidden;}
+.pbh{padding:6px;text-align:center;cursor:pointer;border-bottom:1px solid var(--border);}
+.pbh::before{content:'';display:inline-block;width:28px;height:2px;background:var(--border);border-radius:2px;}
+.pbtabs{display:flex;border-bottom:1px solid var(--border);}
+.pbt{flex:1;padding:6px;font-family:'Orbitron',monospace;font-size:7px;text-align:center;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;}
+.pbt.on{color:var(--green);border-bottom-color:var(--green);}
+.pbcont{flex:1;overflow-y:auto;padding:4px;}
 
-/* ── FAB ── */
-#fab{position:absolute;bottom:16px;right:14px;width:46px;height:46px;background:rgba(0,255,136,.15);border:1px solid var(--green);border-radius:50%;font-size:18px;cursor:pointer;z-index:600;box-shadow:0 0 16px rgba(0,255,136,.25);display:none;align-items:center;justify-content:center;color:var(--green);}
-#fab.visible{display:flex;}
-
-/* ── BOTTOM PANEL ── */
-#panel-bottom{display:none;background:var(--surface);border-top:1px solid var(--border);flex-direction:column;flex-shrink:0;max-height:38vh;}
-#panel-bottom.visible{display:flex;}
-#panel-bottom.collapsed{max-height:38px;overflow:hidden;}
-.pb-handle{padding:7px;text-align:center;cursor:pointer;border-bottom:1px solid var(--border);flex-shrink:0;}
-.pb-handle::before{content:'';display:inline-block;width:28px;height:2px;background:var(--border);border-radius:2px;}
-.pb-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
-.pbtab{flex:1;padding:6px;font-family:'Orbitron',monospace;font-size:7px;text-align:center;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;letter-spacing:1px;}
-.pbtab.active{color:var(--green);border-bottom-color:var(--green);}
-.pb-content{flex:1;overflow-y:auto;padding:5px;}
-
-/* ── TICKER ── */
+/* TICKER */
 .ticker{background:#010308;border-top:1px solid var(--border);padding:3px 10px;font-size:8px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-shrink:0;overflow:hidden;}
-.ticker-lbl{color:var(--cyan);font-weight:700;flex-shrink:0;letter-spacing:2px;font-family:'Orbitron',monospace;font-size:7px;}
-.ticker-txt{animation:tkr 50s linear infinite;white-space:nowrap;}
+.tlbl{color:var(--cyan);font-weight:700;flex-shrink:0;font-family:'Orbitron',monospace;font-size:7px;}
+.ttxt{animation:tkr 50s linear infinite;white-space:nowrap;}
 @keyframes tkr{from{transform:translateX(100vw)}to{transform:translateX(-200%)}}
 
-/* ── LEAFLET OVERRIDES ── */
+/* LEAFLET */
 .leaflet-container{background:#010308!important;}
-.leaflet-popup-content-wrapper{background:rgba(3,8,20,.96)!important;border:1px solid var(--cyan)!important;border-radius:3px!important;color:var(--text)!important;box-shadow:0 0 24px rgba(0,245,255,.2)!important;}
-.leaflet-popup-tip{background:rgba(3,8,20,.96)!important;}
-.leaflet-popup-content{margin:11px 13px!important;min-width:200px;}
-.leaflet-control-zoom a{background:#060d18!important;color:var(--cyan)!important;border-color:var(--border)!important;font-family:'Orbitron',monospace!important;}
+.leaflet-popup-content-wrapper{background:rgba(3,8,20,.97)!important;border:1px solid var(--cyan)!important;border-radius:3px!important;color:var(--text)!important;box-shadow:0 0 20px rgba(0,245,255,.2)!important;}
+.leaflet-popup-tip{background:rgba(3,8,20,.97)!important;}
+.leaflet-popup-content{margin:10px 12px!important;min-width:190px;}
+.leaflet-control-zoom a{background:#060d18!important;color:var(--cyan)!important;border-color:var(--border)!important;}
 .leaflet-bar{border:1px solid var(--border)!important;box-shadow:none!important;}
-.lp-tipo{font-size:7px;font-family:'Orbitron',monospace;letter-spacing:2px;padding:2px 6px;border-radius:1px;display:inline-block;margin-bottom:4px;}
-.lp-titulo{font-size:11px;font-weight:700;margin-bottom:3px;color:var(--text);font-family:'Orbitron',monospace;line-height:1.3;}
-.lp-lugar{font-size:8px;color:var(--muted);margin-bottom:3px;}
-.lp-desc{font-size:9px;color:#5a8098;line-height:1.5;margin-bottom:4px;}
-.lp-dist{font-size:10px;font-family:'Orbitron',monospace;font-weight:700;margin-bottom:3px;}
-.lp-meta{font-size:7px;color:var(--muted);border-top:1px solid var(--border);padding-top:3px;margin-top:3px;display:flex;justify-content:space-between;align-items:center;}
-.lp-link{color:var(--cyan);text-decoration:none;font-size:7px;letter-spacing:1px;}
-.lp-link:hover{text-shadow:0 0 8px var(--cyan);}
+.lpt{font-size:7px;font-family:'Orbitron',monospace;letter-spacing:1px;padding:2px 5px;border-radius:1px;display:inline-block;margin-bottom:4px;}
+.lptit{font-size:11px;font-weight:700;color:var(--text);font-family:'Orbitron',monospace;margin-bottom:2px;line-height:1.3;}
+.lplug{font-size:8px;color:var(--muted);margin-bottom:2px;}
+.lpdesc{font-size:9px;color:#5a8098;line-height:1.5;margin-bottom:3px;}
+.lpdist{font-size:10px;font-family:'Orbitron',monospace;font-weight:700;margin-bottom:2px;}
+.lpmeta{font-size:7px;color:var(--muted);border-top:1px solid var(--border);padding-top:3px;margin-top:3px;display:flex;justify-content:space-between;align-items:center;}
+.lplink{color:var(--cyan);text-decoration:none;font-size:7px;}
 
-/* ── MODALES ── */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:2000;align-items:flex-end;justify-content:center;backdrop-filter:blur(8px);}
-.modal-overlay.open{display:flex;}
-@media(min-width:600px){.modal-overlay{align-items:center;}}
-.modal{background:#030810;border:1px solid var(--cyan);width:100%;max-width:500px;padding:18px;position:relative;animation:slideUp .2s ease;max-height:92vh;overflow-y:auto;border-radius:6px 6px 0 0;box-shadow:0 0 40px rgba(0,245,255,.15);}
-@media(min-width:600px){.modal{border-radius:4px;}}
-.modal.magenta{border-color:var(--magenta);box-shadow:0 0 40px rgba(255,0,170,.15);}
-.modal.ia-modal{border-color:var(--ia);box-shadow:0 0 40px rgba(170,119,255,.15);}
-@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-.modal-title{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:3px;color:var(--cyan);margin-bottom:12px;text-transform:uppercase;}
-.modal-title.mg{color:var(--magenta);}
-.modal-title.ia{color:var(--ia);}
-.form-group{margin-bottom:10px;}
-.form-label{font-size:7px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;font-family:'Orbitron',monospace;display:block;margin-bottom:3px;}
-.form-input,.form-select,.form-textarea{width:100%;background:#010a14;border:1px solid var(--border);color:var(--text);padding:7px 10px;font-family:'Share Tech Mono',monospace;font-size:12px;outline:none;transition:border-color .2s;border-radius:2px;}
-.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--cyan);box-shadow:0 0 8px rgba(0,245,255,.1);}
-.form-select option{background:#030810;}
-.form-textarea{resize:none;min-height:75px;}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.modal-hint{font-size:8px;color:var(--muted);margin-bottom:10px;padding:6px 8px;border:1px solid var(--border);border-left:2px solid var(--cyan);line-height:1.6;}
-.modal-hint.mg{border-left-color:var(--magenta);}
-.modal-hint.ia{border-left-color:var(--ia);}
-.modal-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:12px;}
-.btn-cancel{background:transparent;border:1px solid var(--border);color:var(--muted);padding:7px 12px;font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;border-radius:2px;}
-.btn-save{padding:7px 14px;font-family:'Orbitron',monospace;font-size:8px;font-weight:700;cursor:pointer;border-radius:2px;letter-spacing:1px;border:none;}
-.btn-cyan{background:rgba(0,245,255,.15);color:var(--cyan);border:1px solid var(--cyan);}
-.btn-magenta{background:rgba(255,0,170,.15);color:var(--magenta);border:1px solid var(--magenta);}
-.btn-ia{background:rgba(170,119,255,.15);color:var(--ia);border:1px solid var(--ia);}
-.btn-close{position:absolute;top:10px;right:10px;background:transparent;border:none;color:var(--muted);font-size:14px;cursor:pointer;font-family:'Share Tech Mono',monospace;}
-
-.fuentes-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px;}
-.fuente-btn{padding:6px 4px;border:1px solid var(--border);background:#010a14;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:7px;cursor:pointer;transition:all .2s;text-align:center;border-radius:2px;}
-.fuente-btn:hover,.fuente-btn.sel{border-color:var(--ia);color:var(--ia);background:rgba(170,119,255,.07);}
-.fuente-btn .fi{font-size:13px;display:block;margin-bottom:2px;}
-
-.ia-result{border:1px solid rgba(170,119,255,.3);background:rgba(170,119,255,.04);padding:10px;border-radius:2px;margin-bottom:10px;display:none;}
-.ia-result-title{font-size:7px;letter-spacing:2px;color:var(--ia);font-family:'Orbitron',monospace;text-transform:uppercase;margin-bottom:7px;}
-.rf{margin-bottom:6px;}
+/* MODALES */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:2000;align-items:flex-end;justify-content:center;backdrop-filter:blur(8px);}
+.mo.on{display:flex;}
+@media(min-width:600px){.mo{align-items:center;}}
+.md{background:#030810;border:1px solid var(--cyan);width:100%;max-width:500px;padding:16px;position:relative;animation:su .2s ease;max-height:92vh;overflow-y:auto;border-radius:6px 6px 0 0;}
+@media(min-width:600px){.md{border-radius:4px;}}
+.md.mg{border-color:var(--magenta);}
+.md.ia{border-color:var(--ia);}
+@keyframes su{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.mtit{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;color:var(--cyan);margin-bottom:10px;}
+.mtit.mg{color:var(--magenta);}
+.mtit.ia{color:var(--ia);}
+.mhint{font-size:8px;color:var(--muted);margin-bottom:9px;padding:6px 8px;border:1px solid var(--border);border-left:2px solid var(--cyan);line-height:1.6;}
+.mhint.mg{border-left-color:var(--magenta);}
+.mhint.ia{border-left-color:var(--ia);}
+.fg{margin-bottom:9px;}
+.fl{font-size:7px;color:var(--muted);text-transform:uppercase;font-family:'Orbitron',monospace;display:block;margin-bottom:3px;}
+.fi,.fs,.fta{width:100%;background:#010a14;border:1px solid var(--border);color:var(--text);padding:7px 9px;font-family:'Share Tech Mono',monospace;font-size:12px;outline:none;border-radius:2px;}
+.fi:focus,.fs:focus,.fta:focus{border-color:var(--cyan);}
+.fs option{background:#030810;}
+.fta{resize:none;min-height:70px;}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.mas{display:flex;gap:6px;justify-content:flex-end;margin-top:10px;}
+.bcan{background:transparent;border:1px solid var(--border);color:var(--muted);padding:7px 12px;font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;border-radius:2px;}
+.bsave{padding:7px 13px;font-family:'Orbitron',monospace;font-size:8px;font-weight:700;cursor:pointer;border-radius:2px;}
+.bc2{background:rgba(0,245,255,.12);color:var(--cyan);border:1px solid var(--cyan);}
+.bmg{background:rgba(255,0,170,.12);color:var(--magenta);border:1px solid var(--magenta);}
+.bia2{background:rgba(170,119,255,.12);color:var(--ia);border:1px solid var(--ia);}
+.bclose{position:absolute;top:10px;right:10px;background:transparent;border:none;color:var(--muted);font-size:14px;cursor:pointer;}
+.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:9px;}
+.fbtn{padding:6px 3px;border:1px solid var(--border);background:#010a14;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:7px;cursor:pointer;text-align:center;border-radius:2px;transition:all .2s;}
+.fbtn.sel,.fbtn:hover{border-color:var(--ia);color:var(--ia);}
+.fbtn .fi2{font-size:12px;display:block;margin-bottom:1px;}
+.ires{border:1px solid rgba(170,119,255,.3);background:rgba(170,119,255,.04);padding:9px;border-radius:2px;margin-bottom:9px;display:none;}
+.irtit{font-size:7px;color:var(--ia);font-family:'Orbitron',monospace;letter-spacing:2px;margin-bottom:6px;}
+.rf{margin-bottom:5px;}
 .rl{font-size:6px;color:var(--ia);font-family:'Orbitron',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;}
-.rv{font-size:11px;color:var(--text);padding:4px 7px;background:#010a14;border:1px solid var(--border);border-radius:2px;}
-.rv[contenteditable="true"]:focus{outline:none;border-color:var(--ia);}
+.rv{font-size:11px;color:var(--text);padding:4px 6px;background:#010a14;border:1px solid var(--border);border-radius:2px;}
+.rv[contenteditable]:focus{outline:none;border-color:var(--ia);}
+.ures{border:1px solid rgba(255,0,170,.3);background:rgba(255,0,170,.04);padding:9px;border-radius:2px;margin-bottom:9px;display:none;}
+.urtit{font-size:7px;color:var(--magenta);font-family:'Orbitron',monospace;letter-spacing:2px;margin-bottom:6px;}
 
-/* URL extractor */
-.url-result{border:1px solid rgba(255,0,170,.3);background:rgba(255,0,170,.04);padding:10px;border-radius:2px;margin-bottom:10px;display:none;}
-.url-result-title{font-size:7px;letter-spacing:2px;color:var(--magenta);font-family:'Orbitron',monospace;text-transform:uppercase;margin-bottom:7px;}
+/* LOADING */
+#loading{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+#loading h2{font-family:'Orbitron',monospace;font-size:14px;color:var(--cyan);letter-spacing:3px;text-shadow:0 0 10px var(--cyan);}
+#loading p{font-size:9px;color:var(--muted);letter-spacing:2px;}
+.spinner{width:30px;height:30px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
-<div id="app">
+
+<!-- LOADING SCREEN -->
+<div id="loading">
+  <div class="spinner"></div>
+  <h2>IRAPUATO INTEL</h2>
+  <p id="load-msg">CONECTANDO CON BASE DE DATOS...</p>
+</div>
+
+<div id="app" style="display:none;">
 
 <header>
   <div class="logo">
-    <div class="logo-diamond"></div>
-    <div>
-      <h1>IRAPUATO INTEL</h1>
-      <span class="logo-sub" id="modo-sub">MODO ESCRITORIO</span>
-    </div>
+    <div class="diamond"></div>
+    <h1>IRA INTEL</h1>
   </div>
-  <div class="nav-tabs">
-    <button class="nav-tab active" id="tab-mapa" onclick="setVista('mapa')">🗺 MAPA</button>
-    <button class="nav-tab campo-tab" id="tab-campo" onclick="setVista('campo')">📡 CAMPO</button>
-    <button class="nav-tab stats-tab" id="tab-stats" onclick="setVista('stats')">📊 STATS</button>
+  <div class="nav">
+    <button class="ntab on" id="tab-mapa" onclick="setVista('mapa')">🗺 MAPA</button>
+    <button class="ntab" id="tab-campo" onclick="setVista('campo')">📡 CAMPO</button>
+    <button class="ntab" id="tab-stats" onclick="setVista('stats')">📊 STATS</button>
   </div>
-  <div class="header-actions">
-    <button class="hbtn hbtn-url" onclick="abrirURL()">🔗 URL</button>
-    <button class="hbtn hbtn-ia" onclick="abrirIA()">🤖 IA</button>
-    <button class="hbtn hbtn-add" onclick="abrirManual(null)">+ RPT</button>
+  <div class="acts">
+    <button class="abtn abtn-url" onclick="abrirURL()">🔗</button>
+    <button class="abtn abtn-ia" onclick="abrirIA()">🤖</button>
+    <button class="abtn abtn-add" onclick="abrirManual(null)">+</button>
   </div>
 </header>
 
-<div id="alerta-banner">⚠ ALERTA DE SEGURIDAD EN TU RADIO</div>
+<div id="status-bar">
+  <div id="db-status"><div class="db-dot" id="dbdot"></div><span id="dblbl">Conectando...</span></div>
+  <span id="modo-lbl" style="color:var(--muted);font-size:7px;font-family:Orbitron,monospace;">ESCRITORIO</span>
+</div>
+
+<div id="alerta">⚠ ALERTA DE SEGURIDAD EN TU RADIO</div>
 
 <div id="gps-bar">
-  <div class="gps-info"><div class="gps-dot" id="gps-dot"></div><span id="gps-status">Buscando GPS...</span></div>
-  <div class="gps-coords" id="gps-coords">—</div>
-  <div class="radio-ctrl">
+  <div class="ginfo"><div class="gdot" id="gdot"></div><span id="gst">Buscando GPS...</span></div>
+  <div class="gcoords" id="gcoords">—</div>
+  <div class="rctrl">
     <span>RADIO</span>
-    <input type="range" min="500" max="5000" step="500" value="2000" id="radio-sl" oninput="cambiarRadio(this.value)">
-    <span id="radio-lbl">2km</span>
+    <input type="range" min="500" max="5000" step="500" value="2000" id="rsl" oninput="cambiarRadio(this.value)">
+    <span id="rlbl">2km</span>
   </div>
 </div>
 
-<div class="stats-row">
-  <div class="sbox"><div class="snum" id="s-total">0</div><div class="slbl">EVENTOS</div></div>
-  <div class="sbox"><div class="snum" id="s-cerca" style="color:var(--green)">—</div><div class="slbl">CERCANOS</div></div>
-  <div class="sbox"><div class="snum" id="s-seg" style="color:var(--seguridad)">0</div><div class="slbl">SEGURIDAD</div></div>
+<div class="srow">
+  <div class="sbox"><div class="snum" id="s-tot">0</div><div class="slbl">EVENTOS</div></div>
+  <div class="sbox"><div class="snum" id="s-cer" style="color:var(--green)">—</div><div class="slbl">CERCANOS</div></div>
+  <div class="sbox"><div class="snum" id="s-seg" style="color:var(--seg)">0</div><div class="slbl">SEGURIDAD</div></div>
   <div class="sbox"><div class="snum" id="s-ia" style="color:var(--ia)">0</div><div class="slbl">VÍA IA</div></div>
 </div>
 
 <div class="main">
-
-  <!-- SIDEBAR -->
   <div id="sidebar">
-    <div class="sb-filters">
-      <div class="sb-title">TIPO DE EVENTO</div>
+    <div class="sf">
+      <div class="st">TIPO</div>
       <div class="chips">
-        <button class="chip active" data-t="todos" onclick="filtrar('todos',this)">TODOS</button>
+        <button class="chip on" data-t="todos" onclick="filtrar('todos',this)">TODOS</button>
         <button class="chip" data-t="seguridad" onclick="filtrar('seguridad',this)">SEG</button>
         <button class="chip" data-t="accidente" onclick="filtrar('accidente',this)">ACC</button>
         <button class="chip" data-t="evento" onclick="filtrar('evento',this)">EVE</button>
         <button class="chip" data-t="rumor" onclick="filtrar('rumor',this)">RUM</button>
       </div>
     </div>
-    <div class="time-filter">
-      <div class="sb-title">PERIODO</div>
-      <div class="time-chips">
-        <button class="tchip active" data-days="14" onclick="filtrarTiempo(14,this)">2 SEM</button>
-        <button class="tchip" data-days="30" onclick="filtrarTiempo(30,this)">1 MES</button>
-        <button class="tchip" data-days="90" onclick="filtrarTiempo(90,this)">3 MES</button>
-        <button class="tchip" data-days="365" onclick="filtrarTiempo(365,this)">1 AÑO</button>
-        <button class="tchip" data-days="0" onclick="filtrarTiempo(0,this)">TODO</button>
+    <div class="sf">
+      <div class="st">PERIODO</div>
+      <div class="tchips">
+        <button class="tc on" data-d="14" onclick="filtrarT(14,this)">2SEM</button>
+        <button class="tc" data-d="30" onclick="filtrarT(30,this)">1MES</button>
+        <button class="tc" data-d="90" onclick="filtrarT(90,this)">3MES</button>
+        <button class="tc" data-d="365" onclick="filtrarT(365,this)">1AÑO</button>
+        <button class="tc" data-d="0" onclick="filtrarT(0,this)">TODO</button>
       </div>
     </div>
-    <div class="ev-list" id="ev-list"></div>
-    <div class="sb-legend">
-      <div class="leg-items">
-        <div class="leg-item"><span class="ldot" style="background:#ff2255"></span>SEGURIDAD</div>
-        <div class="leg-item"><span class="ldot" style="background:#ffaa00"></span>ACCIDENTE</div>
-        <div class="leg-item"><span class="ldot" style="background:#00ccff"></span>EVENTO</div>
-        <div class="leg-item"><span class="ldot" style="background:#3a5a7a"></span>RUMOR</div>
-        <div class="leg-item"><span class="ldot" style="background:#00ff88"></span>MI POSICIÓN</div>
+    <div class="evlist" id="evlist"></div>
+    <div class="leg">
+      <div class="litems">
+        <div class="li"><span class="ldot" style="background:#ff2255"></span>SEGURIDAD</div>
+        <div class="li"><span class="ldot" style="background:#ffaa00"></span>ACCIDENTE</div>
+        <div class="li"><span class="ldot" style="background:#00ccff"></span>EVENTO</div>
+        <div class="li"><span class="ldot" style="background:#3a5a7a"></span>RUMOR</div>
+        <div class="li"><span class="ldot" style="background:#00ff88"></span>MI POSICIÓN</div>
       </div>
     </div>
   </div>
 
-  <!-- MAPA -->
-  <div class="map-wrap">
+  <div class="mapwrap">
     <div id="map"></div>
     <button id="fab" onclick="abrirManual('gps')">📍</button>
   </div>
 
-  <!-- PANEL CAMPO -->
-  <div id="panel-campo">
-    <div class="pc-title">
-      <span>📡 CERCANOS</span>
-      <span id="pc-radio-lbl" style="color:var(--muted);font-size:7px;">2KM</span>
-    </div>
-    <div class="cerca-list" id="cerca-list">
-      <div style="padding:16px;text-align:center;color:var(--muted);font-size:8px;font-family:Orbitron,monospace;">ACTIVANDO GPS...</div>
-    </div>
+  <div id="pcampo">
+    <div class="pct"><span>📡 CERCANOS</span><span id="prlbl" style="color:var(--muted);font-size:7px;">2KM</span></div>
+    <div class="clist" id="clist"><div style="padding:14px;text-align:center;color:var(--muted);font-size:8px;font-family:Orbitron,monospace;">ACTIVANDO GPS...</div></div>
   </div>
 
-  <!-- PANEL STATS (overlay) -->
-  <div id="panel-stats">
-    <div class="stats-header">
-      <div class="stats-title">// ANÁLISIS ESTADÍSTICO</div>
-      <button class="stats-close" onclick="setVista('mapa')">← VOLVER AL MAPA</button>
+  <div id="pstats">
+    <div class="sth">
+      <div class="sttitle">// ANÁLISIS HISTÓRICO</div>
+      <button class="stclose" onclick="setVista('mapa')">← MAPA</button>
     </div>
-    <div class="stats-body" id="stats-body"></div>
+    <div class="stbody" id="stbody"></div>
   </div>
-
 </div>
 
-<!-- BOTTOM PANEL MÓVIL -->
-<div id="panel-bottom">
-  <div class="pb-handle" onclick="toggleBottom()"></div>
-  <div class="pb-tabs">
-    <div class="pbtab active" onclick="setPBTab('cercanos',this)">📡 CERCANOS</div>
-    <div class="pbtab" onclick="setPBTab('todos',this)">📋 TODOS</div>
+<div id="pbottom">
+  <div class="pbh" onclick="togglePB()"></div>
+  <div class="pbtabs">
+    <div class="pbt on" onclick="setPBT('c',this)">📡 CERCANOS</div>
+    <div class="pbt" onclick="setPBT('t',this)">📋 TODOS</div>
   </div>
-  <div class="pb-content" id="pb-content"></div>
+  <div class="pbcont" id="pbcont"></div>
 </div>
 
-<div class="ticker">
-  <span class="ticker-lbl">LIVE</span>
-  <span class="ticker-txt" id="ticker-txt">—</span>
-</div>
+<div class="ticker"><span class="tlbl">LIVE</span><span class="ttxt" id="ttxt">—</span></div>
+
+</div><!-- /app -->
 
 <!-- MODAL MANUAL -->
-<div class="modal-overlay" id="m-manual">
-  <div class="modal">
-    <button class="btn-close" onclick="cerrarManual()">✕</button>
-    <div class="modal-title">// NUEVO REPORTE</div>
-    <div class="modal-hint" id="hint-coords">📍 Toca el mapa para fijar ubicación exacta.</div>
-    <div class="form-group"><label class="form-label">TÍTULO *</label><input class="form-input" id="f-titulo" placeholder="Describe el evento brevemente"/></div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">TIPO</label>
-        <select class="form-select" id="f-tipo">
+<div class="mo" id="m-man">
+  <div class="md">
+    <button class="bclose" onclick="cerrarManual()">✕</button>
+    <div class="mtit">// NUEVO REPORTE</div>
+    <div class="mhint" id="mhint">📍 Toca el mapa para fijar ubicación.</div>
+    <div class="fg"><label class="fl">TÍTULO *</label><input class="fi" id="f-tit" placeholder="Describe el evento"/></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">TIPO</label>
+        <select class="fs" id="f-tipo">
           <option value="seguridad">🔴 Seguridad</option>
           <option value="accidente">🟠 Accidente</option>
           <option value="evento">🔵 Evento</option>
           <option value="rumor">⚪ Rumor</option>
         </select>
       </div>
-      <div class="form-group"><label class="form-label">FUENTE</label>
-        <select class="form-select" id="f-fuente">
+      <div class="fg"><label class="fl">FUENTE</label>
+        <select class="fs" id="f-fue">
           <option>Reporte manual</option><option>Municipio Irapuato</option>
           <option>En Tinta Negra</option><option>El Sol de Irapuato</option>
-          <option>AM Guanajuato</option><option>Periódico Correo</option>
-          <option>Facebook</option><option>WhatsApp</option><option>Observación directa</option>
+          <option>AM Guanajuato</option><option>Facebook</option>
+          <option>WhatsApp</option><option>Observación directa</option>
         </select>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">LUGAR / COLONIA</label><input class="form-input" id="f-lugar" placeholder="Ej: Col. Centro, Blvd. Arandas"/></div>
-    <div class="form-group"><label class="form-label">DESCRIPCIÓN</label><textarea class="form-textarea" id="f-desc" placeholder="Detalles del evento..."></textarea></div>
-    <div class="form-group"><label class="form-label">URL DE LA NOTICIA (opcional)</label><input class="form-input" id="f-url" placeholder="https://..."/></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="cerrarManual()">CANCELAR</button>
-      <button class="btn-save btn-cyan" onclick="guardarManual()">REGISTRAR →</button>
+    <div class="fg"><label class="fl">LUGAR / COLONIA</label><input class="fi" id="f-lug" placeholder="Ej: Col. Centro, Blvd. Arandas"/></div>
+    <div class="fg"><label class="fl">DESCRIPCIÓN</label><textarea class="fta" id="f-desc" placeholder="Detalles..."></textarea></div>
+    <div class="fg"><label class="fl">URL (opcional)</label><input class="fi" id="f-url" placeholder="https://..."/></div>
+    <div class="mas">
+      <button class="bcan" onclick="cerrarManual()">CANCELAR</button>
+      <button class="bsave bc2" onclick="guardarManual()">REGISTRAR →</button>
     </div>
   </div>
 </div>
 
 <!-- MODAL URL -->
-<div class="modal-overlay" id="m-url">
-  <div class="modal magenta">
-    <button class="btn-close" onclick="cerrarURL()">✕</button>
-    <div class="modal-title mg">// EXTRACTOR DE NOTICIAS WEB</div>
-    <div class="modal-hint mg">
-      1. Abre la noticia en Chrome<br>
-      2. Copia todo el texto (mantén presionado → Seleccionar todo → Copiar)<br>
-      3. Pega el texto abajo + pega la URL<br>
-      4. La IA extrae lugar, tipo y resumen automáticamente
-    </div>
-    <div class="form-group"><label class="form-label">FUENTE</label>
-      <div class="fuentes-grid">
-        <button class="fuente-btn sel" data-f="Municipio Irapuato" onclick="selF(this,'url')"><span class="fi">🏛</span>MUNICIPIO</button>
-        <button class="fuente-btn" data-f="En Tinta Negra" onclick="selF(this,'url')"><span class="fi">📰</span>TINTA NEGRA</button>
-        <button class="fuente-btn" data-f="El Sol de Irapuato" onclick="selF(this,'url')"><span class="fi">📰</span>EL SOL</button>
-        <button class="fuente-btn" data-f="AM Guanajuato" onclick="selF(this,'url')"><span class="fi">📰</span>AM GTO</button>
-        <button class="fuente-btn" data-f="Periódico Correo" onclick="selF(this,'url')"><span class="fi">📰</span>CORREO</button>
-        <button class="fuente-btn" data-f="Otro" onclick="selF(this,'url')"><span class="fi">🌐</span>OTRO</button>
+<div class="mo" id="m-url">
+  <div class="md mg">
+    <button class="bclose" onclick="cerrarURL()">✕</button>
+    <div class="mtit mg">// EXTRACTOR DE NOTICIAS</div>
+    <div class="mhint mg">1. Abre la noticia en Chrome → 2. Copia todo el texto → 3. Pégalo abajo + la URL → 4. La IA extrae todo automáticamente</div>
+    <div class="fg"><label class="fl">FUENTE</label>
+      <div class="fgrid">
+        <button class="fbtn sel" data-f="Municipio Irapuato" onclick="selF(this,'u')"><span class="fi2">🏛</span>MUNICIPIO</button>
+        <button class="fbtn" data-f="En Tinta Negra" onclick="selF(this,'u')"><span class="fi2">📰</span>TINTA NEGRA</button>
+        <button class="fbtn" data-f="El Sol de Irapuato" onclick="selF(this,'u')"><span class="fi2">📰</span>EL SOL</button>
+        <button class="fbtn" data-f="AM Guanajuato" onclick="selF(this,'u')"><span class="fi2">📰</span>AM GTO</button>
+        <button class="fbtn" data-f="Periódico Correo" onclick="selF(this,'u')"><span class="fi2">📰</span>CORREO</button>
+        <button class="fbtn" data-f="Otro" onclick="selF(this,'u')"><span class="fi2">🌐</span>OTRO</button>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">URL DE LA NOTICIA</label><input class="form-input" id="url-link" placeholder="https://entintanegra.com/..."/></div>
-    <div class="form-group"><label class="form-label">TEXTO DE LA NOTICIA (pegado desde el sitio)</label>
-      <textarea class="form-textarea" id="url-texto" style="min-height:100px;" placeholder="Pega aquí el texto completo de la noticia..."></textarea>
-    </div>
-    <div class="url-result" id="url-result">
-      <div class="url-result-title" id="url-conf">✓ EXTRACCIÓN COMPLETADA</div>
-      <div class="rf"><div class="rl">TÍTULO</div><div class="rv" id="ur-titulo" contenteditable="true"></div></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
+    <div class="fg"><label class="fl">URL DE LA NOTICIA</label><input class="fi" id="u-link" placeholder="https://..."/></div>
+    <div class="fg"><label class="fl">TEXTO DE LA NOTICIA</label><textarea class="fta" id="u-txt" style="min-height:90px;" placeholder="Pega el texto completo aquí..."></textarea></div>
+    <div class="ures" id="ures">
+      <div class="urtit" id="uconf">✓ EXTRACCIÓN COMPLETADA</div>
+      <div class="rf"><div class="rl">TÍTULO</div><div class="rv" id="ur-tit" contenteditable="true"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:5px;">
         <div class="rf"><div class="rl">TIPO</div>
-          <select class="form-input" id="ur-tipo" style="font-size:11px;">
+          <select class="fi" id="ur-tipo" style="font-size:11px;">
             <option value="seguridad">🔴 Seguridad</option><option value="accidente">🟠 Accidente</option>
             <option value="evento">🔵 Evento</option><option value="rumor">⚪ Rumor</option>
           </select>
         </div>
-        <div class="rf"><div class="rl">COLONIA / LUGAR</div><div class="rv" id="ur-lugar" contenteditable="true"></div></div>
+        <div class="rf"><div class="rl">LUGAR</div><div class="rv" id="ur-lug" contenteditable="true"></div></div>
       </div>
-      <div class="rf"><div class="rl">RESUMEN</div><div class="rv" id="ur-resumen" contenteditable="true" style="min-height:40px;"></div></div>
+      <div class="rf"><div class="rl">RESUMEN</div><div class="rv" id="ur-res" contenteditable="true" style="min-height:40px;"></div></div>
     </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="cerrarURL()">CANCELAR</button>
-      <button class="btn-save btn-magenta" id="btn-extraer" onclick="extraerURL()">EXTRAER CON IA →</button>
-      <button class="btn-save btn-cyan" id="btn-guardar-url" onclick="guardarDesdeURL()" style="display:none;">GUARDAR EN MAPA →</button>
+    <div class="mas">
+      <button class="bcan" onclick="cerrarURL()">CANCELAR</button>
+      <button class="bsave bmg" id="b-ext" onclick="extraer()">EXTRAER CON IA →</button>
+      <button class="bsave bc2" id="b-gurl" onclick="guardarURL()" style="display:none;">GUARDAR →</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL IA TEXTO -->
-<div class="modal-overlay" id="m-ia">
-  <div class="modal ia-modal">
-    <button class="btn-close" onclick="cerrarIA()">✕</button>
-    <div class="modal-title ia">// ANALIZADOR IA — TEXTO LIBRE</div>
-    <div class="modal-hint ia">Pega texto de Facebook, WhatsApp o cualquier fuente.</div>
-    <div class="form-group"><label class="form-label">FUENTE</label>
-      <div class="fuentes-grid">
-        <button class="fuente-btn sel" data-f="AM Guanajuato" onclick="selF(this,'ia')"><span class="fi">📰</span>AM GTO</button>
-        <button class="fuente-btn" data-f="En Tinta Negra" onclick="selF(this,'ia')"><span class="fi">📰</span>TINTA NEGRA</button>
-        <button class="fuente-btn" data-f="El Sol de Irapuato" onclick="selF(this,'ia')"><span class="fi">📰</span>EL SOL</button>
-        <button class="fuente-btn" data-f="Facebook" onclick="selF(this,'ia')"><span class="fi">📘</span>FACEBOOK</button>
-        <button class="fuente-btn" data-f="WhatsApp" onclick="selF(this,'ia')"><span class="fi">💬</span>WHATSAPP</button>
-        <button class="fuente-btn" data-f="Otro" onclick="selF(this,'ia')"><span class="fi">📝</span>OTRO</button>
+<!-- MODAL IA -->
+<div class="mo" id="m-ia">
+  <div class="md ia">
+    <button class="bclose" onclick="cerrarIA()">✕</button>
+    <div class="mtit ia">// ANALIZADOR IA</div>
+    <div class="mhint ia">Pega texto de Facebook, WhatsApp o cualquier fuente.</div>
+    <div class="fg"><label class="fl">FUENTE</label>
+      <div class="fgrid">
+        <button class="fbtn sel" data-f="AM Guanajuato" onclick="selF(this,'i')"><span class="fi2">📰</span>AM GTO</button>
+        <button class="fbtn" data-f="En Tinta Negra" onclick="selF(this,'i')"><span class="fi2">📰</span>TINTA NEGRA</button>
+        <button class="fbtn" data-f="El Sol de Irapuato" onclick="selF(this,'i')"><span class="fi2">📰</span>EL SOL</button>
+        <button class="fbtn" data-f="Facebook" onclick="selF(this,'i')"><span class="fi2">📘</span>FACEBOOK</button>
+        <button class="fbtn" data-f="WhatsApp" onclick="selF(this,'i')"><span class="fi2">💬</span>WHATSAPP</button>
+        <button class="fbtn" data-f="Otro" onclick="selF(this,'i')"><span class="fi2">📝</span>OTRO</button>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">TEXTO</label>
-      <textarea class="form-textarea" id="ia-texto" style="min-height:100px;" placeholder="Pega el texto aquí..."></textarea>
-    </div>
-    <div class="ia-result" id="ia-result">
-      <div class="ia-result-title" id="ia-conf">✓ ANÁLISIS</div>
-      <div class="rf"><div class="rl">TÍTULO</div><div class="rv" id="r-titulo" contenteditable="true"></div></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div class="fg"><label class="fl">TEXTO</label><textarea class="fta" id="ia-txt" style="min-height:90px;" placeholder="Pega el texto aquí..."></textarea></div>
+    <div class="ires" id="ires">
+      <div class="irtit" id="iconf">✓ ANÁLISIS</div>
+      <div class="rf"><div class="rl">TÍTULO</div><div class="rv" id="r-tit" contenteditable="true"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
         <div class="rf"><div class="rl">TIPO</div>
-          <select class="form-input" id="r-tipo" style="font-size:11px;">
+          <select class="fi" id="r-tipo" style="font-size:11px;">
             <option value="seguridad">🔴 Seguridad</option><option value="accidente">🟠 Accidente</option>
             <option value="evento">🔵 Evento</option><option value="rumor">⚪ Rumor</option>
           </select>
         </div>
-        <div class="rf"><div class="rl">LUGAR</div><div class="rv" id="r-lugar" contenteditable="true"></div></div>
+        <div class="rf"><div class="rl">LUGAR</div><div class="rv" id="r-lug" contenteditable="true"></div></div>
       </div>
-      <div class="rf"><div class="rl">RESUMEN</div><div class="rv" id="r-resumen" contenteditable="true" style="min-height:40px;"></div></div>
+      <div class="rf"><div class="rl">RESUMEN</div><div class="rv" id="r-res" contenteditable="true" style="min-height:38px;"></div></div>
     </div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="cerrarIA()">CANCELAR</button>
-      <button class="btn-save btn-ia" id="btn-analizar" onclick="analizar()">ANALIZAR →</button>
-      <button class="btn-save btn-cyan" id="btn-guardar-ia" onclick="guardarIA()" style="display:none;">GUARDAR →</button>
+    <div class="mas">
+      <button class="bcan" onclick="cerrarIA()">CANCELAR</button>
+      <button class="bsave bia2" id="b-ana" onclick="analizar()">ANALIZAR →</button>
+      <button class="bsave bc2" id="b-gia" onclick="guardarIA()" style="display:none;">GUARDAR →</button>
     </div>
   </div>
 </div>
 
-<script>
-// ── CONSTANTES ─────────────────────────────────────────────────
-const GEO={cLat:20.6795,cLng:-101.3540};
-const COLORES={seguridad:'#ff2255',accidente:'#ffaa00',evento:'#00ccff',rumor:'#3a6a8a'};
-const NOMINATIM='https://nominatim.openstreetmap.org/search';
+<!-- FIREBASE + LEAFLET -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
-// ── ESTADO ─────────────────────────────────────────────────────
-let eventos=JSON.parse(localStorage.getItem('ira-v7')||'null')||[
-  {id:1,titulo:"Accidente en Blvd. Arandas",tipo:"accidente",lugar:"Blvd. Arandas esq. Libramiento Norte",colonia:"Zona Norte",descripcion:"Choque entre dos vehículos. Tráfico lento.",fuente:"Observación directa",fecha:new Date().toISOString(),lat:20.6834,lng:-101.3510,viaIA:false,url:''},
-  {id:2,titulo:"Feria de empleo en el Centro",tipo:"evento",lugar:"Jardín Principal, Centro Histórico",colonia:"Centro Histórico",descripcion:"Feria de empleo municipal con más de 30 empresas.",fuente:"AM Guanajuato",fecha:new Date().toISOString(),lat:20.6795,lng:-101.3540,viaIA:false,url:''},
-  {id:3,titulo:"Rumor: corte de agua Col. Delegaciones",tipo:"rumor",lugar:"Col. Delegaciones",colonia:"Col. Delegaciones",descripcion:"Posible corte de agua. No confirmado por SAPAL.",fuente:"WhatsApp",fecha:new Date().toISOString(),lat:20.6750,lng:-101.3480,viaIA:false,url:''},
-  {id:4,titulo:"Robo a negocio en Col. Centro",tipo:"seguridad",lugar:"Calle Obregón, Col. Centro",colonia:"Centro Histórico",descripcion:"Asalto a tienda de conveniencia en la madrugada.",fuente:"Facebook",fecha:new Date().toISOString(),lat:20.6810,lng:-101.3555,viaIA:false,url:''},
-  {id:5,titulo:"Asalto a transeúnte en Col. Trojes",tipo:"seguridad",lugar:"Av. Las Trojes",colonia:"Col. Trojes",descripcion:"Robo con violencia reportado por vecinos.",fuente:"Facebook",fecha:new Date(Date.now()-5*86400000).toISOString(),lat:20.6720,lng:-101.3600,viaIA:false,url:''},
-  {id:6,titulo:"Choque en Periférico",tipo:"accidente",lugar:"Periférico Manuel Gomez Morín",colonia:"Zona Norte",descripcion:"Colisión entre camioneta y moto.",fuente:"En Tinta Negra",fecha:new Date(Date.now()-3*86400000).toISOString(),lat:20.6900,lng:-101.3450,viaIA:false,url:''},
-  {id:7,titulo:"Robo a casa habitación",tipo:"seguridad",lugar:"Col. Jardines de Irapuato",colonia:"Col. Jardines",descripcion:"Robo en vivienda durante horas de trabajo.",fuente:"WhatsApp",fecha:new Date(Date.now()-8*86400000).toISOString(),lat:20.6760,lng:-101.3520,viaIA:false,url:''},
-  {id:8,titulo:"Robo a vehículo Col. Centro",tipo:"seguridad",lugar:"Calle Hidalgo",colonia:"Centro Histórico",descripcion:"Robo de autopartes en estacionamiento.",fuente:"Facebook",fecha:new Date(Date.now()-12*86400000).toISOString(),lat:20.6800,lng:-101.3560,viaIA:false,url:''}
-];
+// ── FIREBASE CONFIG ─────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyDQ0DDscWK0HR5nNkhMyzOVk_sxYZ0pGg4",
+  authDomain: "irapuato-intel.firebaseapp.com",
+  projectId: "irapuato-intel",
+  storageBucket: "irapuato-intel.firebasestorage.app",
+  messagingSenderId: "39562297804",
+  appId: "1:39562297804:web:5d5c488450b21dbcfbdd69"
+};
 
-let vista='mapa';
-let filtroTipo='todos';
-let filtroDias=14;
-let coordsClick=null;
-let fuenteIA='AM Guanajuato';
-let fuenteURL='Municipio Irapuato';
-let iaResultado=null;
-let urlResultado=null;
-let miPos=null;
-let radioAlerta=2000;
-let gpsWatcher=null;
-let ultimaAlerta=0;
-let pbTab='cercanos';
-let pbOpen=true;
-let leafletMarkers={};
-let miPosMarker=null;
-let radioCircle=null;
-let heatLayer=null;
-let periodStats=365;
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
 
-// ── MAPA LEAFLET ───────────────────────────────────────────────
-const map=L.map('map',{center:[GEO.cLat,GEO.cLng],zoom:14,zoomControl:false,attributionControl:true});
+// ── CONSTANTES ──────────────────────────────────────────────────
+const GEO = {cLat:20.6795, cLng:-101.3540};
+const COLORES = {seguridad:'#ff2255',accidente:'#ffaa00',evento:'#00ccff',rumor:'#3a6a8a'};
+const GEMINI_KEY = 'AIzaSyBEOLcxYFZFk6_IM4iZ9WjeLoUJi1RgAnw';
+const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+
+// ── ESTADO ──────────────────────────────────────────────────────
+let eventos = [];
+let vista = 'mapa';
+let filtroTipo = 'todos';
+let filtroDias = 14;
+let coordsClick = null;
+let fuenteURL = 'Municipio Irapuato';
+let fuenteIA = 'AM Guanajuato';
+let urlRes = null;
+let iaRes = null;
+let miPos = null;
+let radio = 2000;
+let gpsW = null;
+let ultimaAlerta = 0;
+let pbtab = 'c';
+let pbOpen = true;
+let markers = {};
+let posMarker = null;
+let radioCircle = null;
+let heatLayer = null;
+let periodStats = 365;
+
+// ── MAPA ────────────────────────────────────────────────────────
+const map = L.map('map', {center:[GEO.cLat,GEO.cLng], zoom:14, zoomControl:false, attributionControl:true});
 L.control.zoom({position:'topright'}).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-  attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19
 }).addTo(map);
+map.on('click', e => { coordsClick = {lat:e.latlng.lat, lng:e.latlng.lng}; abrirManual(null); });
 
-map.on('click',e=>{
-  coordsClick={lat:e.latlng.lat,lng:e.latlng.lng};
-  abrirManual(null);
+// ── FIREBASE LISTENER ───────────────────────────────────────────
+const q = query(collection(db,'eventos'), orderBy('fecha','desc'));
+onSnapshot(q, snap => {
+  eventos = snap.docs.map(d => ({id:d.id, ...d.data()}));
+  document.getElementById('dbdot').className = 'db-dot ok';
+  document.getElementById('dblbl').textContent = `Firebase OK — ${eventos.length} eventos`;
+  renderMarcadores();
+  renderLista();
+  actualizarStats();
+  if(miPos) renderCercanos();
+  if(document.getElementById('loading').style.display !== 'none'){
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    setTimeout(()=>map.invalidateSize(), 200);
+  }
+}, err => {
+  console.error(err);
+  document.getElementById('dbdot').className = 'db-dot err';
+  document.getElementById('dblbl').textContent = 'Error de conexión';
+  // Mostrar app igual aunque falle Firebase
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  setTimeout(()=>map.invalidateSize(), 200);
 });
 
-// ── GEOCODIFICACIÓN ────────────────────────────────────────────
-async function geocodificar(lugar){
-  try{
-    const q=encodeURIComponent(lugar+', Irapuato, Guanajuato, Mexico');
-    const res=await fetch(`${NOMINATIM}?q=${q}&format=json&limit=1&countrycodes=mx`);
-    const data=await res.json();
-    if(data&&data.length>0){
-      return {lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lon)};
-    }
-  }catch(e){console.warn('Geocodificación falló:',e);}
+// Timeout de seguridad — si Firebase tarda más de 6s, mostrar app de todas formas
+setTimeout(()=>{
+  if(document.getElementById('loading').style.display !== 'none'){
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    setTimeout(()=>map.invalidateSize(), 200);
+  }
+}, 6000);
+
+// ── GEOCODIFICACIÓN ─────────────────────────────────────────────
+async function geocodificar(lugar) {
+  try {
+    const q2 = encodeURIComponent(lugar + ', Irapuato, Guanajuato, Mexico');
+    const res = await fetch(`${NOMINATIM}?q=${q2}&format=json&limit=1&countrycodes=mx`);
+    const data = await res.json();
+    if(data && data.length > 0) return {lat:parseFloat(data[0].lat), lng:parseFloat(data[0].lon)};
+  } catch(e) {}
   return null;
 }
 
-// ── ICONOS CYBERPUNK NEON ──────────────────────────────────────
-function crearIcono(tipo,viaIA,cercano){
-  const color=COLORES[tipo]||COLORES.rumor;
-  const glow=cercano?`filter:drop-shadow(0 0 6px ${color})`:
-             `filter:drop-shadow(0 0 3px ${color}88)`;
-  const iaRing=viaIA?`<circle cx="16" cy="16" r="13" fill="none" stroke="#aa77ff" stroke-width="1" stroke-dasharray="3,2" opacity=".7"/>`:'';
-  const icons={seguridad:'!',accidente:'~',evento:'★',rumor:'?'};
-  const sz=cercano?11:9;
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" style="${glow}">
-    <circle cx="16" cy="16" r="14" fill="${color}15" stroke="${color}40" stroke-width="1"/>
-    <circle cx="16" cy="16" r="9" fill="${color}" stroke="${color}" stroke-width="0"/>
-    <circle cx="16" cy="16" r="4" fill="${color}aa"/>
-    <text x="16" y="20" text-anchor="middle" font-size="${sz}" font-weight="bold" fill="#000" font-family="sans-serif">${icons[tipo]||'●'}</text>
-    ${iaRing}
+// ── ICONOS ──────────────────────────────────────────────────────
+function crearIcono(tipo, viaIA, cercano) {
+  const c = COLORES[tipo]||COLORES.rumor;
+  const g = cercano ? `filter:drop-shadow(0 0 5px ${c})` : `filter:drop-shadow(0 0 2px ${c}88)`;
+  const ring = viaIA ? `<circle cx="16" cy="16" r="13" fill="none" stroke="#aa77ff" stroke-width="1" stroke-dasharray="3,2"/>` : '';
+  const ico = {seguridad:'!',accidente:'~',evento:'★',rumor:'?'};
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" style="${g}">
+    <circle cx="16" cy="16" r="14" fill="${c}15" stroke="${c}44" stroke-width="1"/>
+    <circle cx="16" cy="16" r="9" fill="${c}"/>
+    <circle cx="16" cy="16" r="4" fill="${c}99"/>
+    <text x="16" y="20" text-anchor="middle" font-size="9" font-weight="bold" fill="#000" font-family="sans-serif">${ico[tipo]||'●'}</text>
+    ${ring}
   </svg>`;
-  return L.divIcon({html:svg,className:'',iconSize:[32,32],iconAnchor:[16,16],popupAnchor:[0,-18]});
+  return L.divIcon({html:svg, className:'', iconSize:[32,32], iconAnchor:[16,16], popupAnchor:[0,-18]});
 }
 
-function crearPopup(ev){
-  const color=COLORES[ev.tipo]||COLORES.rumor;
-  const fecha=new Date(ev.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
-  const distHtml=miPos?`<div class="lp-dist" style="color:${color}">📡 ${fmtD(dist(miPos.lat,miPos.lng,ev.lat,ev.lng))} de ti</div>`:'';
-  const linkHtml=ev.url?`<a href="${ev.url}" target="_blank" class="lp-link">↗ VER NOTICIA ORIGINAL</a>`:'';
+function crearPopup(ev) {
+  const c = COLORES[ev.tipo]||COLORES.rumor;
+  const fecha = ev.fecha?.toDate ? ev.fecha.toDate().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+  const distH = miPos ? `<div class="lpdist" style="color:${c}">📡 ${fmtD(dist(miPos.lat,miPos.lng,ev.lat,ev.lng))} de ti</div>` : '';
+  const linkH = ev.url ? `<a href="${ev.url}" target="_blank" class="lplink">↗ VER NOTICIA</a>` : '';
   return `<div>
-    <span class="lp-tipo" style="background:${color}22;color:${color};text-shadow:0 0 8px ${color}88">${ev.tipo.toUpperCase()}${ev.viaIA?' 🤖':''}</span>
-    <div class="lp-titulo">${ev.titulo}</div>
-    <div class="lp-lugar">📍 ${ev.lugar}</div>
-    <div class="lp-desc">${ev.descripcion}</div>
-    ${distHtml}
-    <div class="lp-meta"><span>${ev.fuente} | ${fecha}</span>${linkHtml}</div>
+    <span class="lpt" style="background:${c}22;color:${c}">${(ev.tipo||'').toUpperCase()}${ev.viaIA?' 🤖':''}</span>
+    <div class="lptit">${ev.titulo||''}</div>
+    <div class="lplug">📍 ${ev.lugar||''}</div>
+    <div class="lpdesc">${ev.descripcion||''}</div>
+    ${distH}
+    <div class="lpmeta"><span>${ev.fuente||''} | ${fecha}</span>${linkH}</div>
   </div>`;
 }
 
-// ── MAPA DE CALOR ──────────────────────────────────────────────
-function actualizarHeatmap(){
-  if(heatLayer){map.removeLayer(heatLayer);heatLayer=null;}
-  const corte=periodStats>0?Date.now()-periodStats*86400000:0;
-  const puntos=eventos
-    .filter(ev=>ev.tipo==='seguridad'&&(periodStats===0||new Date(ev.fecha).getTime()>=corte))
-    .map(ev=>[ev.lat,ev.lng,1.0]);
-  if(puntos.length===0)return;
-  heatLayer=L.heatLayer(puntos,{
-    radius:40,blur:35,maxZoom:17,
-    gradient:{0.2:'rgba(0,255,136,0.4)',0.5:'rgba(255,238,0,0.6)',0.8:'rgba(255,100,0,0.7)',1.0:'rgba(255,34,85,0.85)'}
-  }).addTo(map);
-}
-
-// ── RENDER MARCADORES ──────────────────────────────────────────
-function getEventosFiltrados(){
-  const corte=filtroDias>0?Date.now()-filtroDias*86400000:0;
-  return eventos.filter(ev=>{
-    const tipoOk=filtroTipo==='todos'||ev.tipo===filtroTipo;
-    const timeOk=filtroDias===0||new Date(ev.fecha).getTime()>=corte;
-    return tipoOk&&timeOk;
-  });
-}
-
-function renderMarcadores(){
-  Object.values(leafletMarkers).forEach(m=>map.removeLayer(m));
-  leafletMarkers={};
-  const filtrados=getEventosFiltrados();
-  filtrados.forEach(ev=>{
-    const cercano=miPos&&dist(miPos.lat,miPos.lng,ev.lat,ev.lng)<=radioAlerta;
-    const m=L.marker([ev.lat,ev.lng],{icon:crearIcono(ev.tipo,ev.viaIA,cercano)})
-      .addTo(map).bindPopup(crearPopup(ev),{maxWidth:280});
-    leafletMarkers[ev.id]=m;
-  });
-  actualizarHeatmap();
-}
-
-function actualizarIconosCercania(){
-  Object.entries(leafletMarkers).forEach(([id,m])=>{
-    const ev=eventos.find(e=>e.id==id);
-    if(ev){
-      const cercano=miPos&&dist(miPos.lat,miPos.lng,ev.lat,ev.lng)<=radioAlerta;
-      m.setIcon(crearIcono(ev.tipo,ev.viaIA,cercano));
-      m.setPopupContent(crearPopup(ev));
-    }
-  });
-}
-
-// ── GPS ────────────────────────────────────────────────────────
-function iniciarGPS(){
-  if(!navigator.geolocation){document.getElementById('gps-status').textContent='GPS no disponible';return;}
-  document.getElementById('gps-status').textContent='Buscando señal...';
-  gpsWatcher=navigator.geolocation.watchPosition(pos=>{
-    miPos={lat:pos.coords.latitude,lng:pos.coords.longitude,acc:pos.coords.accuracy};
-    document.getElementById('gps-dot').classList.add('fix');
-    document.getElementById('gps-status').textContent=`GPS ±${Math.round(pos.coords.accuracy)}m`;
-    document.getElementById('gps-coords').textContent=`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
-    actualizarPosMap();actualizarIconosCercania();verificarAlertas();renderCercanos();
-  },()=>{
-    document.getElementById('gps-status').textContent='Sin GPS — usando demo';
-    miPos={lat:GEO.cLat,lng:GEO.cLng,acc:50};
-    document.getElementById('gps-coords').textContent='DEMO';
-    actualizarPosMap();verificarAlertas();renderCercanos();
-  },{enableHighAccuracy:true,timeout:15000,maximumAge:8000});
-}
-
-function detenerGPS(){
-  if(gpsWatcher!==null){navigator.geolocation.clearWatch(gpsWatcher);gpsWatcher=null;}
-  miPos=null;
-  if(miPosMarker){map.removeLayer(miPosMarker);miPosMarker=null;}
-  if(radioCircle){map.removeLayer(radioCircle);radioCircle=null;}
-  document.getElementById('gps-dot').classList.remove('fix');
-  document.getElementById('gps-status').textContent='GPS desactivado';
-  document.getElementById('gps-coords').textContent='—';
-  document.getElementById('alerta-banner').classList.remove('visible');
-  document.getElementById('s-cerca').textContent='—';
-  actualizarIconosCercania();
-}
-
-function actualizarPosMap(){
-  if(!miPos)return;
-  if(radioCircle)map.removeLayer(radioCircle);
-  radioCircle=L.circle([miPos.lat,miPos.lng],{
-    radius:radioAlerta,color:'#00ff88',fillColor:'#00ff88',
-    fillOpacity:.04,weight:1,dashArray:'4,4',
-    className:'radio-circle'
-  }).addTo(map);
-  if(miPosMarker)map.removeLayer(miPosMarker);
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26" style="filter:drop-shadow(0 0 6px #00ff88)">
-    <circle cx="13" cy="13" r="11" fill="rgba(0,255,136,.12)" stroke="#00ff88" stroke-width="1.5"/>
-    <circle cx="13" cy="13" r="6" fill="#00ff88" stroke="white" stroke-width="1.5"/>
-    <circle cx="13" cy="13" r="2" fill="white"/>
-  </svg>`;
-  miPosMarker=L.marker([miPos.lat,miPos.lng],{
-    icon:L.divIcon({html:svg,className:'',iconSize:[26,26],iconAnchor:[13,13]}),zIndexOffset:1000
-  }).addTo(map).bindPopup('<div style="font-family:Orbitron,monospace;font-size:9px;color:#00ff88;text-shadow:0 0 8px #00ff88">📍 TU POSICIÓN</div>');
-}
-
-function dist(la1,lo1,la2,lo2){
-  const R=6371000,d1=(la2-la1)*Math.PI/180,d2=(lo2-lo1)*Math.PI/180;
-  const a=Math.sin(d1/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(d2/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-function fmtD(d){return d<1000?Math.round(d)+'m':(d/1000).toFixed(1)+'km';}
-
-function verificarAlertas(){
-  if(!miPos)return;
-  const p=eventos.filter(ev=>ev.tipo==='seguridad'&&dist(miPos.lat,miPos.lng,ev.lat,ev.lng)<=radioAlerta);
-  const banner=document.getElementById('alerta-banner');
-  if(p.length>0){
-    banner.textContent=`⚠ ALERTA — ${p.length} EVENTO(S) DE SEGURIDAD EN RADIO ${fmtD(radioAlerta).toUpperCase()}`;
-    banner.classList.add('visible');
-    const now=Date.now();
-    if(navigator.vibrate&&now-ultimaAlerta>30000){navigator.vibrate([300,150,300]);ultimaAlerta=now;}
-  } else banner.classList.remove('visible');
-}
-
-function cambiarRadio(val){
-  radioAlerta=parseInt(val);
-  document.getElementById('radio-lbl').textContent=fmtD(radioAlerta);
-  document.getElementById('pc-radio-lbl').textContent=fmtD(radioAlerta).toUpperCase();
-  if(radioCircle&&miPos)radioCircle.setRadius(radioAlerta);
-  verificarAlertas();renderCercanos();actualizarIconosCercania();
-}
-
-// ── VISTAS ────────────────────────────────────────────────────
-function setVista(v){
-  vista=v;
-  const isMobile=window.innerWidth<700;
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tab-'+v).classList.add('active');
-  document.getElementById('modo-sub').textContent=
-    v==='mapa'?'MODO ESCRITORIO':v==='campo'?'MODO CAMPO — GPS ACTIVO':'ANÁLISIS ESTADÍSTICO';
-
-  document.getElementById('gps-bar').classList.toggle('visible',v==='campo');
-  document.getElementById('sidebar').style.display=v!=='campo'&&!isMobile?'flex':'none';
-  document.getElementById('fab').classList.toggle('visible',v==='campo');
-  document.getElementById('panel-stats').classList.toggle('visible',v==='stats');
-
-  if(v==='campo'){
-    iniciarGPS();
-    if(!isMobile)document.getElementById('panel-campo').classList.add('visible');
-    else document.getElementById('panel-bottom').classList.add('visible');
-    map.setZoom(15);
-  } else {
-    if(v!=='mapa'){}
-    else{detenerGPS();}
-    document.getElementById('panel-campo').classList.remove('visible');
-    if(v!=='campo')document.getElementById('panel-bottom').classList.remove('visible');
-  }
-
-  if(v==='stats')renderStats();
-  setTimeout(()=>map.invalidateSize(),120);
-}
-
-// ── FILTROS ────────────────────────────────────────────────────
-function filtrar(tipo,el){
-  filtroTipo=tipo;
-  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active');
-  renderMarcadores();renderLista();
-}
-function filtrarTiempo(dias,el){
-  filtroDias=dias;
-  document.querySelectorAll('.tchip').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active');
-  renderMarcadores();renderLista();
-}
-
-// ── LISTAS ────────────────────────────────────────────────────
-function renderLista(){
-  const filtrados=getEventosFiltrados();
-  const html=filtrados.map(ev=>{
-    const fecha=new Date(ev.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short'});
-    const linkHtml=ev.url?`<a href="${ev.url}" target="_blank" class="ec-link">↗ ver noticia</a>`:'';
-    return `<div class="ev-card" data-t="${ev.tipo}" onclick="enfocar(${ev.id})">
-      <div class="ec-head">
-        <span class="ec-tipo">${ev.tipo.toUpperCase()}${ev.viaIA?'<span class="badge-ia">IA</span>':''}</span>
-        <span class="ec-fecha">${fecha}</span>
-      </div>
-      <div class="ec-titulo">${ev.titulo}</div>
-      <div class="ec-lugar">📍 ${ev.lugar}</div>
-      ${linkHtml}
-    </div>`;
-  }).join('');
-  document.getElementById('ev-list').innerHTML=html||'<div style="padding:16px;text-align:center;color:var(--muted);font-size:8px;font-family:Orbitron,monospace;">SIN EVENTOS EN ESTE PERIODO</div>';
-  if(pbTab==='todos')document.getElementById('pb-content').innerHTML=html;
-  actualizarStats();
-}
-
-function actualizarStats(){
-  document.getElementById('s-total').textContent=eventos.length;
-  document.getElementById('s-seg').textContent=eventos.filter(e=>e.tipo==='seguridad').length;
-  document.getElementById('s-ia').textContent=eventos.filter(e=>e.viaIA).length;
-  document.getElementById('ticker-txt').textContent=
-    eventos.slice(0,6).map(e=>`${e.tipo.toUpperCase()}: ${e.titulo} — ${e.lugar}`).join(' ⬡ ')||'Sin eventos';
-}
-
-function renderCercanos(){
-  if(!miPos)return;
-  const cercanos=eventos.map(ev=>({...ev,d:dist(miPos.lat,miPos.lng,ev.lat,ev.lng)}))
-    .filter(ev=>ev.d<=radioAlerta).sort((a,b)=>a.d-b.d);
-  document.getElementById('s-cerca').textContent=cercanos.length;
-  const html=cercanos.length===0
-    ?`<div style="padding:16px;text-align:center;color:var(--muted);font-size:8px;font-family:Orbitron,monospace;">SIN EVENTOS EN ${fmtD(radioAlerta).toUpperCase()}</div>`
-    :cercanos.map(ev=>{
-      const color=COLORES[ev.tipo]||COLORES.rumor;
-      return `<div class="cerca-card" data-t="${ev.tipo}" onclick="enfocar(${ev.id})">
-        <div class="cc-row">
-          <span class="cc-tipo" style="background:${color}22;color:${color}">${ev.tipo.toUpperCase()}</span>
-          <span class="cc-dist" style="color:${ev.tipo==='seguridad'?'#ff2255':color}">${fmtD(ev.d)}</span>
-        </div>
-        <div class="cc-titulo">${ev.titulo}</div>
-        <div class="cc-lugar">📍 ${ev.lugar}</div>
-      </div>`;
-    }).join('');
-  document.getElementById('cerca-list').innerHTML=html;
-  if(pbTab==='cercanos')document.getElementById('pb-content').innerHTML=html;
-}
-
-function enfocar(id){
-  const ev=eventos.find(e=>e.id===id);
-  if(!ev)return;
-  map.setView([ev.lat,ev.lng],16);
-  if(leafletMarkers[id])leafletMarkers[id].openPopup();
-}
-
-// ── ESTADÍSTICAS ───────────────────────────────────────────────
-function renderStats(){
-  const corte=periodStats>0?Date.now()-periodStats*86400000:0;
-  const evs=eventos.filter(ev=>periodStats===0||new Date(ev.fecha).getTime()>=corte);
-  const segs=evs.filter(e=>e.tipo==='seguridad');
-  const accs=evs.filter(e=>e.tipo==='accidente');
-
-  // Ranking colonias
-  const coloniaMap={};
-  segs.forEach(ev=>{
-    const col=ev.colonia||extraerColonia(ev.lugar);
-    coloniaMap[col]=(coloniaMap[col]||0)+1;
-  });
-  const ranking=Object.entries(coloniaMap).sort((a,b)=>b[1]-a[1]);
-  const maxVal=ranking[0]?ranking[0][1]:1;
-
-  // Distribución por tipo
-  const tipos=['seguridad','accidente','evento','rumor'];
-  const conteos=tipos.map(t=>evs.filter(e=>e.tipo===t).length);
-  const maxC=Math.max(...conteos,1);
-
-  // Últimas semanas
-  const semanas=[];
-  for(let i=3;i>=0;i--){
-    const ini=Date.now()-(i+1)*7*86400000;
-    const fin=Date.now()-i*7*86400000;
-    semanas.push({lbl:`S-${i+1}`,val:segs.filter(e=>{const t=new Date(e.fecha).getTime();return t>=ini&&t<fin;}).length});
-  }
-  const maxS=Math.max(...semanas.map(s=>s.val),1);
-
-  document.getElementById('stats-body').innerHTML=`
-    <div style="font-size:8px;color:var(--muted);font-family:Orbitron,monospace;letter-spacing:2px;margin-bottom:4px;">PERIODO DE ANÁLISIS</div>
-    <div class="periodo-sel">
-      ${[{d:7,l:'7 DÍAS'},{d:14,l:'2 SEM'},{d:30,l:'1 MES'},{d:90,l:'3 MES'},{d:180,l:'6 MES'},{d:365,l:'1 AÑO'},{d:0,l:'HISTÓRICO'}]
-        .map(p=>`<button class="pbtn${periodStats===p.d?' active':''}" onclick="setPeriodoStats(${p.d})">${p.l}</button>`).join('')}
-    </div>
-
-    <div class="stats-cards">
-      <div class="stat-card" style="border-color:var(--seguridad)20">
-        <div class="sc-num" style="color:var(--seguridad);text-shadow:0 0 12px var(--seguridad)">${segs.length}</div>
-        <div class="sc-lbl">EVENTOS SEG.</div>
-      </div>
-      <div class="stat-card" style="border-color:var(--accidente)20">
-        <div class="sc-num" style="color:var(--accidente)">${accs.length}</div>
-        <div class="sc-lbl">ACCIDENTES</div>
-      </div>
-      <div class="stat-card">
-        <div class="sc-num" style="color:var(--cyan)">${evs.length}</div>
-        <div class="sc-lbl">TOTAL EVENTOS</div>
-      </div>
-      <div class="stat-card">
-        <div class="sc-num" style="color:var(--ia)">${evs.filter(e=>e.viaIA).length}</div>
-        <div class="sc-lbl">VÍA IA</div>
-      </div>
-    </div>
-
-    <div class="chart-wrap">
-      <div class="chart-title">TENDENCIA SEMANAL — SEGURIDAD</div>
-      <div class="bars">
-        ${semanas.map(s=>`<div class="bar-col">
-          <div class="bar-val">${s.val}</div>
-          <div class="bar" style="height:${Math.max(s.val/maxS*70,2)}px;background:linear-gradient(to top,var(--seguridad),${s.val>0?'#ff227788':'#1a2030'})"></div>
-          <div class="bar-lbl">${s.lbl}</div>
-        </div>`).join('')}
-      </div>
-    </div>
-
-    <div class="chart-wrap">
-      <div class="chart-title">DISTRIBUCIÓN POR TIPO</div>
-      <div class="bars">
-        ${tipos.map((t,i)=>`<div class="bar-col">
-          <div class="bar-val" style="color:${COLORES[t]}">${conteos[i]}</div>
-          <div class="bar" style="height:${Math.max(conteos[i]/maxC*70,2)}px;background:${COLORES[t]}"></div>
-          <div class="bar-lbl" style="color:${COLORES[t]}">${t.toUpperCase().slice(0,3)}</div>
-        </div>`).join('')}
-      </div>
-    </div>
-
-    ${ranking.length>0?`
-    <div>
-      <div style="font-size:8px;color:var(--magenta);font-family:Orbitron,monospace;letter-spacing:2px;margin-bottom:8px;">📍 ÍNDICE DELICTIVO POR COLONIA</div>
-      <div class="ranking-list">
-        ${ranking.slice(0,8).map(([col,cnt],i)=>`
-        <div class="rank-item">
-          <div class="rank-num">#${i+1}</div>
-          <div class="rank-bar-wrap">
-            <div class="rank-colonia">${col}</div>
-            <div class="rank-bar"><div class="rank-fill" style="width:${cnt/maxVal*100}%;background:linear-gradient(to right,var(--seguridad)88,var(--seguridad))"></div></div>
-          </div>
-          <div class="rank-count">${cnt}</div>
-        </div>`).join('')}
-      </div>
-    </div>`:''}
-
-    <div style="font-size:8px;color:var(--muted);font-family:Share Tech Mono,monospace;padding:8px;border:1px solid var(--border);border-left:2px solid var(--magenta);line-height:1.6;">
-      💡 El mapa de calor en el fondo del mapa muestra la densidad histórica de eventos de seguridad. Verde = bajo, Amarillo = medio, Rojo = alto.
-    </div>
-  `;
-
-  // Actualizar heatmap con periodo seleccionado
-  actualizarHeatmapPeriodo();
-}
-
-function setPeriodoStats(d){
-  periodStats=d;
-  renderStats();
-}
-
-function actualizarHeatmapPeriodo(){
-  if(heatLayer){map.removeLayer(heatLayer);heatLayer=null;}
-  const corte=periodStats>0?Date.now()-periodStats*86400000:0;
-  const puntos=eventos
-    .filter(ev=>ev.tipo==='seguridad'&&(periodStats===0||new Date(ev.fecha).getTime()>=corte))
-    .map(ev=>[ev.lat,ev.lng,1.0]);
-  if(puntos.length===0)return;
-  heatLayer=L.heatLayer(puntos,{
-    radius:40,blur:35,maxZoom:17,
+// ── HEATMAP ─────────────────────────────────────────────────────
+function actualizarHeat() {
+  if(heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+  const corte = periodStats > 0 ? Date.now() - periodStats*86400000 : 0;
+  const pts = eventos
+    .filter(ev => ev.tipo==='seguridad' && ev.lat && ev.lng && (periodStats===0 || (ev.fecha?.toDate?ev.fecha.toDate().getTime():0) >= corte))
+    .map(ev => [ev.lat, ev.lng, 1.0]);
+  if(pts.length === 0) return;
+  heatLayer = L.heatLayer(pts, {
+    radius:40, blur:35, maxZoom:17,
     gradient:{0.2:'rgba(0,255,136,0.5)',0.5:'rgba(255,238,0,0.65)',0.8:'rgba(255,100,0,0.75)',1.0:'rgba(255,34,85,0.9)'}
   }).addTo(map);
 }
 
-function extraerColonia(lugar){
-  if(!lugar)return'Sin colonia';
-  const m=lugar.match(/Col\.\s*([^,]+)/i)||lugar.match(/Colonia\s*([^,]+)/i);
-  if(m)return'Col. '+m[1].trim();
-  const partes=lugar.split(',');
-  return partes[partes.length-1].trim()||lugar.slice(0,25);
+// ── MARCADORES ──────────────────────────────────────────────────
+function getF() {
+  const corte = filtroDias > 0 ? Date.now() - filtroDias*86400000 : 0;
+  return eventos.filter(ev => {
+    const tipoOk = filtroTipo==='todos' || ev.tipo===filtroTipo;
+    const t = ev.fecha?.toDate ? ev.fecha.toDate().getTime() : Date.now();
+    return tipoOk && (filtroDias===0 || t>=corte);
+  });
 }
 
-// ── BOTTOM PANEL ───────────────────────────────────────────────
-function toggleBottom(){pbOpen=!pbOpen;document.getElementById('panel-bottom').classList.toggle('collapsed',!pbOpen);}
-function setPBTab(tab,el){
-  pbTab=tab;
-  document.querySelectorAll('.pbtab').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-  if(tab==='cercanos')renderCercanos(); else renderLista();
+function renderMarcadores() {
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+  getF().forEach(ev => {
+    if(!ev.lat || !ev.lng) return;
+    const cerca = miPos && dist(miPos.lat,miPos.lng,ev.lat,ev.lng) <= radio;
+    const m = L.marker([ev.lat,ev.lng], {icon:crearIcono(ev.tipo,ev.viaIA,cerca)})
+      .addTo(map).bindPopup(crearPopup(ev), {maxWidth:270});
+    markers[ev.id] = m;
+  });
+  actualizarHeat();
 }
 
-// ── MODAL MANUAL ───────────────────────────────────────────────
-function abrirManual(src){
-  const hint=document.getElementById('hint-coords');
-  if(src==='gps'&&miPos){coordsClick={lat:miPos.lat,lng:miPos.lng};hint.textContent=`📍 GPS: ${miPos.lat.toFixed(4)}, ${miPos.lng.toFixed(4)}`;}
-  else if(coordsClick)hint.textContent='📍 Ubicación seleccionada en el mapa';
-  else hint.textContent='📍 Toca el mapa para fijar ubicación, o se geocodificará el lugar automáticamente.';
-  document.getElementById('m-manual').classList.add('open');
+function actualizarIconos() {
+  Object.entries(markers).forEach(([id,m]) => {
+    const ev = eventos.find(e=>e.id===id);
+    if(ev) { const cerca=miPos&&dist(miPos.lat,miPos.lng,ev.lat,ev.lng)<=radio; m.setIcon(crearIcono(ev.tipo,ev.viaIA,cerca)); m.setPopupContent(crearPopup(ev)); }
+  });
 }
-function cerrarManual(){
-  document.getElementById('m-manual').classList.remove('open');
-  coordsClick=null;
-  ['f-titulo','f-lugar','f-desc','f-url'].forEach(id=>document.getElementById(id).value='');
+
+// ── GPS ─────────────────────────────────────────────────────────
+function iniciarGPS() {
+  if(!navigator.geolocation) { document.getElementById('gst').textContent='GPS no disponible'; return; }
+  gpsW = navigator.geolocation.watchPosition(pos => {
+    miPos = {lat:pos.coords.latitude, lng:pos.coords.longitude, acc:pos.coords.accuracy};
+    document.getElementById('gdot').className = 'gdot fix';
+    document.getElementById('gst').textContent = `GPS ±${Math.round(pos.coords.accuracy)}m`;
+    document.getElementById('gcoords').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+    actualizarPos(); actualizarIconos(); verificarAlertas(); renderCercanos();
+  }, () => {
+    miPos = {lat:GEO.cLat, lng:GEO.cLng, acc:50};
+    document.getElementById('gst').textContent = 'Sin GPS — modo demo';
+    document.getElementById('gcoords').textContent = 'DEMO';
+    actualizarPos(); verificarAlertas(); renderCercanos();
+  }, {enableHighAccuracy:true, timeout:15000, maximumAge:8000});
 }
-async function guardarManual(){
-  const titulo=document.getElementById('f-titulo').value.trim();
-  if(!titulo){alert('El título es obligatorio.');return;}
-  const lugar=document.getElementById('f-lugar').value.trim()||'Irapuato';
-  let lat=coordsClick?coordsClick.lat:null;
-  let lng=coordsClick?coordsClick.lng:null;
-  if(!lat){
-    const geo=await geocodificar(lugar);
-    if(geo){lat=geo.lat;lng=geo.lng;}
-    else{lat=GEO.cLat+(Math.random()-.5)*.015;lng=GEO.cLng+(Math.random()-.5)*.015;}
+
+function detenerGPS() {
+  if(gpsW !== null) { navigator.geolocation.clearWatch(gpsW); gpsW = null; }
+  miPos = null;
+  if(posMarker) { map.removeLayer(posMarker); posMarker = null; }
+  if(radioCircle) { map.removeLayer(radioCircle); radioCircle = null; }
+  document.getElementById('gdot').className = 'gdot';
+  document.getElementById('gst').textContent = 'GPS desactivado';
+  document.getElementById('gcoords').textContent = '—';
+  document.getElementById('alerta').classList.remove('on');
+  document.getElementById('s-cer').textContent = '—';
+  actualizarIconos();
+}
+
+function actualizarPos() {
+  if(!miPos) return;
+  if(radioCircle) map.removeLayer(radioCircle);
+  radioCircle = L.circle([miPos.lat,miPos.lng], {radius:radio, color:'#00ff88', fillColor:'#00ff88', fillOpacity:.04, weight:1, dashArray:'4,4'}).addTo(map);
+  if(posMarker) map.removeLayer(posMarker);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26" style="filter:drop-shadow(0 0 5px #00ff88)">
+    <circle cx="13" cy="13" r="11" fill="rgba(0,255,136,.12)" stroke="#00ff88" stroke-width="1.5"/>
+    <circle cx="13" cy="13" r="6" fill="#00ff88" stroke="white" stroke-width="1.5"/>
+    <circle cx="13" cy="13" r="2" fill="white"/>
+  </svg>`;
+  posMarker = L.marker([miPos.lat,miPos.lng], {icon:L.divIcon({html:svg,className:'',iconSize:[26,26],iconAnchor:[13,13]}), zIndexOffset:1000}).addTo(map);
+}
+
+function dist(la1,lo1,la2,lo2) {
+  const R=6371000,d1=(la2-la1)*Math.PI/180,d2=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(d1/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(d2/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function fmtD(d) { return d<1000?Math.round(d)+'m':(d/1000).toFixed(1)+'km'; }
+
+function verificarAlertas() {
+  if(!miPos) return;
+  const p = eventos.filter(ev=>ev.tipo==='seguridad'&&ev.lat&&ev.lng&&dist(miPos.lat,miPos.lng,ev.lat,ev.lng)<=radio);
+  const el = document.getElementById('alerta');
+  if(p.length>0) {
+    el.textContent = `⚠ ALERTA — ${p.length} EVENTO(S) DE SEGURIDAD EN RADIO ${fmtD(radio).toUpperCase()}`;
+    el.classList.add('on');
+    const now = Date.now();
+    if(navigator.vibrate && now-ultimaAlerta>30000) { navigator.vibrate([300,150,300]); ultimaAlerta=now; }
+  } else el.classList.remove('on');
+}
+
+function cambiarRadio(v) {
+  radio = parseInt(v);
+  document.getElementById('rlbl').textContent = fmtD(radio);
+  document.getElementById('prlbl').textContent = fmtD(radio).toUpperCase();
+  if(radioCircle&&miPos) radioCircle.setRadius(radio);
+  verificarAlertas(); renderCercanos(); actualizarIconos();
+}
+window.cambiarRadio = cambiarRadio;
+
+// ── VISTAS ──────────────────────────────────────────────────────
+function setVista(v) {
+  vista = v;
+  const mob = window.innerWidth < 700;
+  document.querySelectorAll('.ntab').forEach(t=>t.className='ntab');
+  const tab = document.getElementById('tab-'+v);
+  tab.classList.add(v==='campo'?'campo-on':v==='stats'?'stats-on':'on');
+  document.getElementById('modo-lbl').textContent = v==='mapa'?'ESCRITORIO':v==='campo'?'CAMPO — GPS':' ESTADÍSTICAS';
+  document.getElementById('gps-bar').classList.toggle('on', v==='campo');
+  document.getElementById('sidebar').style.display = v!=='campo'&&!mob?'flex':'none';
+  document.getElementById('fab').classList.toggle('on', v==='campo');
+  document.getElementById('pcampo').classList.toggle('on', v==='campo'&&!mob);
+  document.getElementById('pbottom').classList.toggle('on', v==='campo'&&mob);
+  document.getElementById('pstats').classList.toggle('on', v==='stats');
+  if(v==='campo') iniciarGPS();
+  else detenerGPS();
+  if(v==='stats') renderStats();
+  setTimeout(()=>map.invalidateSize(), 150);
+}
+window.setVista = setVista;
+
+// ── FILTROS ─────────────────────────────────────────────────────
+function filtrar(tipo, el) {
+  filtroTipo = tipo;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  renderMarcadores(); renderLista();
+}
+window.filtrar = filtrar;
+
+function filtrarT(dias, el) {
+  filtroDias = dias;
+  document.querySelectorAll('.tc').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  renderMarcadores(); renderLista();
+}
+window.filtrarT = filtrarT;
+
+// ── LISTAS ──────────────────────────────────────────────────────
+function renderLista() {
+  const f = getF();
+  const html = f.map(ev=>{
+    const fecha = ev.fecha?.toDate ? ev.fecha.toDate().toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : '—';
+    const lnk = ev.url ? `<a href="${ev.url}" target="_blank" class="elink">↗ ver noticia</a>` : '';
+    return `<div class="ecard" data-t="${ev.tipo}" onclick="enfocar('${ev.id}')">
+      <div class="ech"><span class="etipo">${(ev.tipo||'').toUpperCase()}${ev.viaIA?'<span class="bia">IA</span>':''}</span><span class="efecha">${fecha}</span></div>
+      <div class="etit">${ev.titulo||''}</div>
+      <div class="elug">📍 ${ev.lugar||''}</div>${lnk}
+    </div>`;
+  }).join('');
+  document.getElementById('evlist').innerHTML = html || '<div style="padding:14px;text-align:center;color:var(--muted);font-size:8px;">SIN EVENTOS</div>';
+  if(pbtab==='t') document.getElementById('pbcont').innerHTML = html;
+  actualizarStats();
+}
+
+function actualizarStats() {
+  document.getElementById('s-tot').textContent = eventos.length;
+  document.getElementById('s-seg').textContent = eventos.filter(e=>e.tipo==='seguridad').length;
+  document.getElementById('s-ia').textContent = eventos.filter(e=>e.viaIA).length;
+  document.getElementById('ttxt').textContent = eventos.slice(0,6).map(e=>`${(e.tipo||'').toUpperCase()}: ${e.titulo||''} — ${e.lugar||''}`).join(' ⬡ ') || 'Sin eventos';
+}
+
+function renderCercanos() {
+  if(!miPos) return;
+  const c = eventos.map(ev=>({...ev,d:dist(miPos.lat,miPos.lng,ev.lat||GEO.cLat,ev.lng||GEO.cLng)}))
+    .filter(ev=>ev.d<=radio).sort((a,b)=>a.d-b.d);
+  document.getElementById('s-cer').textContent = c.length;
+  const html = c.length===0
+    ? `<div style="padding:14px;text-align:center;color:var(--muted);font-size:8px;font-family:Orbitron,monospace;">SIN EVENTOS EN ${fmtD(radio).toUpperCase()}</div>`
+    : c.map(ev=>{
+      const col = COLORES[ev.tipo]||COLORES.rumor;
+      return `<div class="ccard" data-t="${ev.tipo}" onclick="enfocar('${ev.id}')">
+        <div class="ccr">
+          <span class="cctipo" style="background:${col}22;color:${col}">${(ev.tipo||'').toUpperCase()}</span>
+          <span class="ccdist" style="color:${ev.tipo==='seguridad'?'#ff2255':col}">${fmtD(ev.d)}</span>
+        </div>
+        <div class="cctit">${ev.titulo||''}</div>
+        <div class="cclug">📍 ${ev.lugar||''}</div>
+      </div>`;
+    }).join('');
+  document.getElementById('clist').innerHTML = html;
+  if(pbtab==='c') document.getElementById('pbcont').innerHTML = html;
+}
+
+function enfocar(id) {
+  const ev = eventos.find(e=>e.id===id);
+  if(!ev||!ev.lat) return;
+  map.setView([ev.lat,ev.lng],16);
+  if(markers[id]) markers[id].openPopup();
+}
+window.enfocar = enfocar;
+
+// ── STATS ────────────────────────────────────────────────────────
+function renderStats() {
+  const corte = periodStats>0 ? Date.now()-periodStats*86400000 : 0;
+  const evs = eventos.filter(ev=>{
+    const t = ev.fecha?.toDate ? ev.fecha.toDate().getTime() : 0;
+    return periodStats===0 || t>=corte;
+  });
+  const segs = evs.filter(e=>e.tipo==='seguridad');
+  const colMap = {};
+  segs.forEach(ev=>{ const c=ev.colonia||extraColonia(ev.lugar||''); colMap[c]=(colMap[c]||0)+1; });
+  const ranking = Object.entries(colMap).sort((a,b)=>b[1]-a[1]);
+  const maxV = ranking[0]?ranking[0][1]:1;
+  const tipos = ['seguridad','accidente','evento','rumor'];
+  const cnts = tipos.map(t=>evs.filter(e=>e.tipo===t).length);
+  const maxC = Math.max(...cnts,1);
+  const sems = [];
+  for(let i=3;i>=0;i--){
+    const ini=Date.now()-(i+1)*7*86400000, fin=Date.now()-i*7*86400000;
+    sems.push({l:`S-${i+1}`, v:segs.filter(e=>{ const t=e.fecha?.toDate?e.fecha.toDate().getTime():0; return t>=ini&&t<fin; }).length});
   }
-  guardar({id:Date.now(),titulo,tipo:document.getElementById('f-tipo').value,
-    fuente:document.getElementById('f-fuente').value,lugar,
-    colonia:extraerColonia(lugar),
-    descripcion:document.getElementById('f-desc').value.trim()||'Sin descripción.',
-    url:document.getElementById('f-url').value.trim(),
-    fecha:new Date().toISOString(),lat,lng,viaIA:false});
-  cerrarManual();
+  const maxS = Math.max(...sems.map(s=>s.v),1);
+  document.getElementById('stbody').innerHTML=`
+    <div style="font-size:7px;color:var(--muted);font-family:Orbitron,monospace;letter-spacing:2px;">PERIODO</div>
+    <div class="psel">
+      ${[{d:7,l:'7D'},{d:14,l:'2SEM'},{d:30,l:'1MES'},{d:90,l:'3MES'},{d:180,l:'6MES'},{d:365,l:'1AÑO'},{d:0,l:'TODO'}]
+        .map(p=>`<button class="pbtn${periodStats===p.d?' on':''}" onclick="setPStat(${p.d})">${p.l}</button>`).join('')}
+    </div>
+    <div class="scards">
+      <div class="scard" style="border-color:var(--seg)20"><div class="scnum" style="color:var(--seg);text-shadow:0 0 10px var(--seg)">${segs.length}</div><div class="sclbl">SEGURIDAD</div></div>
+      <div class="scard"><div class="scnum" style="color:var(--cyan)">${evs.length}</div><div class="sclbl">TOTAL</div></div>
+    </div>
+    <div class="chart">
+      <div class="cht">TENDENCIA SEMANAL — SEGURIDAD</div>
+      <div class="bars">${sems.map(s=>`<div class="bc"><div class="bv">${s.v}</div><div class="bar" style="height:${Math.max(s.v/maxS*60,2)}px;background:linear-gradient(to top,var(--seg),${s.v?'#ff227788':'#1a2030'})"></div><div class="bl">${s.l}</div></div>`).join('')}</div>
+    </div>
+    <div class="chart">
+      <div class="cht">DISTRIBUCIÓN POR TIPO</div>
+      <div class="bars">${tipos.map((t,i)=>`<div class="bc"><div class="bv" style="color:${COLORES[t]}">${cnts[i]}</div><div class="bar" style="height:${Math.max(cnts[i]/maxC*60,2)}px;background:${COLORES[t]}"></div><div class="bl" style="color:${COLORES[t]}">${t.slice(0,3).toUpperCase()}</div></div>`).join('')}</div>
+    </div>
+    ${ranking.length?`
+    <div>
+      <div style="font-size:7px;color:var(--magenta);font-family:Orbitron,monospace;letter-spacing:2px;margin-bottom:7px;">📍 ÍNDICE DELICTIVO POR COLONIA</div>
+      <div class="rlist">${ranking.slice(0,8).map(([col,cnt],i)=>`
+        <div class="ritem">
+          <div class="rnum">#${i+1}</div>
+          <div class="rbw"><div class="rcol">${col}</div><div class="rbar"><div class="rfill" style="width:${cnt/maxV*100}%;background:linear-gradient(to right,var(--seg)88,var(--seg))"></div></div></div>
+          <div class="rcnt">${cnt}</div>
+        </div>`).join('')}
+      </div>
+    </div>`:''}
+  `;
+  actualizarHeat();
+}
+window.renderStats = renderStats;
+
+function setPStat(d) { periodStats=d; renderStats(); }
+window.setPStat = setPStat;
+
+function extraColonia(lugar) {
+  const m = lugar.match(/Col\.\s*([^,]+)/i)||lugar.match(/Colonia\s*([^,]+)/i);
+  if(m) return 'Col. '+m[1].trim();
+  const p = lugar.split(',');
+  return p[p.length-1].trim()||lugar.slice(0,25)||'Sin colonia';
 }
 
-// ── MODAL URL ──────────────────────────────────────────────────
-function abrirURL(){document.getElementById('m-url').classList.add('open');resetURL();}
-function cerrarURL(){document.getElementById('m-url').classList.remove('open');resetURL();}
-function resetURL(){
-  ['url-link','url-texto'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('url-result').style.display='none';
-  const btn=document.getElementById('btn-extraer');
-  btn.style.display='inline-block';btn.textContent='EXTRAER CON IA →';btn.disabled=false;
-  document.getElementById('btn-guardar-url').style.display='none';
-  urlResultado=null;
+// ── BOTTOM PANEL ─────────────────────────────────────────────────
+function togglePB() { pbOpen=!pbOpen; document.getElementById('pbottom').classList.toggle('col',!pbOpen); }
+function setPBT(tab,el) { pbtab=tab; document.querySelectorAll('.pbt').forEach(b=>b.classList.remove('on')); el.classList.add('on'); if(tab==='c')renderCercanos(); else renderLista(); }
+window.togglePB=togglePB; window.setPBT=setPBT;
+
+// ── GEMINI API ───────────────────────────────────────────────────
+async function llamarGemini(prompt) {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+  });
+  const data = await res.json();
+  const txt = data.candidates[0].content.parts[0].text;
+  return JSON.parse(txt.replace(/```json|```/g,'').trim());
 }
 
-async function extraerURL(){
-  const texto=document.getElementById('url-texto').value.trim();
-  const urlVal=document.getElementById('url-link').value.trim();
-  if(!texto){alert('Pega el texto de la noticia primero.');return;}
-  const btn=document.getElementById('btn-extraer');
-  btn.textContent='⏳ EXTRAYENDO...';btn.disabled=true;
-  try{
-    const prompt=`Analiza esta noticia de Irapuato, Guanajuato, México y responde SOLO con JSON válido sin markdown:
-{
-  "titulo": "título descriptivo corto (máx 80 chars)",
-  "tipo": "seguridad|accidente|evento|rumor",
-  "lugar": "dirección o lugar específico mencionado en Irapuato",
-  "colonia": "nombre de la colonia si se menciona, sino inferirla",
-  "resumen": "resumen claro en 2-3 oraciones",
-  "lat": número latitud en Irapuato (entre 20.640 y 20.730),
-  "lng": número longitud en Irapuato (entre -101.415 y -101.310),
-  "confianza": "alta|media|baja"
-}
-Tipos: seguridad=robos/violencia/crimen, accidente=choques/viales, evento=actividades/noticias positivas, rumor=no verificado.
-Si no hay lugar específico usa lat:20.6795 lng:-101.3540.
-NOTICIA:
-"""${texto}"""`;
-    const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBEOLcxYFZFk6_IM4iZ9WjeLoUJi1RgAnw",{method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
-    });
-    const data=await res.json();
-    const rawText=data.candidates[0].content.parts[0].text;
-    const r=JSON.parse(rawText.replace(/```json|```/g,'').trim());
-    urlResultado={...r,url:urlVal};
-    document.getElementById('ur-titulo').textContent=r.titulo||'Sin título';
-    document.getElementById('ur-tipo').value=r.tipo||'rumor';
-    document.getElementById('ur-lugar').textContent=r.lugar||'Irapuato';
-    document.getElementById('ur-resumen').textContent=r.resumen||texto.slice(0,200);
-    document.getElementById('url-conf').textContent={'alta':'✓ ALTA CONFIANZA','media':'⚠ MEDIA CONFIANZA','baja':'? BAJA CONFIANZA'}[r.confianza]||'✓ EXTRACCIÓN COMPLETADA';
-    document.getElementById('url-result').style.display='block';
-    document.getElementById('btn-guardar-url').style.display='inline-block';
+// ── MODAL URL ────────────────────────────────────────────────────
+function abrirURL() { document.getElementById('m-url').classList.add('on'); resetURL(); }
+function cerrarURL() { document.getElementById('m-url').classList.remove('on'); resetURL(); }
+function resetURL() { document.getElementById('u-link').value=''; document.getElementById('u-txt').value=''; document.getElementById('ures').style.display='none'; const b=document.getElementById('b-ext'); b.style.display='inline-block'; b.textContent='EXTRAER CON IA →'; b.disabled=false; document.getElementById('b-gurl').style.display='none'; urlRes=null; }
+window.abrirURL=abrirURL; window.cerrarURL=cerrarURL;
 
-    // Intentar geocodificar el lugar extraído
-    if(r.lugar&&r.lugar!=='Irapuato'){
-      const geo=await geocodificar(r.lugar);
-      if(geo){urlResultado.lat=geo.lat;urlResultado.lng=geo.lng;}
-    }
-  }catch(err){alert('Error al extraer. Verifica conexión.\n'+err.message);}
-  finally{btn.textContent='RE-EXTRAER →';btn.disabled=false;}
+async function extraer() {
+  const txt = document.getElementById('u-txt').value.trim();
+  if(!txt) { alert('Pega el texto primero.'); return; }
+  const btn = document.getElementById('b-ext');
+  btn.textContent='⏳ EXTRAYENDO...'; btn.disabled=true;
+  try {
+    const r = await llamarGemini(`Analiza esta noticia de Irapuato, Guanajuato, México y responde SOLO JSON sin markdown:
+{"titulo":"título corto (máx 80 chars)","tipo":"seguridad|accidente|evento|rumor","lugar":"lugar específico","colonia":"nombre de colonia","resumen":"2-3 oraciones","lat":número entre 20.640-20.730,"lng":número entre -101.415 y -101.310,"confianza":"alta|media|baja"}
+NOTICIA: """${txt}"""`);
+    urlRes = {...r, url:document.getElementById('u-link').value.trim()};
+    document.getElementById('ur-tit').textContent = r.titulo||'';
+    document.getElementById('ur-tipo').value = r.tipo||'rumor';
+    document.getElementById('ur-lug').textContent = r.lugar||'Irapuato';
+    document.getElementById('ur-res').textContent = r.resumen||txt.slice(0,200);
+    document.getElementById('uconf').textContent = {'alta':'✓ ALTA CONFIANZA','media':'⚠ MEDIA','baja':'? BAJA'}[r.confianza]||'✓ OK';
+    document.getElementById('ures').style.display='block';
+    document.getElementById('b-gurl').style.display='inline-block';
+    if(r.lugar && r.lugar!=='Irapuato') { const g=await geocodificar(r.lugar); if(g){urlRes.lat=g.lat;urlRes.lng=g.lng;} }
+  } catch(e) { alert('Error al extraer: '+e.message); }
+  finally { btn.textContent='RE-EXTRAER →'; btn.disabled=false; }
 }
+window.extraer=extraer;
 
-async function guardarDesdeURL(){
-  if(!urlResultado)return;
-  let lat=parseFloat(urlResultado.lat)||GEO.cLat;
-  let lng=parseFloat(urlResultado.lng)||GEO.cLng;
-  guardar({id:Date.now(),
-    titulo:document.getElementById('ur-titulo').textContent.trim(),
+async function guardarURL() {
+  if(!urlRes) return;
+  await guardar({
+    titulo:document.getElementById('ur-tit').textContent.trim(),
     tipo:document.getElementById('ur-tipo').value,
     fuente:fuenteURL,
-    lugar:document.getElementById('ur-lugar').textContent.trim()||'Irapuato',
-    colonia:urlResultado.colonia||extraerColonia(document.getElementById('ur-lugar').textContent),
-    descripcion:document.getElementById('ur-resumen').textContent.trim(),
-    url:urlResultado.url||'',
-    fecha:new Date().toISOString(),lat,lng,viaIA:true});
+    lugar:document.getElementById('ur-lug').textContent.trim()||'Irapuato',
+    colonia:urlRes.colonia||extraColonia(document.getElementById('ur-lug').textContent),
+    descripcion:document.getElementById('ur-res').textContent.trim(),
+    url:urlRes.url||'', lat:parseFloat(urlRes.lat)||GEO.cLat, lng:parseFloat(urlRes.lng)||GEO.cLng, viaIA:true
+  });
   cerrarURL();
 }
+window.guardarURL=guardarURL;
 
-// ── MODAL IA TEXTO ─────────────────────────────────────────────
-function abrirIA(){document.getElementById('m-ia').classList.add('open');resetIA();}
-function cerrarIA(){document.getElementById('m-ia').classList.remove('open');resetIA();}
-function resetIA(){
-  document.getElementById('ia-texto').value='';
-  document.getElementById('ia-result').style.display='none';
-  const btn=document.getElementById('btn-analizar');
-  btn.style.display='inline-block';btn.textContent='ANALIZAR →';btn.disabled=false;
-  document.getElementById('btn-guardar-ia').style.display='none';
-  iaResultado=null;
-}
+// ── MODAL IA ─────────────────────────────────────────────────────
+function abrirIA() { document.getElementById('m-ia').classList.add('on'); resetIA(); }
+function cerrarIA() { document.getElementById('m-ia').classList.remove('on'); resetIA(); }
+function resetIA() { document.getElementById('ia-txt').value=''; document.getElementById('ires').style.display='none'; const b=document.getElementById('b-ana'); b.style.display='inline-block'; b.textContent='ANALIZAR →'; b.disabled=false; document.getElementById('b-gia').style.display='none'; iaRes=null; }
+window.abrirIA=abrirIA; window.cerrarIA=cerrarIA;
 
-function selF(el,ctx){
-  const parent=el.parentElement;
-  parent.querySelectorAll('.fuente-btn').forEach(b=>b.classList.remove('sel'));
-  el.classList.add('sel');
-  if(ctx==='url')fuenteURL=el.getAttribute('data-f');
-  else fuenteIA=el.getAttribute('data-f');
-}
-
-async function analizar(){
-  const texto=document.getElementById('ia-texto').value.trim();
-  if(!texto){alert('Pega el texto primero.');return;}
-  const btn=document.getElementById('btn-analizar');
-  btn.textContent='⏳ ANALIZANDO...';btn.disabled=true;
-  try{
-    const prompt2=`Analiza este texto de Irapuato y responde SOLO JSON sin markdown:
+async function analizar() {
+  const txt = document.getElementById('ia-txt').value.trim();
+  if(!txt) { alert('Pega el texto primero.'); return; }
+  const btn = document.getElementById('b-ana');
+  btn.textContent='⏳ ANALIZANDO...'; btn.disabled=true;
+  try {
+    const r = await llamarGemini(`Analiza este texto de Irapuato y responde SOLO JSON sin markdown:
 {"titulo":"título corto (máx 80 chars)","tipo":"seguridad|accidente|evento|rumor","lugar":"lugar específico","colonia":"nombre de colonia","resumen":"2-3 oraciones","lat":número entre 20.640-20.730,"lng":número entre -101.415 y -101.310,"confianza":"alta|media|baja"}
-TEXTO: """${texto}"""`);
-    const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBEOLcxYFZFk6_IM4iZ9WjeLoUJi1RgAnw",{method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({contents:[{parts:[{text:prompt2}]}]})
-    });
-    const data=await res.json();
-    const rawText2=data.candidates[0].content.parts[0].text;
-    const r=JSON.parse(rawText2.replace(/```json|```/g,"").trim());
-    iaResultado=r;
-    document.getElementById('r-titulo').textContent=r.titulo||'Sin título';
-    document.getElementById('r-tipo').value=r.tipo||'rumor';
-    document.getElementById('r-lugar').textContent=r.lugar||'Irapuato';
-    document.getElementById('r-resumen').textContent=r.resumen||texto.slice(0,200);
-    document.getElementById('ia-conf').textContent={'alta':'✓ ALTA CONFIANZA','media':'⚠ MEDIA','baja':'? BAJA'}[r.confianza]||'✓ OK';
-    document.getElementById('ia-result').style.display='block';
-    document.getElementById('btn-guardar-ia').style.display='inline-block';
-    // Geocodificar
-    if(r.lugar&&r.lugar!=='Irapuato'){
-      const geo=await geocodificar(r.lugar);
-      if(geo){iaResultado.lat=geo.lat;iaResultado.lng=geo.lng;}
-    }
-  }catch(err){alert('Error al analizar.\n'+err.message);}
-  finally{const b=document.getElementById('btn-analizar');b.textContent='RE-ANALIZAR →';b.disabled=false;}
+TEXTO: """${txt}"""`);
+    iaRes = r;
+    document.getElementById('r-tit').textContent = r.titulo||'';
+    document.getElementById('r-tipo').value = r.tipo||'rumor';
+    document.getElementById('r-lug').textContent = r.lugar||'Irapuato';
+    document.getElementById('r-res').textContent = r.resumen||txt.slice(0,200);
+    document.getElementById('iconf').textContent = {'alta':'✓ ALTA CONFIANZA','media':'⚠ MEDIA','baja':'? BAJA'}[r.confianza]||'✓ OK';
+    document.getElementById('ires').style.display='block';
+    document.getElementById('b-gia').style.display='inline-block';
+    if(r.lugar&&r.lugar!=='Irapuato'){const g=await geocodificar(r.lugar);if(g){iaRes.lat=g.lat;iaRes.lng=g.lng;}}
+  } catch(e) { alert('Error: '+e.message); }
+  finally { btn.textContent='RE-ANALIZAR →'; btn.disabled=false; }
 }
+window.analizar=analizar;
 
-async function guardarIA(){
-  if(!iaResultado)return;
-  guardar({id:Date.now(),
-    titulo:document.getElementById('r-titulo').textContent.trim(),
-    tipo:document.getElementById('r-tipo').value,fuente:fuenteIA,
-    lugar:document.getElementById('r-lugar').textContent.trim()||'Irapuato',
-    colonia:iaResultado.colonia||extraerColonia(document.getElementById('r-lugar').textContent),
-    descripcion:document.getElementById('r-resumen').textContent.trim(),
-    url:'',fecha:new Date().toISOString(),
-    lat:parseFloat(iaResultado.lat)||GEO.cLat,
-    lng:parseFloat(iaResultado.lng)||GEO.cLng,viaIA:true});
+async function guardarIA() {
+  if(!iaRes) return;
+  await guardar({
+    titulo:document.getElementById('r-tit').textContent.trim(),
+    tipo:document.getElementById('r-tipo').value, fuente:fuenteIA,
+    lugar:document.getElementById('r-lug').textContent.trim()||'Irapuato',
+    colonia:iaRes.colonia||extraColonia(document.getElementById('r-lug').textContent),
+    descripcion:document.getElementById('r-res').textContent.trim(),
+    url:'', lat:parseFloat(iaRes.lat)||GEO.cLat, lng:parseFloat(iaRes.lng)||GEO.cLng, viaIA:true
+  });
   cerrarIA();
 }
+window.guardarIA=guardarIA;
 
-// ── GUARDAR ────────────────────────────────────────────────────
-function guardar(ev){
-  eventos.unshift(ev);
-  localStorage.setItem('ira-v7',JSON.stringify(eventos));
-  renderMarcadores();renderLista();verificarAlertas();renderCercanos();actualizarStats();
+// ── MODAL MANUAL ──────────────────────────────────────────────────
+function abrirManual(src) {
+  const hint = document.getElementById('mhint');
+  if(src==='gps'&&miPos) { coordsClick={lat:miPos.lat,lng:miPos.lng}; hint.textContent=`📍 GPS: ${miPos.lat.toFixed(4)}, ${miPos.lng.toFixed(4)}`; }
+  else if(coordsClick) hint.textContent='📍 Ubicación marcada en el mapa.';
+  else hint.textContent='📍 Toca el mapa para fijar ubicación, o se geocodificará el lugar.';
+  document.getElementById('m-man').classList.add('on');
+}
+function cerrarManual() { document.getElementById('m-man').classList.remove('on'); coordsClick=null; ['f-tit','f-lug','f-desc','f-url'].forEach(id=>document.getElementById(id).value=''); }
+window.abrirManual=abrirManual; window.cerrarManual=cerrarManual;
+
+async function guardarManual() {
+  const tit = document.getElementById('f-tit').value.trim();
+  if(!tit) { alert('El título es obligatorio.'); return; }
+  const lugar = document.getElementById('f-lug').value.trim()||'Irapuato';
+  let lat = coordsClick?coordsClick.lat:null, lng = coordsClick?coordsClick.lng:null;
+  if(!lat) { const g=await geocodificar(lugar); if(g){lat=g.lat;lng=g.lng;} else{lat=GEO.cLat+(Math.random()-.5)*.015;lng=GEO.cLng+(Math.random()-.5)*.015;} }
+  await guardar({titulo:tit, tipo:document.getElementById('f-tipo').value, fuente:document.getElementById('f-fue').value, lugar, colonia:extraColonia(lugar), descripcion:document.getElementById('f-desc').value.trim()||'Sin descripción.', url:document.getElementById('f-url').value.trim(), lat, lng, viaIA:false});
+  cerrarManual();
+}
+window.guardarManual=guardarManual;
+
+function selF(el, ctx) {
+  const parent = el.closest('.fgrid');
+  parent.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+  if(ctx==='u') fuenteURL=el.getAttribute('data-f');
+  else fuenteIA=el.getAttribute('data-f');
+}
+window.selF=selF;
+
+// ── GUARDAR EN FIREBASE ───────────────────────────────────────────
+async function guardar(ev) {
+  try {
+    await addDoc(collection(db,'eventos'), {...ev, fecha:serverTimestamp()});
+  } catch(e) {
+    console.error('Error guardando:', e);
+    alert('Error al guardar. Verifica conexión.');
+  }
 }
 
-// ── RESPONSIVE ─────────────────────────────────────────────────
-function checkResponsive(){
-  const isMobile=window.innerWidth<700;
-  document.getElementById('sidebar').style.display=
-    !isMobile&&vista!=='campo'?'flex':'none';
+// ── RESPONSIVE ────────────────────────────────────────────────────
+function checkR() {
+  const mob = window.innerWidth < 700;
+  document.getElementById('sidebar').style.display = vista!=='campo'&&!mob?'flex':'none';
 }
-window.addEventListener('resize',()=>{checkResponsive();map.invalidateSize();});
+window.addEventListener('resize', ()=>{ checkR(); map.invalidateSize(); });
+checkR();
 
-// ── INIT ───
-checkResponsive();
-setTimeout(()=>{ map.invalidateSize(); renderMarcadores(); renderLista(); actualizarStats(); }, 250);
 </script>
 </body>
 </html>
