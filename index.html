@@ -3,196 +3,265 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>IRAPUATO INTEL</title>
+<title>IRAPUATO INTEL v7</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <style>
 :root {
-  --bg:#020508; --surface:#060d12; --border:#0a2030;
-  --accent:#00ff88; --accent2:#00ccff; --warn:#ff4444;
-  --text:#a0ffcc; --muted:#1a4030;
-  --seguridad:#ff3355; --accidente:#ffaa00; --evento:#00ccff; --rumor:#446677;
-  --ia:#a78bfa;
+  --bg:#03050a;
+  --surface:#060d18;
+  --border:#0d2040;
+  --cyan:#00f5ff;
+  --magenta:#ff00aa;
+  --green:#00ff88;
+  --yellow:#ffee00;
+  --text:#c0e8ff;
+  --muted:#1a3050;
+  --seguridad:#ff2255;
+  --accidente:#ffaa00;
+  --evento:#00ccff;
+  --rumor:#3a5a7a;
+  --ia:#aa77ff;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;font-family:'Share Tech Mono',monospace;background:var(--bg);color:var(--text);}
 #app{display:flex;flex-direction:column;height:100vh;}
 
-/* HEADER */
-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;flex-wrap:wrap;}
+/* ── HEADER ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:6px;flex-wrap:wrap;}
 .logo{display:flex;align-items:center;gap:8px;}
-.logo-icon{width:20px;height:20px;border:2px solid var(--accent);transform:rotate(45deg);animation:spin-slow 8s linear infinite;flex-shrink:0;}
-@keyframes spin-slow{to{transform:rotate(405deg)}}
-.logo h1{font-family:'Orbitron',monospace;font-size:13px;font-weight:900;letter-spacing:3px;color:var(--accent);text-shadow:0 0 10px var(--accent);}
-.logo span{font-size:8px;color:#446677;letter-spacing:2px;display:block;}
-.mode-toggle{display:flex;gap:4px;}
-.mode-btn{padding:5px 10px;border:1px solid var(--border);background:transparent;color:#446677;font-family:'Share Tech Mono',monospace;font-size:9px;cursor:pointer;border-radius:2px;transition:all .2s;letter-spacing:1px;}
-.mode-btn.active-e{background:rgba(0,204,255,0.15);color:var(--accent2);border-color:var(--accent2);}
-.mode-btn.active-c{background:rgba(0,255,136,0.15);color:var(--accent);border-color:var(--accent);text-shadow:0 0 8px var(--accent);}
-.header-btns{display:flex;gap:5px;}
-.hbtn{border:none;padding:5px 9px;font-family:'Orbitron',monospace;font-size:8px;font-weight:700;cursor:pointer;border-radius:2px;transition:all .2s;letter-spacing:1px;}
-.hbtn-ia{background:rgba(167,139,250,.2);color:var(--ia);border:1px solid var(--ia);}
-.hbtn-add{background:rgba(0,255,136,.15);color:var(--accent);border:1px solid var(--accent);}
+.logo-diamond{width:18px;height:18px;background:var(--cyan);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);animation:pulse-d 2s ease-in-out infinite;flex-shrink:0;}
+@keyframes pulse-d{0%,100%{box-shadow:0 0 8px var(--cyan);opacity:1}50%{box-shadow:0 0 20px var(--cyan);opacity:.7}}
+.logo h1{font-family:'Orbitron',monospace;font-size:12px;font-weight:900;letter-spacing:3px;color:var(--cyan);text-shadow:0 0 12px var(--cyan),0 0 30px rgba(0,245,255,.3);}
+.logo-sub{font-size:7px;color:var(--muted);letter-spacing:2px;display:block;font-family:'Share Tech Mono',monospace;}
 
-/* ALERTA */
-#alerta-banner{display:none;background:rgba(255,51,85,0.2);border-bottom:1px solid var(--seguridad);color:var(--seguridad);padding:6px 14px;font-size:10px;letter-spacing:1px;text-align:center;font-family:'Orbitron',monospace;flex-shrink:0;}
+.nav-tabs{display:flex;gap:3px;}
+.nav-tab{padding:5px 9px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;border-radius:2px;transition:all .2s;letter-spacing:1px;}
+.nav-tab.active{background:rgba(0,245,255,.12);color:var(--cyan);border-color:var(--cyan);text-shadow:0 0 8px var(--cyan);}
+.nav-tab.campo-tab.active{background:rgba(0,255,136,.12);color:var(--green);border-color:var(--green);text-shadow:0 0 8px var(--green);}
+.nav-tab.stats-tab.active{background:rgba(255,0,170,.12);color:var(--magenta);border-color:var(--magenta);}
+
+.header-actions{display:flex;gap:4px;}
+.hbtn{border:none;padding:5px 8px;font-family:'Orbitron',monospace;font-size:8px;font-weight:700;cursor:pointer;border-radius:2px;transition:all .2s;letter-spacing:1px;}
+.hbtn-ia{background:rgba(170,119,255,.2);color:var(--ia);border:1px solid var(--ia);}
+.hbtn-add{background:rgba(0,245,255,.12);color:var(--cyan);border:1px solid var(--cyan);}
+.hbtn-url{background:rgba(255,0,170,.12);color:var(--magenta);border:1px solid var(--magenta);}
+
+/* ── ALERTA ── */
+#alerta-banner{display:none;padding:5px 14px;font-size:9px;letter-spacing:1px;text-align:center;font-family:'Orbitron',monospace;flex-shrink:0;border-bottom:1px solid var(--seguridad);background:rgba(255,34,85,.15);color:var(--seguridad);}
 #alerta-banner.visible{display:block;}
 
-/* GPS BAR */
-#gps-bar{display:none;align-items:center;justify-content:space-between;padding:4px 12px;background:#020d0a;border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;flex-wrap:wrap;}
+/* ── GPS BAR ── */
+#gps-bar{display:none;align-items:center;justify-content:space-between;padding:4px 12px;background:rgba(0,255,136,.04);border-bottom:1px solid rgba(0,255,136,.15);flex-shrink:0;gap:6px;flex-wrap:wrap;}
 #gps-bar.visible{display:flex;}
-.gps-dot{width:7px;height:7px;border-radius:50%;background:#446677;flex-shrink:0;}
-.gps-dot.fix{background:var(--accent);box-shadow:0 0 6px var(--accent);animation:glow 1.5s ease-in-out infinite;}
-@keyframes glow{0%,100%{opacity:1}50%{opacity:.4}}
-.gps-info{display:flex;align-items:center;gap:6px;font-size:9px;color:#446677;}
-.gps-coords{font-size:8px;color:var(--accent2);}
-.radio-ctrl{display:flex;align-items:center;gap:5px;font-size:8px;color:#446677;}
-.radio-ctrl input{accent-color:var(--accent);width:55px;}
+.gps-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:all .3s;}
+.gps-dot.fix{background:var(--green);box-shadow:0 0 8px var(--green);animation:gps-glow 1.5s ease-in-out infinite;}
+@keyframes gps-glow{0%,100%{opacity:1}50%{opacity:.3}}
+.gps-info{display:flex;align-items:center;gap:5px;font-size:8px;color:var(--muted);}
+.gps-coords{font-size:8px;color:var(--cyan);font-family:'Share Tech Mono',monospace;}
+.radio-ctrl{display:flex;align-items:center;gap:4px;font-size:8px;color:var(--muted);}
+.radio-ctrl input{accent-color:var(--green);width:50px;}
 
-/* STATS */
-.stats-row{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface);}
-.stat-box{flex:1;text-align:center;padding:5px 2px;border-right:1px solid var(--border);}
-.stat-box:last-child{border-right:none;}
-.stat-num{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--accent2);}
-.stat-label{font-size:7px;color:#446677;letter-spacing:1px;}
+/* ── STATS ROW ── */
+.stats-row{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:rgba(6,13,24,.8);}
+.sbox{flex:1;text-align:center;padding:5px 2px;border-right:1px solid var(--border);}
+.sbox:last-child{border-right:none;}
+.snum{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--cyan);}
+.slbl{font-size:7px;color:var(--muted);letter-spacing:1px;}
 
-/* MAIN */
+/* ── MAIN ── */
 .main{flex:1;display:flex;overflow:hidden;position:relative;}
 
-/* SIDEBAR */
-#sidebar-desktop{width:260px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
-.filters{padding:8px 10px;border-bottom:1px solid var(--border);}
-.filters-title{font-size:8px;letter-spacing:2px;color:#446677;text-transform:uppercase;margin-bottom:7px;font-family:'Orbitron',monospace;}
-.filter-chips{display:flex;flex-wrap:wrap;gap:4px;}
-.chip{padding:3px 7px;border:1px solid var(--border);border-radius:2px;font-size:8px;cursor:pointer;transition:all .2s;color:#446677;background:transparent;letter-spacing:1px;}
-.chip.active{color:var(--bg);}
-.chip[data-type="todos"].active{background:var(--accent2);border-color:var(--accent2);}
-.chip[data-type="seguridad"].active{background:var(--seguridad);border-color:var(--seguridad);}
-.chip[data-type="accidente"].active{background:var(--accidente);border-color:var(--accidente);}
-.chip[data-type="evento"].active{background:var(--accent2);border-color:var(--accent2);}
-.chip[data-type="rumor"].active{background:var(--rumor);border-color:var(--rumor);color:var(--text);}
-.eventos-list{flex:1;overflow-y:auto;padding:5px;}
-.eventos-list::-webkit-scrollbar{width:3px;}
-.eventos-list::-webkit-scrollbar-thumb{background:var(--border);}
-.evento-card{padding:8px 10px;border:1px solid var(--border);border-left:3px solid #446677;margin-bottom:5px;cursor:pointer;transition:all .2s;border-radius:2px;}
-.evento-card:hover{background:rgba(0,255,136,0.05);}
-.evento-card[data-type="seguridad"]{border-left-color:var(--seguridad);}
-.evento-card[data-type="accidente"]{border-left-color:var(--accidente);}
-.evento-card[data-type="evento"]{border-left-color:var(--accent2);}
-.evento-card[data-type="rumor"]{border-left-color:var(--rumor);}
-.card-header{display:flex;justify-content:space-between;margin-bottom:3px;}
-.card-tipo{font-size:7px;font-family:'Orbitron',monospace;letter-spacing:1px;padding:2px 4px;border-radius:1px;}
-[data-type="seguridad"] .card-tipo{background:rgba(255,51,85,.15);color:var(--seguridad);}
-[data-type="accidente"] .card-tipo{background:rgba(255,170,0,.15);color:var(--accidente);}
-[data-type="evento"] .card-tipo{background:rgba(0,204,255,.15);color:var(--accent2);}
-[data-type="rumor"] .card-tipo{background:rgba(68,102,119,.15);color:var(--rumor);}
-.card-fecha{font-size:8px;color:#446677;}
-.card-titulo{font-size:11px;font-weight:600;margin-bottom:2px;line-height:1.3;color:var(--text);}
-.card-lugar{font-size:8px;color:#446677;}
-.badge-ia{font-size:7px;background:rgba(167,139,250,.2);color:var(--ia);padding:1px 4px;border-radius:1px;margin-left:3px;}
-.legend{padding:8px 10px;border-top:1px solid var(--border);}
-.legend-title{font-size:8px;letter-spacing:2px;color:#446677;text-transform:uppercase;margin-bottom:5px;font-family:'Orbitron',monospace;}
-.legend-items{display:flex;flex-direction:column;gap:3px;}
-.legend-item{display:flex;align-items:center;gap:6px;font-size:8px;color:#446677;}
-.dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+/* ── SIDEBAR ── */
+#sidebar{width:255px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
+.sb-filters{padding:8px 10px;border-bottom:1px solid var(--border);}
+.sb-title{font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;font-family:'Orbitron',monospace;}
+.chips{display:flex;flex-wrap:wrap;gap:3px;}
+.chip{padding:3px 7px;border:1px solid var(--border);border-radius:2px;font-size:7px;cursor:pointer;transition:all .2s;color:var(--muted);background:transparent;letter-spacing:1px;font-family:'Orbitron',monospace;}
+.chip.active{color:#000;}
+.chip[data-t="todos"].active{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 8px rgba(0,245,255,.4);}
+.chip[data-t="seguridad"].active{background:var(--seguridad);border-color:var(--seguridad);box-shadow:0 0 8px rgba(255,34,85,.4);}
+.chip[data-t="accidente"].active{background:var(--accidente);border-color:var(--accidente);}
+.chip[data-t="evento"].active{background:var(--evento);border-color:var(--evento);}
+.chip[data-t="rumor"].active{background:var(--rumor);border-color:var(--rumor);color:var(--text);}
 
-/* MAP WRAP */
+/* Filtro tiempo */
+.time-filter{padding:6px 10px;border-bottom:1px solid var(--border);}
+.time-chips{display:flex;gap:3px;flex-wrap:wrap;}
+.tchip{padding:2px 6px;border:1px solid var(--border);border-radius:2px;font-size:7px;cursor:pointer;color:var(--muted);background:transparent;font-family:'Orbitron',monospace;letter-spacing:1px;transition:all .2s;}
+.tchip.active{background:rgba(255,0,170,.15);color:var(--magenta);border-color:var(--magenta);}
+
+.ev-list{flex:1;overflow-y:auto;padding:5px;}
+.ev-list::-webkit-scrollbar{width:2px;}
+.ev-list::-webkit-scrollbar-thumb{background:var(--border);}
+.ev-card{padding:7px 9px;border:1px solid var(--border);border-left:2px solid var(--muted);margin-bottom:5px;cursor:pointer;transition:all .2s;border-radius:2px;background:rgba(0,245,255,.01);}
+.ev-card:hover{background:rgba(0,245,255,.05);border-left-color:var(--cyan);}
+.ev-card[data-t="seguridad"]{border-left-color:var(--seguridad);}
+.ev-card[data-t="accidente"]{border-left-color:var(--accidente);}
+.ev-card[data-t="evento"]{border-left-color:var(--evento);}
+.ev-card[data-t="rumor"]{border-left-color:var(--rumor);}
+.ec-head{display:flex;justify-content:space-between;margin-bottom:2px;align-items:center;}
+.ec-tipo{font-size:7px;font-family:'Orbitron',monospace;letter-spacing:1px;padding:1px 4px;border-radius:1px;}
+[data-t="seguridad"] .ec-tipo{background:rgba(255,34,85,.15);color:var(--seguridad);}
+[data-t="accidente"] .ec-tipo{background:rgba(255,170,0,.15);color:var(--accidente);}
+[data-t="evento"] .ec-tipo{background:rgba(0,204,255,.15);color:var(--evento);}
+[data-t="rumor"] .ec-tipo{background:rgba(58,90,122,.2);color:#6a9ab0;}
+.ec-fecha{font-size:7px;color:var(--muted);}
+.ec-titulo{font-size:10px;font-weight:600;line-height:1.3;color:var(--text);margin-bottom:1px;}
+.ec-lugar{font-size:8px;color:var(--muted);}
+.ec-link{font-size:7px;color:var(--cyan);margin-top:2px;display:block;text-decoration:none;opacity:.7;}
+.ec-link:hover{opacity:1;}
+.badge-ia{font-size:6px;background:rgba(170,119,255,.2);color:var(--ia);padding:1px 3px;border-radius:1px;margin-left:2px;}
+
+.sb-legend{padding:7px 10px;border-top:1px solid var(--border);flex-shrink:0;}
+.leg-items{display:flex;flex-direction:column;gap:2px;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:7px;color:var(--muted);}
+.ldot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* ── MAP ── */
 .map-wrap{flex:1;position:relative;overflow:hidden;}
 #map{width:100%;height:100%;}
 
-/* RADAR OVERLAY — canvas encima del mapa en modo campo */
-#radar-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:none;z-index:500;}
-#radar-canvas.visible{display:block;}
-
-/* FAB */
-#fab{position:absolute;bottom:16px;right:14px;width:50px;height:50px;background:rgba(0,255,136,0.15);border:2px solid var(--accent);border-radius:50%;font-size:20px;cursor:pointer;z-index:600;box-shadow:0 0 20px rgba(0,255,136,0.3);transition:all .2s;display:none;align-items:center;justify-content:center;color:var(--accent);}
-#fab.visible{display:flex;}
-#fab:active{transform:scale(.9);}
-
-/* PANEL CAMPO */
-#panel-campo{display:none;width:250px;background:var(--surface);border-left:1px solid var(--border);flex-direction:column;overflow:hidden;z-index:600;}
+/* ── CAMPO PANEL ── */
+#panel-campo{display:none;width:240px;background:var(--surface);border-left:1px solid var(--border);flex-direction:column;overflow:hidden;flex-shrink:0;}
 #panel-campo.visible{display:flex;}
-.panel-title{padding:8px 12px;border-bottom:1px solid var(--border);font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;color:var(--accent);display:flex;justify-content:space-between;}
-.cercanos-list{flex:1;overflow-y:auto;padding:5px;}
-.cercanos-list::-webkit-scrollbar{width:3px;}
-.cercanos-list::-webkit-scrollbar-thumb{background:var(--border);}
-.cercano-card{padding:8px 10px;border:1px solid var(--border);border-left:3px solid #446677;margin-bottom:5px;border-radius:2px;cursor:pointer;}
-.cercano-card[data-tipo="seguridad"]{border-left-color:var(--seguridad);}
-.cercano-card[data-tipo="accidente"]{border-left-color:var(--accidente);}
-.cercano-card[data-tipo="evento"]{border-left-color:var(--accent2);}
-.cercano-card[data-tipo="rumor"]{border-left-color:var(--rumor);}
-.cc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.pc-title{padding:7px 10px;border-bottom:1px solid var(--border);font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:var(--green);display:flex;justify-content:space-between;align-items:center;}
+.cerca-list{flex:1;overflow-y:auto;padding:5px;}
+.cerca-list::-webkit-scrollbar{width:2px;}
+.cerca-list::-webkit-scrollbar-thumb{background:var(--border);}
+.cerca-card{padding:7px 9px;border:1px solid var(--border);border-left:2px solid var(--muted);margin-bottom:4px;border-radius:2px;cursor:pointer;transition:all .2s;}
+.cerca-card[data-t="seguridad"]{border-left-color:var(--seguridad);}
+.cerca-card[data-t="accidente"]{border-left-color:var(--accidente);}
+.cerca-card[data-t="evento"]{border-left-color:var(--evento);}
+.cerca-card[data-t="rumor"]{border-left-color:var(--rumor);}
+.cc-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;}
 .cc-tipo{font-size:7px;font-family:'Orbitron',monospace;letter-spacing:1px;padding:1px 4px;border-radius:1px;}
-.cc-dist{font-size:10px;font-family:'Orbitron',monospace;font-weight:700;}
-.cc-titulo{font-size:11px;font-weight:600;line-height:1.3;color:var(--text);}
-.cc-lugar{font-size:8px;color:#446677;margin-top:2px;}
+.cc-dist{font-size:9px;font-family:'Orbitron',monospace;font-weight:700;}
+.cc-titulo{font-size:10px;font-weight:600;color:var(--text);line-height:1.3;}
+.cc-lugar{font-size:7px;color:var(--muted);margin-top:1px;}
 
-/* BOTTOM PANEL MÓVIL */
-#panel-bottom{display:none;background:var(--surface);border-top:1px solid var(--border);flex-direction:column;flex-shrink:0;max-height:40vh;z-index:600;}
+/* ── STATS PANEL ── */
+#panel-stats{display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(3,5,10,.95);z-index:900;flex-direction:column;overflow:hidden;}
+#panel-stats.visible{display:flex;}
+.stats-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.stats-title{font-family:'Orbitron',monospace;font-size:12px;letter-spacing:3px;color:var(--magenta);text-shadow:0 0 10px var(--magenta);}
+.stats-close{background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 10px;cursor:pointer;font-family:'Orbitron',monospace;font-size:8px;border-radius:2px;}
+.stats-body{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:14px;}
+
+/* Periodo selector */
+.periodo-sel{display:flex;gap:5px;flex-wrap:wrap;}
+.pbtn{padding:4px 10px;border:1px solid var(--border);border-radius:2px;font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;color:var(--muted);background:transparent;transition:all .2s;letter-spacing:1px;}
+.pbtn.active{background:rgba(255,0,170,.15);color:var(--magenta);border-color:var(--magenta);box-shadow:0 0 8px rgba(255,0,170,.2);}
+
+/* Ranking colonias */
+.ranking-list{display:flex;flex-direction:column;gap:5px;}
+.rank-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:2px;background:rgba(255,34,85,.03);}
+.rank-num{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:var(--magenta);width:20px;flex-shrink:0;}
+.rank-bar-wrap{flex:1;}
+.rank-colonia{font-size:10px;color:var(--text);margin-bottom:3px;}
+.rank-bar{height:4px;border-radius:2px;background:var(--border);overflow:hidden;}
+.rank-fill{height:100%;border-radius:2px;transition:width .8s ease;}
+.rank-count{font-family:'Orbitron',monospace;font-size:9px;color:var(--seguridad);width:30px;text-align:right;flex-shrink:0;}
+
+/* Gráfica barras */
+.chart-wrap{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:3px;padding:10px;}
+.chart-title{font-family:'Orbitron',monospace;font-size:8px;color:var(--muted);letter-spacing:2px;margin-bottom:8px;}
+.bars{display:flex;align-items:flex-end;gap:4px;height:80px;}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.bar{width:100%;border-radius:2px 2px 0 0;min-height:2px;transition:height .6s ease;}
+.bar-lbl{font-size:6px;color:var(--muted);font-family:'Orbitron',monospace;text-align:center;white-space:nowrap;}
+.bar-val{font-size:7px;color:var(--text);font-family:'Orbitron',monospace;}
+
+/* Resumen stats */
+.stats-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.stat-card{padding:10px;border:1px solid var(--border);border-radius:3px;text-align:center;}
+.sc-num{font-family:'Orbitron',monospace;font-size:20px;font-weight:700;}
+.sc-lbl{font-size:8px;color:var(--muted);margin-top:2px;letter-spacing:1px;}
+
+/* ── FAB ── */
+#fab{position:absolute;bottom:16px;right:14px;width:46px;height:46px;background:rgba(0,255,136,.15);border:1px solid var(--green);border-radius:50%;font-size:18px;cursor:pointer;z-index:600;box-shadow:0 0 16px rgba(0,255,136,.25);display:none;align-items:center;justify-content:center;color:var(--green);}
+#fab.visible{display:flex;}
+
+/* ── BOTTOM PANEL ── */
+#panel-bottom{display:none;background:var(--surface);border-top:1px solid var(--border);flex-direction:column;flex-shrink:0;max-height:38vh;}
 #panel-bottom.visible{display:flex;}
-#panel-bottom.collapsed{max-height:40px;overflow:hidden;}
-.bottom-handle{padding:8px;text-align:center;cursor:pointer;border-bottom:1px solid var(--border);flex-shrink:0;}
-.bottom-handle::before{content:'';display:inline-block;width:32px;height:3px;background:var(--border);border-radius:2px;}
-.bottom-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
-.btab{flex:1;padding:7px;font-family:'Orbitron',monospace;font-size:8px;text-align:center;cursor:pointer;color:#446677;border-bottom:2px solid transparent;letter-spacing:1px;}
-.btab.active{color:var(--accent);border-bottom-color:var(--accent);}
-.bottom-content{flex:1;overflow-y:auto;padding:5px;}
+#panel-bottom.collapsed{max-height:38px;overflow:hidden;}
+.pb-handle{padding:7px;text-align:center;cursor:pointer;border-bottom:1px solid var(--border);flex-shrink:0;}
+.pb-handle::before{content:'';display:inline-block;width:28px;height:2px;background:var(--border);border-radius:2px;}
+.pb-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.pbtab{flex:1;padding:6px;font-family:'Orbitron',monospace;font-size:7px;text-align:center;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;letter-spacing:1px;}
+.pbtab.active{color:var(--green);border-bottom-color:var(--green);}
+.pb-content{flex:1;overflow-y:auto;padding:5px;}
 
-/* TICKER */
-.ticker{background:#010508;border-top:1px solid var(--border);padding:4px 12px;font-size:8px;color:#446677;display:flex;gap:8px;align-items:center;flex-shrink:0;overflow:hidden;}
-.ticker-label{color:var(--accent);font-weight:700;flex-shrink:0;letter-spacing:2px;font-family:'Orbitron',monospace;}
-.ticker-text{animation:ticker 45s linear infinite;white-space:nowrap;}
-@keyframes ticker{from{transform:translateX(100vw)}to{transform:translateX(-200%)}}
+/* ── TICKER ── */
+.ticker{background:#010308;border-top:1px solid var(--border);padding:3px 10px;font-size:8px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-shrink:0;overflow:hidden;}
+.ticker-lbl{color:var(--cyan);font-weight:700;flex-shrink:0;letter-spacing:2px;font-family:'Orbitron',monospace;font-size:7px;}
+.ticker-txt{animation:tkr 50s linear infinite;white-space:nowrap;}
+@keyframes tkr{from{transform:translateX(100vw)}to{transform:translateX(-200%)}}
 
-/* LEAFLET DARK OVERRIDES */
-.leaflet-container{background:#010508!important;}
-.leaflet-popup-content-wrapper{background:#030e0a!important;border:1px solid var(--accent)!important;border-radius:3px!important;color:var(--text)!important;box-shadow:0 0 20px rgba(0,255,136,0.2)!important;}
-.leaflet-popup-tip{background:#030e0a!important;}
-.leaflet-popup-content{margin:12px 14px!important;}
-.leaflet-control-zoom a{background:#060d12!important;color:var(--accent)!important;border-color:var(--border)!important;}
-.leaflet-control-zoom a:hover{background:#0a2030!important;}
+/* ── LEAFLET OVERRIDES ── */
+.leaflet-container{background:#010308!important;}
+.leaflet-popup-content-wrapper{background:rgba(3,8,20,.96)!important;border:1px solid var(--cyan)!important;border-radius:3px!important;color:var(--text)!important;box-shadow:0 0 24px rgba(0,245,255,.2)!important;}
+.leaflet-popup-tip{background:rgba(3,8,20,.96)!important;}
+.leaflet-popup-content{margin:11px 13px!important;min-width:200px;}
+.leaflet-control-zoom a{background:#060d18!important;color:var(--cyan)!important;border-color:var(--border)!important;font-family:'Orbitron',monospace!important;}
 .leaflet-bar{border:1px solid var(--border)!important;box-shadow:none!important;}
-.popup-tipo{font-size:8px;font-family:'Orbitron',monospace;letter-spacing:1px;text-transform:uppercase;padding:2px 6px;border-radius:1px;display:inline-block;margin-bottom:5px;}
-.popup-titulo{font-size:12px;font-weight:700;margin-bottom:3px;color:var(--text);font-family:'Orbitron',monospace;}
-.popup-lugar{font-size:9px;color:#446677;margin-bottom:3px;}
-.popup-desc{font-size:10px;color:#5a8870;line-height:1.5;margin-bottom:4px;}
-.popup-dist{font-size:11px;font-family:'Orbitron',monospace;font-weight:700;margin-bottom:3px;}
-.popup-meta{font-size:8px;color:#446677;border-top:1px solid var(--border);padding-top:4px;margin-top:4px;}
+.lp-tipo{font-size:7px;font-family:'Orbitron',monospace;letter-spacing:2px;padding:2px 6px;border-radius:1px;display:inline-block;margin-bottom:4px;}
+.lp-titulo{font-size:11px;font-weight:700;margin-bottom:3px;color:var(--text);font-family:'Orbitron',monospace;line-height:1.3;}
+.lp-lugar{font-size:8px;color:var(--muted);margin-bottom:3px;}
+.lp-desc{font-size:9px;color:#5a8098;line-height:1.5;margin-bottom:4px;}
+.lp-dist{font-size:10px;font-family:'Orbitron',monospace;font-weight:700;margin-bottom:3px;}
+.lp-meta{font-size:7px;color:var(--muted);border-top:1px solid var(--border);padding-top:3px;margin-top:3px;display:flex;justify-content:space-between;align-items:center;}
+.lp-link{color:var(--cyan);text-decoration:none;font-size:7px;letter-spacing:1px;}
+.lp-link:hover{text-shadow:0 0 8px var(--cyan);}
 
-/* MODALES */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px);}
+/* ── MODALES ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:2000;align-items:flex-end;justify-content:center;backdrop-filter:blur(8px);}
 .modal-overlay.open{display:flex;}
 @media(min-width:600px){.modal-overlay{align-items:center;}}
-.modal{background:#030e0a;border:1px solid var(--accent);width:100%;max-width:480px;padding:20px;position:relative;animation:slideUp .2s ease;max-height:90vh;overflow-y:auto;border-radius:6px 6px 0 0;box-shadow:0 0 30px rgba(0,255,136,0.15);}
+.modal{background:#030810;border:1px solid var(--cyan);width:100%;max-width:500px;padding:18px;position:relative;animation:slideUp .2s ease;max-height:92vh;overflow-y:auto;border-radius:6px 6px 0 0;box-shadow:0 0 40px rgba(0,245,255,.15);}
 @media(min-width:600px){.modal{border-radius:4px;}}
+.modal.magenta{border-color:var(--magenta);box-shadow:0 0 40px rgba(255,0,170,.15);}
+.modal.ia-modal{border-color:var(--ia);box-shadow:0 0 40px rgba(170,119,255,.15);}
 @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-.modal-title{font-family:'Orbitron',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:14px;text-transform:uppercase;}
-.modal-title.ia-c{color:var(--ia);}
-.form-group{margin-bottom:11px;}
-.form-label{font-size:8px;letter-spacing:1px;color:#446677;text-transform:uppercase;font-family:'Orbitron',monospace;display:block;margin-bottom:4px;}
-.form-input,.form-select,.form-textarea{width:100%;background:#010a07;border:1px solid var(--border);color:var(--text);padding:8px 10px;font-family:'Share Tech Mono',monospace;font-size:13px;outline:none;transition:border-color .2s;border-radius:2px;}
-.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent);}
-.form-select option{background:#030e0a;}
-.form-textarea{resize:none;min-height:80px;}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.modal-hint{font-size:9px;color:#446677;margin-bottom:12px;padding:7px 9px;border:1px solid var(--border);border-left:3px solid var(--accent);line-height:1.6;}
-.modal-hint.ia-h{border-left-color:var(--ia);}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;}
-.btn-cancel{background:transparent;border:1px solid var(--border);color:#446677;padding:8px 14px;font-family:'Orbitron',monospace;font-size:9px;cursor:pointer;border-radius:2px;}
-.btn-save{background:rgba(0,255,136,.15);color:var(--accent);border:1px solid var(--accent);padding:8px 16px;font-family:'Orbitron',monospace;font-size:9px;font-weight:700;cursor:pointer;border-radius:2px;letter-spacing:1px;}
-.btn-save.ia{background:rgba(167,139,250,.15);color:var(--ia);border-color:var(--ia);}
-.btn-close{position:absolute;top:12px;right:12px;background:transparent;border:none;color:#446677;font-size:16px;cursor:pointer;}
-.fuentes-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:12px;}
-.fuente-btn{padding:7px 4px;border:1px solid var(--border);background:#010a07;color:#446677;font-family:'Share Tech Mono',monospace;font-size:8px;cursor:pointer;transition:all .2s;text-align:center;border-radius:2px;}
-.fuente-btn:hover,.fuente-btn.sel{border-color:var(--ia);color:var(--ia);background:rgba(167,139,250,.08);}
-.fuente-btn .fi{font-size:14px;display:block;margin-bottom:2px;}
-.ia-result{border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.04);padding:12px;border-radius:2px;margin-bottom:12px;display:none;}
-.ia-result-title{font-size:8px;letter-spacing:2px;color:var(--ia);font-family:'Orbitron',monospace;text-transform:uppercase;margin-bottom:8px;}
-.rf{margin-bottom:7px;}
-.rl{font-size:7px;color:var(--ia);font-family:'Orbitron',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;}
-.rv{font-size:11px;color:var(--text);padding:5px 7px;background:#010a07;border:1px solid var(--border);border-radius:2px;}
+.modal-title{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:3px;color:var(--cyan);margin-bottom:12px;text-transform:uppercase;}
+.modal-title.mg{color:var(--magenta);}
+.modal-title.ia{color:var(--ia);}
+.form-group{margin-bottom:10px;}
+.form-label{font-size:7px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;font-family:'Orbitron',monospace;display:block;margin-bottom:3px;}
+.form-input,.form-select,.form-textarea{width:100%;background:#010a14;border:1px solid var(--border);color:var(--text);padding:7px 10px;font-family:'Share Tech Mono',monospace;font-size:12px;outline:none;transition:border-color .2s;border-radius:2px;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--cyan);box-shadow:0 0 8px rgba(0,245,255,.1);}
+.form-select option{background:#030810;}
+.form-textarea{resize:none;min-height:75px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.modal-hint{font-size:8px;color:var(--muted);margin-bottom:10px;padding:6px 8px;border:1px solid var(--border);border-left:2px solid var(--cyan);line-height:1.6;}
+.modal-hint.mg{border-left-color:var(--magenta);}
+.modal-hint.ia{border-left-color:var(--ia);}
+.modal-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:12px;}
+.btn-cancel{background:transparent;border:1px solid var(--border);color:var(--muted);padding:7px 12px;font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;border-radius:2px;}
+.btn-save{padding:7px 14px;font-family:'Orbitron',monospace;font-size:8px;font-weight:700;cursor:pointer;border-radius:2px;letter-spacing:1px;border:none;}
+.btn-cyan{background:rgba(0,245,255,.15);color:var(--cyan);border:1px solid var(--cyan);}
+.btn-magenta{background:rgba(255,0,170,.15);color:var(--magenta);border:1px solid var(--magenta);}
+.btn-ia{background:rgba(170,119,255,.15);color:var(--ia);border:1px solid var(--ia);}
+.btn-close{position:absolute;top:10px;right:10px;background:transparent;border:none;color:var(--muted);font-size:14px;cursor:pointer;font-family:'Share Tech Mono',monospace;}
+
+.fuentes-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px;}
+.fuente-btn{padding:6px 4px;border:1px solid var(--border);background:#010a14;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:7px;cursor:pointer;transition:all .2s;text-align:center;border-radius:2px;}
+.fuente-btn:hover,.fuente-btn.sel{border-color:var(--ia);color:var(--ia);background:rgba(170,119,255,.07);}
+.fuente-btn .fi{font-size:13px;display:block;margin-bottom:2px;}
+
+.ia-result{border:1px solid rgba(170,119,255,.3);background:rgba(170,119,255,.04);padding:10px;border-radius:2px;margin-bottom:10px;display:none;}
+.ia-result-title{font-size:7px;letter-spacing:2px;color:var(--ia);font-family:'Orbitron',monospace;text-transform:uppercase;margin-bottom:7px;}
+.rf{margin-bottom:6px;}
+.rl{font-size:6px;color:var(--ia);font-family:'Orbitron',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;}
+.rv{font-size:11px;color:var(--text);padding:4px 7px;background:#010a14;border:1px solid var(--border);border-radius:2px;}
 .rv[contenteditable="true"]:focus{outline:none;border-color:var(--ia);}
+
+/* URL extractor */
+.url-result{border:1px solid rgba(255,0,170,.3);background:rgba(255,0,170,.04);padding:10px;border-radius:2px;margin-bottom:10px;display:none;}
+.url-result-title{font-size:7px;letter-spacing:2px;color:var(--magenta);font-family:'Orbitron',monospace;text-transform:uppercase;margin-bottom:7px;}
 </style>
 </head>
 <body>
@@ -200,88 +269,121 @@ header{display:flex;align-items:center;justify-content:space-between;padding:8px
 
 <header>
   <div class="logo">
-    <div class="logo-icon"></div>
+    <div class="logo-diamond"></div>
     <div>
       <h1>IRAPUATO INTEL</h1>
-      <span id="modo-label">MODO ESCRITORIO</span>
+      <span class="logo-sub" id="modo-sub">MODO ESCRITORIO</span>
     </div>
   </div>
-  <div class="mode-toggle">
-    <button class="mode-btn active-e" id="btn-e" onclick="setModo('escritorio')">🖥 DESK</button>
-    <button class="mode-btn" id="btn-c" onclick="setModo('campo')">📡 CAMPO</button>
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="tab-mapa" onclick="setVista('mapa')">🗺 MAPA</button>
+    <button class="nav-tab campo-tab" id="tab-campo" onclick="setVista('campo')">📡 CAMPO</button>
+    <button class="nav-tab stats-tab" id="tab-stats" onclick="setVista('stats')">📊 STATS</button>
   </div>
-  <div class="header-btns" id="hbtns">
+  <div class="header-actions">
+    <button class="hbtn hbtn-url" onclick="abrirURL()">🔗 URL</button>
     <button class="hbtn hbtn-ia" onclick="abrirIA()">🤖 IA</button>
     <button class="hbtn hbtn-add" onclick="abrirManual(null)">+ RPT</button>
   </div>
 </header>
 
-<div id="alerta-banner">⚠ ALERTA — EVENTO DE SEGURIDAD EN TU RADIO</div>
+<div id="alerta-banner">⚠ ALERTA DE SEGURIDAD EN TU RADIO</div>
 
 <div id="gps-bar">
-  <div class="gps-info"><div class="gps-dot" id="gps-dot"></div><span id="gps-status">Obteniendo GPS...</span></div>
+  <div class="gps-info"><div class="gps-dot" id="gps-dot"></div><span id="gps-status">Buscando GPS...</span></div>
   <div class="gps-coords" id="gps-coords">—</div>
   <div class="radio-ctrl">
-    <span>RADIO:</span>
+    <span>RADIO</span>
     <input type="range" min="500" max="5000" step="500" value="2000" id="radio-sl" oninput="cambiarRadio(this.value)">
     <span id="radio-lbl">2km</span>
   </div>
 </div>
 
 <div class="stats-row">
-  <div class="stat-box"><div class="stat-num" id="s-total">0</div><div class="stat-label">EVENTOS</div></div>
-  <div class="stat-box"><div class="stat-num" id="s-cerca" style="color:var(--accent)">—</div><div class="stat-label">CERCANOS</div></div>
-  <div class="stat-box"><div class="stat-num" id="s-rumor">0</div><div class="stat-label">RUMORES</div></div>
-  <div class="stat-box"><div class="stat-num" id="s-ia">0</div><div class="stat-label">VÍA IA</div></div>
+  <div class="sbox"><div class="snum" id="s-total">0</div><div class="slbl">EVENTOS</div></div>
+  <div class="sbox"><div class="snum" id="s-cerca" style="color:var(--green)">—</div><div class="slbl">CERCANOS</div></div>
+  <div class="sbox"><div class="snum" id="s-seg" style="color:var(--seguridad)">0</div><div class="slbl">SEGURIDAD</div></div>
+  <div class="sbox"><div class="snum" id="s-ia" style="color:var(--ia)">0</div><div class="slbl">VÍA IA</div></div>
 </div>
 
 <div class="main">
-  <div id="sidebar-desktop">
-    <div class="filters">
-      <div class="filters-title">FILTRAR</div>
-      <div class="filter-chips">
-        <button class="chip active" data-type="todos" onclick="filtrar('todos',this)">TODOS</button>
-        <button class="chip" data-type="seguridad" onclick="filtrar('seguridad',this)">SEG</button>
-        <button class="chip" data-type="accidente" onclick="filtrar('accidente',this)">ACC</button>
-        <button class="chip" data-type="evento" onclick="filtrar('evento',this)">EVE</button>
-        <button class="chip" data-type="rumor" onclick="filtrar('rumor',this)">RUM</button>
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sb-filters">
+      <div class="sb-title">TIPO DE EVENTO</div>
+      <div class="chips">
+        <button class="chip active" data-t="todos" onclick="filtrar('todos',this)">TODOS</button>
+        <button class="chip" data-t="seguridad" onclick="filtrar('seguridad',this)">SEG</button>
+        <button class="chip" data-t="accidente" onclick="filtrar('accidente',this)">ACC</button>
+        <button class="chip" data-t="evento" onclick="filtrar('evento',this)">EVE</button>
+        <button class="chip" data-t="rumor" onclick="filtrar('rumor',this)">RUM</button>
       </div>
     </div>
-    <div class="eventos-list" id="eventos-list"></div>
-    <div class="legend">
-      <div class="legend-title">LEYENDA</div>
-      <div class="legend-items">
-        <div class="legend-item"><span class="dot" style="background:#ff3355"></span>SEGURIDAD</div>
-        <div class="legend-item"><span class="dot" style="background:#ffaa00"></span>ACCIDENTE</div>
-        <div class="legend-item"><span class="dot" style="background:#00ccff"></span>EVENTO</div>
-        <div class="legend-item"><span class="dot" style="background:#446677"></span>RUMOR</div>
-        <div class="legend-item"><span class="dot" style="background:#00ff88"></span>MI POSICIÓN</div>
+    <div class="time-filter">
+      <div class="sb-title">PERIODO</div>
+      <div class="time-chips">
+        <button class="tchip active" data-days="14" onclick="filtrarTiempo(14,this)">2 SEM</button>
+        <button class="tchip" data-days="30" onclick="filtrarTiempo(30,this)">1 MES</button>
+        <button class="tchip" data-days="90" onclick="filtrarTiempo(90,this)">3 MES</button>
+        <button class="tchip" data-days="365" onclick="filtrarTiempo(365,this)">1 AÑO</button>
+        <button class="tchip" data-days="0" onclick="filtrarTiempo(0,this)">TODO</button>
+      </div>
+    </div>
+    <div class="ev-list" id="ev-list"></div>
+    <div class="sb-legend">
+      <div class="leg-items">
+        <div class="leg-item"><span class="ldot" style="background:#ff2255"></span>SEGURIDAD</div>
+        <div class="leg-item"><span class="ldot" style="background:#ffaa00"></span>ACCIDENTE</div>
+        <div class="leg-item"><span class="ldot" style="background:#00ccff"></span>EVENTO</div>
+        <div class="leg-item"><span class="ldot" style="background:#3a5a7a"></span>RUMOR</div>
+        <div class="leg-item"><span class="ldot" style="background:#00ff88"></span>MI POSICIÓN</div>
       </div>
     </div>
   </div>
 
+  <!-- MAPA -->
   <div class="map-wrap">
     <div id="map"></div>
-    <canvas id="radar-canvas"></canvas>
-    <button id="fab" onclick="abrirManual('gps')" title="Reportar aquí">📍</button>
+    <button id="fab" onclick="abrirManual('gps')">📍</button>
   </div>
 
+  <!-- PANEL CAMPO -->
   <div id="panel-campo">
-    <div class="panel-title"><span>📡 CERCANOS</span><span id="radio-campo-lbl" style="color:#446677;font-size:8px;">2KM</span></div>
-    <div class="cercanos-list" id="cercanos-list"><div style="padding:20px;text-align:center;color:#446677;font-size:9px;font-family:Orbitron,monospace;">ACTIVANDO GPS...</div></div>
+    <div class="pc-title">
+      <span>📡 CERCANOS</span>
+      <span id="pc-radio-lbl" style="color:var(--muted);font-size:7px;">2KM</span>
+    </div>
+    <div class="cerca-list" id="cerca-list">
+      <div style="padding:16px;text-align:center;color:var(--muted);font-size:8px;font-family:Orbitron,monospace;">ACTIVANDO GPS...</div>
+    </div>
   </div>
+
+  <!-- PANEL STATS (overlay) -->
+  <div id="panel-stats">
+    <div class="stats-header">
+      <div class="stats-title">// ANÁLISIS ESTADÍSTICO</div>
+      <button class="stats-close" onclick="setVista('mapa')">← VOLVER AL MAPA</button>
+    </div>
+    <div class="stats-body" id="stats-body"></div>
+  </div>
+
 </div>
 
+<!-- BOTTOM PANEL MÓVIL -->
 <div id="panel-bottom">
-  <div class="bottom-handle" onclick="toggleBottom()"></div>
-  <div class="bottom-tabs">
-    <div class="btab active" onclick="setBottomTab('cercanos',this)">📡 CERCANOS</div>
-    <div class="btab" onclick="setBottomTab('todos',this)">📋 TODOS</div>
+  <div class="pb-handle" onclick="toggleBottom()"></div>
+  <div class="pb-tabs">
+    <div class="pbtab active" onclick="setPBTab('cercanos',this)">📡 CERCANOS</div>
+    <div class="pbtab" onclick="setPBTab('todos',this)">📋 TODOS</div>
   </div>
-  <div class="bottom-content" id="bottom-content"></div>
+  <div class="pb-content" id="pb-content"></div>
 </div>
 
-<div class="ticker"><span class="ticker-label">LIVE</span><span class="ticker-text" id="ticker-text">—</span></div>
+<div class="ticker">
+  <span class="ticker-lbl">LIVE</span>
+  <span class="ticker-txt" id="ticker-txt">—</span>
+</div>
 
 <!-- MODAL MANUAL -->
 <div class="modal-overlay" id="m-manual">
@@ -289,7 +391,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:8px
     <button class="btn-close" onclick="cerrarManual()">✕</button>
     <div class="modal-title">// NUEVO REPORTE</div>
     <div class="modal-hint" id="hint-coords">📍 Toca el mapa para fijar ubicación exacta.</div>
-    <div class="form-group"><label class="form-label">TÍTULO *</label><input class="form-input" id="f-titulo" placeholder="Describe el evento"/></div>
+    <div class="form-group"><label class="form-label">TÍTULO *</label><input class="form-input" id="f-titulo" placeholder="Describe el evento brevemente"/></div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">TIPO</label>
         <select class="form-select" id="f-tipo">
@@ -301,38 +403,89 @@ header{display:flex;align-items:center;justify-content:space-between;padding:8px
       </div>
       <div class="form-group"><label class="form-label">FUENTE</label>
         <select class="form-select" id="f-fuente">
-          <option>Reporte manual</option><option>AM Guanajuato</option><option>Periódico Correo</option>
-          <option>En Tinta Negra</option><option>Zona Franca</option><option>Facebook</option>
-          <option>WhatsApp</option><option>Observación directa</option>
+          <option>Reporte manual</option><option>Municipio Irapuato</option>
+          <option>En Tinta Negra</option><option>El Sol de Irapuato</option>
+          <option>AM Guanajuato</option><option>Periódico Correo</option>
+          <option>Facebook</option><option>WhatsApp</option><option>Observación directa</option>
         </select>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">LUGAR</label><input class="form-input" id="f-lugar" placeholder="Colonia o referencia"/></div>
-    <div class="form-group"><label class="form-label">DESCRIPCIÓN</label><textarea class="form-textarea" id="f-desc" placeholder="Detalles..."></textarea></div>
+    <div class="form-group"><label class="form-label">LUGAR / COLONIA</label><input class="form-input" id="f-lugar" placeholder="Ej: Col. Centro, Blvd. Arandas"/></div>
+    <div class="form-group"><label class="form-label">DESCRIPCIÓN</label><textarea class="form-textarea" id="f-desc" placeholder="Detalles del evento..."></textarea></div>
+    <div class="form-group"><label class="form-label">URL DE LA NOTICIA (opcional)</label><input class="form-input" id="f-url" placeholder="https://..."/></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="cerrarManual()">CANCELAR</button>
-      <button class="btn-save" onclick="guardarManual()">REGISTRAR →</button>
+      <button class="btn-save btn-cyan" onclick="guardarManual()">REGISTRAR →</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL IA -->
-<div class="modal-overlay" id="m-ia">
-  <div class="modal">
-    <button class="btn-close" onclick="cerrarIA()">✕</button>
-    <div class="modal-title ia-c">🤖 ANALIZADOR IA</div>
-    <div class="modal-hint ia-h">Pega texto de periódico, Facebook o WhatsApp. La IA extrae lugar, tipo y resumen.</div>
+<!-- MODAL URL -->
+<div class="modal-overlay" id="m-url">
+  <div class="modal magenta">
+    <button class="btn-close" onclick="cerrarURL()">✕</button>
+    <div class="modal-title mg">// EXTRACTOR DE NOTICIAS WEB</div>
+    <div class="modal-hint mg">
+      1. Abre la noticia en Chrome<br>
+      2. Copia todo el texto (mantén presionado → Seleccionar todo → Copiar)<br>
+      3. Pega el texto abajo + pega la URL<br>
+      4. La IA extrae lugar, tipo y resumen automáticamente
+    </div>
     <div class="form-group"><label class="form-label">FUENTE</label>
       <div class="fuentes-grid">
-        <button class="fuente-btn sel" data-f="AM Guanajuato" onclick="selF(this)"><span class="fi">📰</span>AM GTO</button>
-        <button class="fuente-btn" data-f="Periódico Correo" onclick="selF(this)"><span class="fi">📰</span>CORREO</button>
-        <button class="fuente-btn" data-f="En Tinta Negra" onclick="selF(this)"><span class="fi">📰</span>TINTA NEGRA</button>
-        <button class="fuente-btn" data-f="Zona Franca" onclick="selF(this)"><span class="fi">📰</span>ZONA FRANCA</button>
-        <button class="fuente-btn" data-f="Facebook" onclick="selF(this)"><span class="fi">📘</span>FACEBOOK</button>
-        <button class="fuente-btn" data-f="WhatsApp" onclick="selF(this)"><span class="fi">💬</span>WHATSAPP</button>
+        <button class="fuente-btn sel" data-f="Municipio Irapuato" onclick="selF(this,'url')"><span class="fi">🏛</span>MUNICIPIO</button>
+        <button class="fuente-btn" data-f="En Tinta Negra" onclick="selF(this,'url')"><span class="fi">📰</span>TINTA NEGRA</button>
+        <button class="fuente-btn" data-f="El Sol de Irapuato" onclick="selF(this,'url')"><span class="fi">📰</span>EL SOL</button>
+        <button class="fuente-btn" data-f="AM Guanajuato" onclick="selF(this,'url')"><span class="fi">📰</span>AM GTO</button>
+        <button class="fuente-btn" data-f="Periódico Correo" onclick="selF(this,'url')"><span class="fi">📰</span>CORREO</button>
+        <button class="fuente-btn" data-f="Otro" onclick="selF(this,'url')"><span class="fi">🌐</span>OTRO</button>
       </div>
     </div>
-    <div class="form-group"><label class="form-label">TEXTO</label><textarea class="form-textarea" id="ia-texto" style="min-height:100px;" placeholder="Pega aquí el texto..."></textarea></div>
+    <div class="form-group"><label class="form-label">URL DE LA NOTICIA</label><input class="form-input" id="url-link" placeholder="https://entintanegra.com/..."/></div>
+    <div class="form-group"><label class="form-label">TEXTO DE LA NOTICIA (pegado desde el sitio)</label>
+      <textarea class="form-textarea" id="url-texto" style="min-height:100px;" placeholder="Pega aquí el texto completo de la noticia..."></textarea>
+    </div>
+    <div class="url-result" id="url-result">
+      <div class="url-result-title" id="url-conf">✓ EXTRACCIÓN COMPLETADA</div>
+      <div class="rf"><div class="rl">TÍTULO</div><div class="rv" id="ur-titulo" contenteditable="true"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
+        <div class="rf"><div class="rl">TIPO</div>
+          <select class="form-input" id="ur-tipo" style="font-size:11px;">
+            <option value="seguridad">🔴 Seguridad</option><option value="accidente">🟠 Accidente</option>
+            <option value="evento">🔵 Evento</option><option value="rumor">⚪ Rumor</option>
+          </select>
+        </div>
+        <div class="rf"><div class="rl">COLONIA / LUGAR</div><div class="rv" id="ur-lugar" contenteditable="true"></div></div>
+      </div>
+      <div class="rf"><div class="rl">RESUMEN</div><div class="rv" id="ur-resumen" contenteditable="true" style="min-height:40px;"></div></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarURL()">CANCELAR</button>
+      <button class="btn-save btn-magenta" id="btn-extraer" onclick="extraerURL()">EXTRAER CON IA →</button>
+      <button class="btn-save btn-cyan" id="btn-guardar-url" onclick="guardarDesdeURL()" style="display:none;">GUARDAR EN MAPA →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IA TEXTO -->
+<div class="modal-overlay" id="m-ia">
+  <div class="modal ia-modal">
+    <button class="btn-close" onclick="cerrarIA()">✕</button>
+    <div class="modal-title ia">// ANALIZADOR IA — TEXTO LIBRE</div>
+    <div class="modal-hint ia">Pega texto de Facebook, WhatsApp o cualquier fuente.</div>
+    <div class="form-group"><label class="form-label">FUENTE</label>
+      <div class="fuentes-grid">
+        <button class="fuente-btn sel" data-f="AM Guanajuato" onclick="selF(this,'ia')"><span class="fi">📰</span>AM GTO</button>
+        <button class="fuente-btn" data-f="En Tinta Negra" onclick="selF(this,'ia')"><span class="fi">📰</span>TINTA NEGRA</button>
+        <button class="fuente-btn" data-f="El Sol de Irapuato" onclick="selF(this,'ia')"><span class="fi">📰</span>EL SOL</button>
+        <button class="fuente-btn" data-f="Facebook" onclick="selF(this,'ia')"><span class="fi">📘</span>FACEBOOK</button>
+        <button class="fuente-btn" data-f="WhatsApp" onclick="selF(this,'ia')"><span class="fi">💬</span>WHATSAPP</button>
+        <button class="fuente-btn" data-f="Otro" onclick="selF(this,'ia')"><span class="fi">📝</span>OTRO</button>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">TEXTO</label>
+      <textarea class="form-textarea" id="ia-texto" style="min-height:100px;" placeholder="Pega el texto aquí..."></textarea>
+    </div>
     <div class="ia-result" id="ia-result">
       <div class="ia-result-title" id="ia-conf">✓ ANÁLISIS</div>
       <div class="rf"><div class="rl">TÍTULO</div><div class="rv" id="r-titulo" contenteditable="true"></div></div>
@@ -349,8 +502,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:8px
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="cerrarIA()">CANCELAR</button>
-      <button class="btn-save ia" id="btn-analizar" onclick="analizar()">ANALIZAR →</button>
-      <button class="btn-save" id="btn-guardar-ia" onclick="guardarIA()" style="display:none;">GUARDAR →</button>
+      <button class="btn-save btn-ia" id="btn-analizar" onclick="analizar()">ANALIZAR →</button>
+      <button class="btn-save btn-cyan" id="btn-guardar-ia" onclick="guardarIA()" style="display:none;">GUARDAR →</button>
     </div>
   </div>
 </div>
@@ -358,285 +511,162 @@ header{display:flex;align-items:center;justify-content:space-between;padding:8px
 <script>
 // ── CONSTANTES ─────────────────────────────────────────────────
 const GEO={cLat:20.6795,cLng:-101.3540};
-const COLORES={seguridad:'#ff3355',accidente:'#ffaa00',evento:'#00ccff',rumor:'#446677'};
+const COLORES={seguridad:'#ff2255',accidente:'#ffaa00',evento:'#00ccff',rumor:'#3a6a8a'};
+const NOMINATIM='https://nominatim.openstreetmap.org/search';
 
 // ── ESTADO ─────────────────────────────────────────────────────
-let eventos=JSON.parse(localStorage.getItem('ira-v6')||'null')||[
-  {id:1,titulo:"Accidente en Blvd. Arandas",tipo:"accidente",lugar:"Blvd. Arandas / Libramiento",descripcion:"Choque entre dos vehículos. Tráfico lento en la zona.",fuente:"Observación directa",fecha:new Date().toISOString(),lat:20.6834,lng:-101.3510,viaIA:false},
-  {id:2,titulo:"Feria de empleo en el Centro",tipo:"evento",lugar:"Jardín Principal, Centro Histórico",descripcion:"Feria de empleo municipal con más de 30 empresas participantes.",fuente:"AM Guanajuato",fecha:new Date().toISOString(),lat:20.6795,lng:-101.3540,viaIA:false},
-  {id:3,titulo:"Rumor: corte de agua Col. Delegaciones",tipo:"rumor",lugar:"Col. Delegaciones",descripcion:"Posible corte de agua. No confirmado por SAPAL.",fuente:"WhatsApp",fecha:new Date().toISOString(),lat:20.6750,lng:-101.3480,viaIA:false},
-  {id:4,titulo:"Robo a negocio en Col. Centro",tipo:"seguridad",lugar:"Calle Obregón, Col. Centro",descripcion:"Asalto a tienda de conveniencia en la madrugada. Sin lesionados.",fuente:"Facebook",fecha:new Date().toISOString(),lat:20.6810,lng:-101.3555,viaIA:false}
+let eventos=JSON.parse(localStorage.getItem('ira-v7')||'null')||[
+  {id:1,titulo:"Accidente en Blvd. Arandas",tipo:"accidente",lugar:"Blvd. Arandas esq. Libramiento Norte",colonia:"Zona Norte",descripcion:"Choque entre dos vehículos. Tráfico lento.",fuente:"Observación directa",fecha:new Date().toISOString(),lat:20.6834,lng:-101.3510,viaIA:false,url:''},
+  {id:2,titulo:"Feria de empleo en el Centro",tipo:"evento",lugar:"Jardín Principal, Centro Histórico",colonia:"Centro Histórico",descripcion:"Feria de empleo municipal con más de 30 empresas.",fuente:"AM Guanajuato",fecha:new Date().toISOString(),lat:20.6795,lng:-101.3540,viaIA:false,url:''},
+  {id:3,titulo:"Rumor: corte de agua Col. Delegaciones",tipo:"rumor",lugar:"Col. Delegaciones",colonia:"Col. Delegaciones",descripcion:"Posible corte de agua. No confirmado por SAPAL.",fuente:"WhatsApp",fecha:new Date().toISOString(),lat:20.6750,lng:-101.3480,viaIA:false,url:''},
+  {id:4,titulo:"Robo a negocio en Col. Centro",tipo:"seguridad",lugar:"Calle Obregón, Col. Centro",colonia:"Centro Histórico",descripcion:"Asalto a tienda de conveniencia en la madrugada.",fuente:"Facebook",fecha:new Date().toISOString(),lat:20.6810,lng:-101.3555,viaIA:false,url:''},
+  {id:5,titulo:"Asalto a transeúnte en Col. Trojes",tipo:"seguridad",lugar:"Av. Las Trojes",colonia:"Col. Trojes",descripcion:"Robo con violencia reportado por vecinos.",fuente:"Facebook",fecha:new Date(Date.now()-5*86400000).toISOString(),lat:20.6720,lng:-101.3600,viaIA:false,url:''},
+  {id:6,titulo:"Choque en Periférico",tipo:"accidente",lugar:"Periférico Manuel Gomez Morín",colonia:"Zona Norte",descripcion:"Colisión entre camioneta y moto.",fuente:"En Tinta Negra",fecha:new Date(Date.now()-3*86400000).toISOString(),lat:20.6900,lng:-101.3450,viaIA:false,url:''},
+  {id:7,titulo:"Robo a casa habitación",tipo:"seguridad",lugar:"Col. Jardines de Irapuato",colonia:"Col. Jardines",descripcion:"Robo en vivienda durante horas de trabajo.",fuente:"WhatsApp",fecha:new Date(Date.now()-8*86400000).toISOString(),lat:20.6760,lng:-101.3520,viaIA:false,url:''},
+  {id:8,titulo:"Robo a vehículo Col. Centro",tipo:"seguridad",lugar:"Calle Hidalgo",colonia:"Centro Histórico",descripcion:"Robo de autopartes en estacionamiento.",fuente:"Facebook",fecha:new Date(Date.now()-12*86400000).toISOString(),lat:20.6800,lng:-101.3560,viaIA:false,url:''}
 ];
 
-let modo='escritorio';
-let filtroActivo='todos';
+let vista='mapa';
+let filtroTipo='todos';
+let filtroDias=14;
 let coordsClick=null;
 let fuenteIA='AM Guanajuato';
+let fuenteURL='Municipio Irapuato';
 let iaResultado=null;
+let urlResultado=null;
 let miPos=null;
 let radioAlerta=2000;
 let gpsWatcher=null;
 let ultimaAlerta=0;
-let bottomTab='cercanos';
-let bottomOpen=true;
+let pbTab='cercanos';
+let pbOpen=true;
 let leafletMarkers={};
 let miPosMarker=null;
 let radioCircle=null;
-let animFrame=null;
-let radarAngle=0;
+let heatLayer=null;
+let periodStats=365;
 
 // ── MAPA LEAFLET ───────────────────────────────────────────────
-const map=L.map('map',{
-  center:[GEO.cLat,GEO.cLng],
-  zoom:14,
-  zoomControl:false,
-  attributionControl:false
-});
-
+const map=L.map('map',{center:[GEO.cLat,GEO.cLng],zoom:14,zoomControl:false,attributionControl:true});
 L.control.zoom({position:'topright'}).addTo(map);
-L.control.attribution({position:'bottomleft',prefix:''}).addTo(map);
-
-// Tile oscuro tipo radar
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-  attribution:'© OpenStreetMap © CARTO',
-  subdomains:'abcd',
-  maxZoom:19
+  attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19
 }).addTo(map);
 
-// Clic en mapa para nuevo reporte
-map.on('click',function(e){
+map.on('click',e=>{
   coordsClick={lat:e.latlng.lat,lng:e.latlng.lng};
   abrirManual(null);
 });
 
-// ── ICONOS LEAFLET ─────────────────────────────────────────────
-function crearIcono(tipo,viaIA){
+// ── GEOCODIFICACIÓN ────────────────────────────────────────────
+async function geocodificar(lugar){
+  try{
+    const q=encodeURIComponent(lugar+', Irapuato, Guanajuato, Mexico');
+    const res=await fetch(`${NOMINATIM}?q=${q}&format=json&limit=1&countrycodes=mx`);
+    const data=await res.json();
+    if(data&&data.length>0){
+      return {lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lon)};
+    }
+  }catch(e){console.warn('Geocodificación falló:',e);}
+  return null;
+}
+
+// ── ICONOS CYBERPUNK NEON ──────────────────────────────────────
+function crearIcono(tipo,viaIA,cercano){
   const color=COLORES[tipo]||COLORES.rumor;
-  const ring=viaIA?`<circle cx="16" cy="16" r="13" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="3,2"/>`:'';
+  const glow=cercano?`filter:drop-shadow(0 0 6px ${color})`:
+             `filter:drop-shadow(0 0 3px ${color}88)`;
+  const iaRing=viaIA?`<circle cx="16" cy="16" r="13" fill="none" stroke="#aa77ff" stroke-width="1" stroke-dasharray="3,2" opacity=".7"/>`:'';
   const icons={seguridad:'!',accidente:'~',evento:'★',rumor:'?'};
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-    <circle cx="16" cy="16" r="14" fill="${color}22"/>
-    ${ring}
-    <circle cx="16" cy="16" r="9" fill="${color}" stroke="#010508" stroke-width="2"/>
-    <text x="16" y="20" text-anchor="middle" font-size="10" font-weight="bold" fill="#010508" font-family="sans-serif">${icons[tipo]||'●'}</text>
+  const sz=cercano?11:9;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" style="${glow}">
+    <circle cx="16" cy="16" r="14" fill="${color}15" stroke="${color}40" stroke-width="1"/>
+    <circle cx="16" cy="16" r="9" fill="${color}" stroke="${color}" stroke-width="0"/>
+    <circle cx="16" cy="16" r="4" fill="${color}aa"/>
+    <text x="16" y="20" text-anchor="middle" font-size="${sz}" font-weight="bold" fill="#000" font-family="sans-serif">${icons[tipo]||'●'}</text>
+    ${iaRing}
   </svg>`;
   return L.divIcon({html:svg,className:'',iconSize:[32,32],iconAnchor:[16,16],popupAnchor:[0,-18]});
 }
 
-function crearPopupHTML(ev){
+function crearPopup(ev){
   const color=COLORES[ev.tipo]||COLORES.rumor;
   const fecha=new Date(ev.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
-  const distStr=miPos?`<div class="popup-dist" style="color:${color}">📡 ${formatDist(distancia(miPos.lat,miPos.lng,ev.lat,ev.lng))} de ti</div>`:'';
+  const distHtml=miPos?`<div class="lp-dist" style="color:${color}">📡 ${fmtD(dist(miPos.lat,miPos.lng,ev.lat,ev.lng))} de ti</div>`:'';
+  const linkHtml=ev.url?`<a href="${ev.url}" target="_blank" class="lp-link">↗ VER NOTICIA ORIGINAL</a>`:'';
   return `<div>
-    <span class="popup-tipo" style="background:${color}22;color:${color}">${ev.tipo.toUpperCase()}${ev.viaIA?' 🤖':''}</span>
-    <div class="popup-titulo">${ev.titulo}</div>
-    <div class="popup-lugar">📍 ${ev.lugar}</div>
-    <div class="popup-desc">${ev.descripcion}</div>
-    ${distStr}
-    <div class="popup-meta">${ev.fuente} | ${fecha}</div>
+    <span class="lp-tipo" style="background:${color}22;color:${color};text-shadow:0 0 8px ${color}88">${ev.tipo.toUpperCase()}${ev.viaIA?' 🤖':''}</span>
+    <div class="lp-titulo">${ev.titulo}</div>
+    <div class="lp-lugar">📍 ${ev.lugar}</div>
+    <div class="lp-desc">${ev.descripcion}</div>
+    ${distHtml}
+    <div class="lp-meta"><span>${ev.fuente} | ${fecha}</span>${linkHtml}</div>
   </div>`;
 }
 
-function formatDist(d){return d<1000?Math.round(d)+'m':(d/1000).toFixed(1)+'km';}
+// ── MAPA DE CALOR ──────────────────────────────────────────────
+function actualizarHeatmap(){
+  if(heatLayer){map.removeLayer(heatLayer);heatLayer=null;}
+  const corte=periodStats>0?Date.now()-periodStats*86400000:0;
+  const puntos=eventos
+    .filter(ev=>ev.tipo==='seguridad'&&(periodStats===0||new Date(ev.fecha).getTime()>=corte))
+    .map(ev=>[ev.lat,ev.lng,1.0]);
+  if(puntos.length===0)return;
+  heatLayer=L.heatLayer(puntos,{
+    radius:40,blur:35,maxZoom:17,
+    gradient:{0.2:'rgba(0,255,136,0.4)',0.5:'rgba(255,238,0,0.6)',0.8:'rgba(255,100,0,0.7)',1.0:'rgba(255,34,85,0.85)'}
+  }).addTo(map);
+}
 
 // ── RENDER MARCADORES ──────────────────────────────────────────
+function getEventosFiltrados(){
+  const corte=filtroDias>0?Date.now()-filtroDias*86400000:0;
+  return eventos.filter(ev=>{
+    const tipoOk=filtroTipo==='todos'||ev.tipo===filtroTipo;
+    const timeOk=filtroDias===0||new Date(ev.fecha).getTime()>=corte;
+    return tipoOk&&timeOk;
+  });
+}
+
 function renderMarcadores(){
-  // Limpiar
   Object.values(leafletMarkers).forEach(m=>map.removeLayer(m));
   leafletMarkers={};
-
-  const filtrados=filtroActivo==='todos'?eventos:eventos.filter(e=>e.tipo===filtroActivo);
+  const filtrados=getEventosFiltrados();
   filtrados.forEach(ev=>{
-    const m=L.marker([ev.lat,ev.lng],{icon:crearIcono(ev.tipo,ev.viaIA)})
-      .addTo(map)
-      .bindPopup(crearPopupHTML(ev),{maxWidth:260,className:'dark-popup'});
+    const cercano=miPos&&dist(miPos.lat,miPos.lng,ev.lat,ev.lng)<=radioAlerta;
+    const m=L.marker([ev.lat,ev.lng],{icon:crearIcono(ev.tipo,ev.viaIA,cercano)})
+      .addTo(map).bindPopup(crearPopup(ev),{maxWidth:280});
     leafletMarkers[ev.id]=m;
   });
+  actualizarHeatmap();
 }
 
-function actualizarPopups(){
+function actualizarIconosCercania(){
   Object.entries(leafletMarkers).forEach(([id,m])=>{
     const ev=eventos.find(e=>e.id==id);
-    if(ev)m.setPopupContent(crearPopupHTML(ev));
-  });
-}
-
-// ── MI POSICIÓN EN MAPA ────────────────────────────────────────
-function actualizarPosicionMapa(){
-  if(!miPos)return;
-
-  // Círculo de radio
-  if(radioCircle)map.removeLayer(radioCircle);
-  radioCircle=L.circle([miPos.lat,miPos.lng],{
-    radius:radioAlerta,
-    color:'#00ff88',fillColor:'#00ff88',
-    fillOpacity:0.04,weight:1,dashArray:'5,5'
-  }).addTo(map);
-
-  // Marcador propio
-  if(miPosMarker)map.removeLayer(miPosMarker);
-  const svgYo=`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
-    <circle cx="14" cy="14" r="12" fill="rgba(0,255,136,0.15)" stroke="#00ff88" stroke-width="2"/>
-    <circle cx="14" cy="14" r="6" fill="#00ff88" stroke="white" stroke-width="2"/>
-    <circle cx="14" cy="14" r="2" fill="white"/>
-  </svg>`;
-  miPosMarker=L.marker([miPos.lat,miPos.lng],{
-    icon:L.divIcon({html:svgYo,className:'',iconSize:[28,28],iconAnchor:[14,14]}),
-    zIndexOffset:1000
-  }).addTo(map).bindPopup('<div style="font-family:Orbitron,monospace;font-size:10px;color:#00ff88">📍 TU POSICIÓN</div>');
-}
-
-// ── RADAR CANVAS OVERLAY (modo campo) ─────────────────────────
-const radarCanvas=document.getElementById('radar-canvas');
-const rCtx=radarCanvas.getContext('2d');
-
-function resizeRadar(){
-  radarCanvas.width=radarCanvas.offsetWidth;
-  radarCanvas.height=radarCanvas.offsetHeight;
-}
-
-function dibujarRadar(){
-  const W=radarCanvas.width,H=radarCanvas.height;
-  rCtx.clearRect(0,0,W,H);
-  if(!miPos)return;
-
-  const cx=W/2,cy=H/2;
-  const R=Math.min(W,H)*0.40;
-
-  // Fondo radar semitransparente
-  const bg=rCtx.createRadialGradient(cx,cy,0,cx,cy,R);
-  bg.addColorStop(0,'rgba(0,20,10,0.7)');
-  bg.addColorStop(0.8,'rgba(0,10,5,0.85)');
-  bg.addColorStop(1,'rgba(0,5,2,0.95)');
-  rCtx.beginPath();rCtx.arc(cx,cy,R,0,Math.PI*2);
-  rCtx.fillStyle=bg;rCtx.fill();
-
-  // Scanlines
-  rCtx.save();rCtx.beginPath();rCtx.arc(cx,cy,R,0,Math.PI*2);rCtx.clip();
-  rCtx.fillStyle='rgba(0,255,136,0.015)';
-  for(let y=0;y<H;y+=3){rCtx.fillRect(cx-R,y,R*2,1);}
-  rCtx.restore();
-
-  // Anillos
-  [0.25,0.5,0.75,1.0].forEach((f,i)=>{
-    rCtx.beginPath();rCtx.arc(cx,cy,R*f,0,Math.PI*2);
-    rCtx.strokeStyle=`rgba(0,255,136,${0.08+i*0.04})`;rCtx.lineWidth=1;rCtx.stroke();
-    const d=radioAlerta*f;
-    rCtx.font='7px Orbitron,monospace';rCtx.fillStyle='rgba(0,255,136,0.35)';rCtx.textAlign='center';
-    rCtx.fillText(formatDist(d),cx,cy-R*f+10);
-  });
-
-  // Cruz
-  rCtx.strokeStyle='rgba(0,255,136,0.1)';rCtx.lineWidth=0.8;
-  rCtx.beginPath();rCtx.moveTo(cx-R,cy);rCtx.lineTo(cx+R,cy);rCtx.stroke();
-  rCtx.beginPath();rCtx.moveTo(cx,cy-R);rCtx.lineTo(cx,cy+R);rCtx.stroke();
-
-  // Sweep
-  radarAngle=(radarAngle+2)%360;
-  const sa=radarAngle*Math.PI/180;
-  for(let i=0;i<40;i++){
-    const a=(radarAngle-i)*Math.PI/180;
-    rCtx.beginPath();rCtx.moveTo(cx,cy);
-    rCtx.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));
-    rCtx.strokeStyle=`rgba(0,255,136,${(40-i)/40*0.3})`;rCtx.lineWidth=2;rCtx.stroke();
-  }
-  rCtx.beginPath();rCtx.moveTo(cx,cy);
-  rCtx.lineTo(cx+R*Math.cos(sa),cy+R*Math.sin(sa));
-  rCtx.strokeStyle='rgba(0,255,136,0.9)';rCtx.lineWidth=2;rCtx.stroke();
-
-  // Borde
-  rCtx.beginPath();rCtx.arc(cx,cy,R,0,Math.PI*2);
-  rCtx.strokeStyle='rgba(0,255,136,0.35)';rCtx.lineWidth=2;rCtx.stroke();
-
-  // Máscara exterior
-  rCtx.save();
-  rCtx.beginPath();rCtx.rect(0,0,W,H);rCtx.arc(cx,cy,R,0,Math.PI*2,true);
-  rCtx.fillStyle='rgba(2,5,8,0.88)';rCtx.fill();
-  rCtx.restore();
-
-  // N
-  rCtx.font='bold 10px Orbitron,monospace';
-  rCtx.fillStyle='rgba(0,255,136,0.6)';rCtx.textAlign='center';
-  rCtx.fillText('N',cx,cy-R-6);
-
-  // Eventos en radar
-  eventos.forEach(ev=>{
-    const d=distancia(miPos.lat,miPos.lng,ev.lat,ev.lng);
-    if(d>radioAlerta)return;
-    const dLat=ev.lat-miPos.lat,dLng=ev.lng-miPos.lng;
-    const ang=Math.atan2(dLng,dLat);
-    const ratio=d/radioAlerta;
-    const px=cx+Math.sin(ang)*R*ratio;
-    const py=cy-Math.cos(ang)*R*ratio;
-    const color=COLORES[ev.tipo]||COLORES.rumor;
-    const sz=d<300?10:d<800?8:6;
-
-    rCtx.beginPath();rCtx.arc(px,py,sz+4,0,Math.PI*2);
-    rCtx.fillStyle=color+'22';rCtx.fill();
-    rCtx.beginPath();rCtx.arc(px,py,sz,0,Math.PI*2);
-    rCtx.fillStyle=color;rCtx.fill();
-    rCtx.strokeStyle='rgba(0,0,0,0.6)';rCtx.lineWidth=1.5;rCtx.stroke();
-
-    const icons={seguridad:'!',accidente:'~',evento:'★',rumor:'?'};
-    rCtx.font=`bold ${sz}px sans-serif`;rCtx.fillStyle='#000';rCtx.textAlign='center';
-    rCtx.fillText(icons[ev.tipo]||'●',px,py+sz*.35);
-
-    rCtx.font='7px Orbitron,monospace';rCtx.fillStyle=color;rCtx.textAlign='center';
-    rCtx.fillText(formatDist(d),px,py-sz-3);
-    if(d<400){
-      const t=ev.titulo.length>18?ev.titulo.slice(0,18)+'…':ev.titulo;
-      rCtx.font='7px Share Tech Mono,monospace';rCtx.fillStyle='rgba(255,255,255,0.55)';
-      rCtx.fillText(t,px,py-sz-12);
+    if(ev){
+      const cercano=miPos&&dist(miPos.lat,miPos.lng,ev.lat,ev.lng)<=radioAlerta;
+      m.setIcon(crearIcono(ev.tipo,ev.viaIA,cercano));
+      m.setPopupContent(crearPopup(ev));
     }
   });
-
-  // YO (centro)
-  rCtx.beginPath();rCtx.arc(cx,cy,10,0,Math.PI*2);
-  rCtx.fillStyle='rgba(0,255,136,0.2)';rCtx.fill();
-  rCtx.beginPath();rCtx.arc(cx,cy,6,0,Math.PI*2);
-  rCtx.fillStyle='#00ff88';rCtx.fill();
-  rCtx.strokeStyle='white';rCtx.lineWidth=2;rCtx.stroke();
-  rCtx.beginPath();rCtx.arc(cx,cy,2,0,Math.PI*2);
-  rCtx.fillStyle='white';rCtx.fill();
-
-  // HUD
-  rCtx.font='8px Orbitron,monospace';rCtx.textAlign='left';
-  rCtx.fillStyle='rgba(0,255,136,0.4)';
-  rCtx.fillText(`${miPos.lat.toFixed(4)}, ${miPos.lng.toFixed(4)}`,8,H-18);
-}
-
-function startRadar(){
-  if(animFrame)return;
-  resizeRadar();
-  function loop(){dibujarRadar();animFrame=requestAnimationFrame(loop);}
-  loop();
-}
-function stopRadar(){
-  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
-  rCtx.clearRect(0,0,radarCanvas.width,radarCanvas.height);
 }
 
 // ── GPS ────────────────────────────────────────────────────────
 function iniciarGPS(){
-  if(!navigator.geolocation){
-    document.getElementById('gps-status').textContent='GPS no disponible';
-    return;
-  }
+  if(!navigator.geolocation){document.getElementById('gps-status').textContent='GPS no disponible';return;}
   document.getElementById('gps-status').textContent='Buscando señal...';
   gpsWatcher=navigator.geolocation.watchPosition(pos=>{
     miPos={lat:pos.coords.latitude,lng:pos.coords.longitude,acc:pos.coords.accuracy};
     document.getElementById('gps-dot').classList.add('fix');
     document.getElementById('gps-status').textContent=`GPS ±${Math.round(pos.coords.accuracy)}m`;
     document.getElementById('gps-coords').textContent=`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
-    actualizarPosicionMapa();
-    actualizarPopups();
-    verificarAlertas();
-    renderCercanos();
-  },err=>{
+    actualizarPosMap();actualizarIconosCercania();verificarAlertas();renderCercanos();
+  },()=>{
     document.getElementById('gps-status').textContent='Sin GPS — usando demo';
     miPos={lat:GEO.cLat,lng:GEO.cLng,acc:50};
     document.getElementById('gps-coords').textContent='DEMO';
-    actualizarPosicionMapa();verificarAlertas();renderCercanos();
+    actualizarPosMap();verificarAlertas();renderCercanos();
   },{enableHighAccuracy:true,timeout:15000,maximumAge:8000});
 }
 
@@ -650,173 +680,403 @@ function detenerGPS(){
   document.getElementById('gps-coords').textContent='—';
   document.getElementById('alerta-banner').classList.remove('visible');
   document.getElementById('s-cerca').textContent='—';
+  actualizarIconosCercania();
 }
 
-function distancia(la1,lo1,la2,lo2){
+function actualizarPosMap(){
+  if(!miPos)return;
+  if(radioCircle)map.removeLayer(radioCircle);
+  radioCircle=L.circle([miPos.lat,miPos.lng],{
+    radius:radioAlerta,color:'#00ff88',fillColor:'#00ff88',
+    fillOpacity:.04,weight:1,dashArray:'4,4',
+    className:'radio-circle'
+  }).addTo(map);
+  if(miPosMarker)map.removeLayer(miPosMarker);
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26" style="filter:drop-shadow(0 0 6px #00ff88)">
+    <circle cx="13" cy="13" r="11" fill="rgba(0,255,136,.12)" stroke="#00ff88" stroke-width="1.5"/>
+    <circle cx="13" cy="13" r="6" fill="#00ff88" stroke="white" stroke-width="1.5"/>
+    <circle cx="13" cy="13" r="2" fill="white"/>
+  </svg>`;
+  miPosMarker=L.marker([miPos.lat,miPos.lng],{
+    icon:L.divIcon({html:svg,className:'',iconSize:[26,26],iconAnchor:[13,13]}),zIndexOffset:1000
+  }).addTo(map).bindPopup('<div style="font-family:Orbitron,monospace;font-size:9px;color:#00ff88;text-shadow:0 0 8px #00ff88">📍 TU POSICIÓN</div>');
+}
+
+function dist(la1,lo1,la2,lo2){
   const R=6371000,d1=(la2-la1)*Math.PI/180,d2=(lo2-lo1)*Math.PI/180;
   const a=Math.sin(d1/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(d2/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
+function fmtD(d){return d<1000?Math.round(d)+'m':(d/1000).toFixed(1)+'km';}
 
 function verificarAlertas(){
   if(!miPos)return;
-  const peligrosos=eventos.filter(ev=>ev.tipo==='seguridad'&&distancia(miPos.lat,miPos.lng,ev.lat,ev.lng)<=radioAlerta);
+  const p=eventos.filter(ev=>ev.tipo==='seguridad'&&dist(miPos.lat,miPos.lng,ev.lat,ev.lng)<=radioAlerta);
   const banner=document.getElementById('alerta-banner');
-  if(peligrosos.length>0){
-    banner.textContent=`⚠ ALERTA — ${peligrosos.length} EVENTO(S) DE SEGURIDAD EN RADIO ${formatDist(radioAlerta).toUpperCase()}`;
+  if(p.length>0){
+    banner.textContent=`⚠ ALERTA — ${p.length} EVENTO(S) DE SEGURIDAD EN RADIO ${fmtD(radioAlerta).toUpperCase()}`;
     banner.classList.add('visible');
-    const ahora=Date.now();
-    if(navigator.vibrate&&ahora-ultimaAlerta>30000){navigator.vibrate([300,150,300]);ultimaAlerta=ahora;}
-  } else {
-    banner.classList.remove('visible');
-  }
+    const now=Date.now();
+    if(navigator.vibrate&&now-ultimaAlerta>30000){navigator.vibrate([300,150,300]);ultimaAlerta=now;}
+  } else banner.classList.remove('visible');
 }
 
 function cambiarRadio(val){
   radioAlerta=parseInt(val);
-  const lbl=formatDist(radioAlerta);
-  document.getElementById('radio-lbl').textContent=lbl;
-  document.getElementById('radio-campo-lbl').textContent=lbl.toUpperCase();
-  if(radioCircle&&miPos){
-    radioCircle.setRadius(radioAlerta);
-  }
-  verificarAlertas();renderCercanos();
+  document.getElementById('radio-lbl').textContent=fmtD(radioAlerta);
+  document.getElementById('pc-radio-lbl').textContent=fmtD(radioAlerta).toUpperCase();
+  if(radioCircle&&miPos)radioCircle.setRadius(radioAlerta);
+  verificarAlertas();renderCercanos();actualizarIconosCercania();
 }
 
-// ── MODOS ──────────────────────────────────────────────────────
-function setModo(m){
-  modo=m;
+// ── VISTAS ────────────────────────────────────────────────────
+function setVista(v){
+  vista=v;
   const isMobile=window.innerWidth<700;
-  document.getElementById('btn-e').className='mode-btn'+(m==='escritorio'?' active-e':'');
-  document.getElementById('btn-c').className='mode-btn campo'+(m==='campo'?' active-c':'');
-  document.getElementById('modo-label').textContent=m==='escritorio'?'MODO ESCRITORIO':'MODO CAMPO — GPS ACTIVO';
-  document.getElementById('gps-bar').classList.toggle('visible',m==='campo');
-  document.getElementById('sidebar-desktop').style.display=m==='escritorio'&&!isMobile?'flex':'none';
-  document.getElementById('hbtns').style.display=m==='escritorio'?'flex':'none';
-  document.getElementById('fab').classList.toggle('visible',m==='campo');
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+v).classList.add('active');
+  document.getElementById('modo-sub').textContent=
+    v==='mapa'?'MODO ESCRITORIO':v==='campo'?'MODO CAMPO — GPS ACTIVO':'ANÁLISIS ESTADÍSTICO';
 
-  const radarEl=document.getElementById('radar-canvas');
+  document.getElementById('gps-bar').classList.toggle('visible',v==='campo');
+  document.getElementById('sidebar').style.display=v!=='campo'&&!isMobile?'flex':'none';
+  document.getElementById('fab').classList.toggle('visible',v==='campo');
+  document.getElementById('panel-stats').classList.toggle('visible',v==='stats');
 
-  if(m==='campo'){
+  if(v==='campo'){
     iniciarGPS();
-    radarEl.classList.add('visible');
-    startRadar();
     if(!isMobile)document.getElementById('panel-campo').classList.add('visible');
     else document.getElementById('panel-bottom').classList.add('visible');
     map.setZoom(15);
   } else {
-    detenerGPS();
-    radarEl.classList.remove('visible');
-    stopRadar();
+    if(v!=='mapa'){}
+    else{detenerGPS();}
     document.getElementById('panel-campo').classList.remove('visible');
-    document.getElementById('panel-bottom').classList.remove('visible');
-    map.setZoom(14);
+    if(v!=='campo')document.getElementById('panel-bottom').classList.remove('visible');
   }
-  setTimeout(()=>map.invalidateSize(),100);
+
+  if(v==='stats')renderStats();
+  setTimeout(()=>map.invalidateSize(),120);
 }
 
 // ── FILTROS ────────────────────────────────────────────────────
 function filtrar(tipo,el){
-  filtroActivo=tipo;
+  filtroTipo=tipo;
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderMarcadores();renderLista();
+}
+function filtrarTiempo(dias,el){
+  filtroDias=dias;
+  document.querySelectorAll('.tchip').forEach(c=>c.classList.remove('active'));
   el.classList.add('active');
   renderMarcadores();renderLista();
 }
 
 // ── LISTAS ────────────────────────────────────────────────────
 function renderLista(){
-  const filtrados=filtroActivo==='todos'?eventos:eventos.filter(e=>e.tipo===filtroActivo);
+  const filtrados=getEventosFiltrados();
   const html=filtrados.map(ev=>{
     const fecha=new Date(ev.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short'});
-    return `<div class="evento-card" data-type="${ev.tipo}" onclick="enfocarEvento(${ev.id})">
-      <div class="card-header">
-        <span class="card-tipo">${ev.tipo.toUpperCase()}${ev.viaIA?'<span class="badge-ia">IA</span>':''}</span>
-        <span class="card-fecha">${fecha}</span>
+    const linkHtml=ev.url?`<a href="${ev.url}" target="_blank" class="ec-link">↗ ver noticia</a>`:'';
+    return `<div class="ev-card" data-t="${ev.tipo}" onclick="enfocar(${ev.id})">
+      <div class="ec-head">
+        <span class="ec-tipo">${ev.tipo.toUpperCase()}${ev.viaIA?'<span class="badge-ia">IA</span>':''}</span>
+        <span class="ec-fecha">${fecha}</span>
       </div>
-      <div class="card-titulo">${ev.titulo}</div>
-      <div class="card-lugar">📍 ${ev.lugar}</div>
+      <div class="ec-titulo">${ev.titulo}</div>
+      <div class="ec-lugar">📍 ${ev.lugar}</div>
+      ${linkHtml}
     </div>`;
   }).join('');
-  document.getElementById('eventos-list').innerHTML=html;
-  if(bottomTab==='todos')document.getElementById('bottom-content').innerHTML=html;
+  document.getElementById('ev-list').innerHTML=html||'<div style="padding:16px;text-align:center;color:var(--muted);font-size:8px;font-family:Orbitron,monospace;">SIN EVENTOS EN ESTE PERIODO</div>';
+  if(pbTab==='todos')document.getElementById('pb-content').innerHTML=html;
+  actualizarStats();
+}
+
+function actualizarStats(){
   document.getElementById('s-total').textContent=eventos.length;
-  document.getElementById('s-rumor').textContent=eventos.filter(e=>e.tipo==='rumor').length;
+  document.getElementById('s-seg').textContent=eventos.filter(e=>e.tipo==='seguridad').length;
   document.getElementById('s-ia').textContent=eventos.filter(e=>e.viaIA).length;
-  document.getElementById('ticker-text').textContent=
-    eventos.slice(0,5).map(e=>`${e.tipo.toUpperCase()}: ${e.titulo} — ${e.lugar}`).join(' • ')||'Sin eventos';
+  document.getElementById('ticker-txt').textContent=
+    eventos.slice(0,6).map(e=>`${e.tipo.toUpperCase()}: ${e.titulo} — ${e.lugar}`).join(' ⬡ ')||'Sin eventos';
 }
 
 function renderCercanos(){
   if(!miPos)return;
-  const cercanos=eventos.map(ev=>({...ev,dist:distancia(miPos.lat,miPos.lng,ev.lat,ev.lng)}))
-    .filter(ev=>ev.dist<=radioAlerta).sort((a,b)=>a.dist-b.dist);
+  const cercanos=eventos.map(ev=>({...ev,d:dist(miPos.lat,miPos.lng,ev.lat,ev.lng)}))
+    .filter(ev=>ev.d<=radioAlerta).sort((a,b)=>a.d-b.d);
   document.getElementById('s-cerca').textContent=cercanos.length;
   const html=cercanos.length===0
-    ?`<div style="padding:20px;text-align:center;color:#446677;font-size:9px;font-family:Orbitron,monospace;">SIN EVENTOS EN ${formatDist(radioAlerta).toUpperCase()}</div>`
+    ?`<div style="padding:16px;text-align:center;color:var(--muted);font-size:8px;font-family:Orbitron,monospace;">SIN EVENTOS EN ${fmtD(radioAlerta).toUpperCase()}</div>`
     :cercanos.map(ev=>{
       const color=COLORES[ev.tipo]||COLORES.rumor;
-      return `<div class="cercano-card" data-tipo="${ev.tipo}" onclick="enfocarEvento(${ev.id})">
-        <div class="cc-header">
+      return `<div class="cerca-card" data-t="${ev.tipo}" onclick="enfocar(${ev.id})">
+        <div class="cc-row">
           <span class="cc-tipo" style="background:${color}22;color:${color}">${ev.tipo.toUpperCase()}</span>
-          <span class="cc-dist" style="color:${ev.tipo==='seguridad'?'#ff3355':color}">${formatDist(ev.dist)}</span>
+          <span class="cc-dist" style="color:${ev.tipo==='seguridad'?'#ff2255':color}">${fmtD(ev.d)}</span>
         </div>
         <div class="cc-titulo">${ev.titulo}</div>
         <div class="cc-lugar">📍 ${ev.lugar}</div>
       </div>`;
     }).join('');
-  document.getElementById('cercanos-list').innerHTML=html;
-  if(bottomTab==='cercanos')document.getElementById('bottom-content').innerHTML=html;
+  document.getElementById('cerca-list').innerHTML=html;
+  if(pbTab==='cercanos')document.getElementById('pb-content').innerHTML=html;
 }
 
-function enfocarEvento(id){
+function enfocar(id){
   const ev=eventos.find(e=>e.id===id);
   if(!ev)return;
   map.setView([ev.lat,ev.lng],16);
   if(leafletMarkers[id])leafletMarkers[id].openPopup();
 }
 
-function toggleBottom(){
-  bottomOpen=!bottomOpen;
-  document.getElementById('panel-bottom').classList.toggle('collapsed',!bottomOpen);
+// ── ESTADÍSTICAS ───────────────────────────────────────────────
+function renderStats(){
+  const corte=periodStats>0?Date.now()-periodStats*86400000:0;
+  const evs=eventos.filter(ev=>periodStats===0||new Date(ev.fecha).getTime()>=corte);
+  const segs=evs.filter(e=>e.tipo==='seguridad');
+  const accs=evs.filter(e=>e.tipo==='accidente');
+
+  // Ranking colonias
+  const coloniaMap={};
+  segs.forEach(ev=>{
+    const col=ev.colonia||extraerColonia(ev.lugar);
+    coloniaMap[col]=(coloniaMap[col]||0)+1;
+  });
+  const ranking=Object.entries(coloniaMap).sort((a,b)=>b[1]-a[1]);
+  const maxVal=ranking[0]?ranking[0][1]:1;
+
+  // Distribución por tipo
+  const tipos=['seguridad','accidente','evento','rumor'];
+  const conteos=tipos.map(t=>evs.filter(e=>e.tipo===t).length);
+  const maxC=Math.max(...conteos,1);
+
+  // Últimas semanas
+  const semanas=[];
+  for(let i=3;i>=0;i--){
+    const ini=Date.now()-(i+1)*7*86400000;
+    const fin=Date.now()-i*7*86400000;
+    semanas.push({lbl:`S-${i+1}`,val:segs.filter(e=>{const t=new Date(e.fecha).getTime();return t>=ini&&t<fin;}).length});
+  }
+  const maxS=Math.max(...semanas.map(s=>s.val),1);
+
+  document.getElementById('stats-body').innerHTML=`
+    <div style="font-size:8px;color:var(--muted);font-family:Orbitron,monospace;letter-spacing:2px;margin-bottom:4px;">PERIODO DE ANÁLISIS</div>
+    <div class="periodo-sel">
+      ${[{d:7,l:'7 DÍAS'},{d:14,l:'2 SEM'},{d:30,l:'1 MES'},{d:90,l:'3 MES'},{d:180,l:'6 MES'},{d:365,l:'1 AÑO'},{d:0,l:'HISTÓRICO'}]
+        .map(p=>`<button class="pbtn${periodStats===p.d?' active':''}" onclick="setPeriodoStats(${p.d})">${p.l}</button>`).join('')}
+    </div>
+
+    <div class="stats-cards">
+      <div class="stat-card" style="border-color:var(--seguridad)20">
+        <div class="sc-num" style="color:var(--seguridad);text-shadow:0 0 12px var(--seguridad)">${segs.length}</div>
+        <div class="sc-lbl">EVENTOS SEG.</div>
+      </div>
+      <div class="stat-card" style="border-color:var(--accidente)20">
+        <div class="sc-num" style="color:var(--accidente)">${accs.length}</div>
+        <div class="sc-lbl">ACCIDENTES</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-num" style="color:var(--cyan)">${evs.length}</div>
+        <div class="sc-lbl">TOTAL EVENTOS</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-num" style="color:var(--ia)">${evs.filter(e=>e.viaIA).length}</div>
+        <div class="sc-lbl">VÍA IA</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">TENDENCIA SEMANAL — SEGURIDAD</div>
+      <div class="bars">
+        ${semanas.map(s=>`<div class="bar-col">
+          <div class="bar-val">${s.val}</div>
+          <div class="bar" style="height:${Math.max(s.val/maxS*70,2)}px;background:linear-gradient(to top,var(--seguridad),${s.val>0?'#ff227788':'#1a2030'})"></div>
+          <div class="bar-lbl">${s.lbl}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">DISTRIBUCIÓN POR TIPO</div>
+      <div class="bars">
+        ${tipos.map((t,i)=>`<div class="bar-col">
+          <div class="bar-val" style="color:${COLORES[t]}">${conteos[i]}</div>
+          <div class="bar" style="height:${Math.max(conteos[i]/maxC*70,2)}px;background:${COLORES[t]}"></div>
+          <div class="bar-lbl" style="color:${COLORES[t]}">${t.toUpperCase().slice(0,3)}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    ${ranking.length>0?`
+    <div>
+      <div style="font-size:8px;color:var(--magenta);font-family:Orbitron,monospace;letter-spacing:2px;margin-bottom:8px;">📍 ÍNDICE DELICTIVO POR COLONIA</div>
+      <div class="ranking-list">
+        ${ranking.slice(0,8).map(([col,cnt],i)=>`
+        <div class="rank-item">
+          <div class="rank-num">#${i+1}</div>
+          <div class="rank-bar-wrap">
+            <div class="rank-colonia">${col}</div>
+            <div class="rank-bar"><div class="rank-fill" style="width:${cnt/maxVal*100}%;background:linear-gradient(to right,var(--seguridad)88,var(--seguridad))"></div></div>
+          </div>
+          <div class="rank-count">${cnt}</div>
+        </div>`).join('')}
+      </div>
+    </div>`:''}
+
+    <div style="font-size:8px;color:var(--muted);font-family:Share Tech Mono,monospace;padding:8px;border:1px solid var(--border);border-left:2px solid var(--magenta);line-height:1.6;">
+      💡 El mapa de calor en el fondo del mapa muestra la densidad histórica de eventos de seguridad. Verde = bajo, Amarillo = medio, Rojo = alto.
+    </div>
+  `;
+
+  // Actualizar heatmap con periodo seleccionado
+  actualizarHeatmapPeriodo();
 }
-function setBottomTab(tab,el){
-  bottomTab=tab;
-  document.querySelectorAll('.btab').forEach(b=>b.classList.remove('active'));
+
+function setPeriodoStats(d){
+  periodStats=d;
+  renderStats();
+}
+
+function actualizarHeatmapPeriodo(){
+  if(heatLayer){map.removeLayer(heatLayer);heatLayer=null;}
+  const corte=periodStats>0?Date.now()-periodStats*86400000:0;
+  const puntos=eventos
+    .filter(ev=>ev.tipo==='seguridad'&&(periodStats===0||new Date(ev.fecha).getTime()>=corte))
+    .map(ev=>[ev.lat,ev.lng,1.0]);
+  if(puntos.length===0)return;
+  heatLayer=L.heatLayer(puntos,{
+    radius:40,blur:35,maxZoom:17,
+    gradient:{0.2:'rgba(0,255,136,0.5)',0.5:'rgba(255,238,0,0.65)',0.8:'rgba(255,100,0,0.75)',1.0:'rgba(255,34,85,0.9)'}
+  }).addTo(map);
+}
+
+function extraerColonia(lugar){
+  if(!lugar)return'Sin colonia';
+  const m=lugar.match(/Col\.\s*([^,]+)/i)||lugar.match(/Colonia\s*([^,]+)/i);
+  if(m)return'Col. '+m[1].trim();
+  const partes=lugar.split(',');
+  return partes[partes.length-1].trim()||lugar.slice(0,25);
+}
+
+// ── BOTTOM PANEL ───────────────────────────────────────────────
+function toggleBottom(){pbOpen=!pbOpen;document.getElementById('panel-bottom').classList.toggle('collapsed',!pbOpen);}
+function setPBTab(tab,el){
+  pbTab=tab;
+  document.querySelectorAll('.pbtab').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   if(tab==='cercanos')renderCercanos(); else renderLista();
 }
 
-// ── MODALES ────────────────────────────────────────────────────
+// ── MODAL MANUAL ───────────────────────────────────────────────
 function abrirManual(src){
   const hint=document.getElementById('hint-coords');
-  if(src==='gps'&&miPos){
-    coordsClick={lat:miPos.lat,lng:miPos.lng};
-    hint.textContent=`📍 GPS: ${miPos.lat.toFixed(4)}, ${miPos.lng.toFixed(4)}`;
-  } else if(coordsClick){
-    hint.textContent=`📍 Ubicación marcada en el mapa`;
-  } else {
-    hint.textContent='📍 Toca el mapa para fijar ubicación.';
-  }
+  if(src==='gps'&&miPos){coordsClick={lat:miPos.lat,lng:miPos.lng};hint.textContent=`📍 GPS: ${miPos.lat.toFixed(4)}, ${miPos.lng.toFixed(4)}`;}
+  else if(coordsClick)hint.textContent='📍 Ubicación seleccionada en el mapa';
+  else hint.textContent='📍 Toca el mapa para fijar ubicación, o se geocodificará el lugar automáticamente.';
   document.getElementById('m-manual').classList.add('open');
 }
 function cerrarManual(){
   document.getElementById('m-manual').classList.remove('open');
   coordsClick=null;
-  ['f-titulo','f-lugar','f-desc'].forEach(id=>document.getElementById(id).value='');
+  ['f-titulo','f-lugar','f-desc','f-url'].forEach(id=>document.getElementById(id).value='');
 }
-function guardarManual(){
+async function guardarManual(){
   const titulo=document.getElementById('f-titulo').value.trim();
   if(!titulo){alert('El título es obligatorio.');return;}
-  const lat=coordsClick?coordsClick.lat:GEO.cLat+(Math.random()-.5)*.015;
-  const lng=coordsClick?coordsClick.lng:GEO.cLng+(Math.random()-.5)*.015;
+  const lugar=document.getElementById('f-lugar').value.trim()||'Irapuato';
+  let lat=coordsClick?coordsClick.lat:null;
+  let lng=coordsClick?coordsClick.lng:null;
+  if(!lat){
+    const geo=await geocodificar(lugar);
+    if(geo){lat=geo.lat;lng=geo.lng;}
+    else{lat=GEO.cLat+(Math.random()-.5)*.015;lng=GEO.cLng+(Math.random()-.5)*.015;}
+  }
   guardar({id:Date.now(),titulo,tipo:document.getElementById('f-tipo').value,
-    fuente:document.getElementById('f-fuente').value,
-    lugar:document.getElementById('f-lugar').value.trim()||'Irapuato',
+    fuente:document.getElementById('f-fuente').value,lugar,
+    colonia:extraerColonia(lugar),
     descripcion:document.getElementById('f-desc').value.trim()||'Sin descripción.',
+    url:document.getElementById('f-url').value.trim(),
     fecha:new Date().toISOString(),lat,lng,viaIA:false});
   cerrarManual();
 }
 
+// ── MODAL URL ──────────────────────────────────────────────────
+function abrirURL(){document.getElementById('m-url').classList.add('open');resetURL();}
+function cerrarURL(){document.getElementById('m-url').classList.remove('open');resetURL();}
+function resetURL(){
+  ['url-link','url-texto'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('url-result').style.display='none';
+  const btn=document.getElementById('btn-extraer');
+  btn.style.display='inline-block';btn.textContent='EXTRAER CON IA →';btn.disabled=false;
+  document.getElementById('btn-guardar-url').style.display='none';
+  urlResultado=null;
+}
+
+async function extraerURL(){
+  const texto=document.getElementById('url-texto').value.trim();
+  const urlVal=document.getElementById('url-link').value.trim();
+  if(!texto){alert('Pega el texto de la noticia primero.');return;}
+  const btn=document.getElementById('btn-extraer');
+  btn.textContent='⏳ EXTRAYENDO...';btn.disabled=true;
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,
+        messages:[{role:"user",content:`Analiza esta noticia de Irapuato, Guanajuato, México y responde SOLO con JSON válido sin markdown:
+{
+  "titulo": "título descriptivo corto (máx 80 chars)",
+  "tipo": "seguridad|accidente|evento|rumor",
+  "lugar": "dirección o lugar específico mencionado en Irapuato",
+  "colonia": "nombre de la colonia si se menciona, sino inferirla",
+  "resumen": "resumen claro en 2-3 oraciones",
+  "lat": número latitud en Irapuato (entre 20.640 y 20.730),
+  "lng": número longitud en Irapuato (entre -101.415 y -101.310),
+  "confianza": "alta|media|baja"
+}
+Tipos: seguridad=robos/violencia/crimen, accidente=choques/viales, evento=actividades/noticias positivas, rumor=no verificado.
+Si no hay lugar específico usa lat:20.6795 lng:-101.3540.
+NOTICIA:
+"""${texto}"""`}]})
+    });
+    const data=await res.json();
+    const r=JSON.parse(data.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim());
+    urlResultado={...r,url:urlVal};
+    document.getElementById('ur-titulo').textContent=r.titulo||'Sin título';
+    document.getElementById('ur-tipo').value=r.tipo||'rumor';
+    document.getElementById('ur-lugar').textContent=r.lugar||'Irapuato';
+    document.getElementById('ur-resumen').textContent=r.resumen||texto.slice(0,200);
+    document.getElementById('url-conf').textContent={'alta':'✓ ALTA CONFIANZA','media':'⚠ MEDIA CONFIANZA','baja':'? BAJA CONFIANZA'}[r.confianza]||'✓ EXTRACCIÓN COMPLETADA';
+    document.getElementById('url-result').style.display='block';
+    document.getElementById('btn-guardar-url').style.display='inline-block';
+
+    // Intentar geocodificar el lugar extraído
+    if(r.lugar&&r.lugar!=='Irapuato'){
+      const geo=await geocodificar(r.lugar);
+      if(geo){urlResultado.lat=geo.lat;urlResultado.lng=geo.lng;}
+    }
+  }catch(err){alert('Error al extraer. Verifica conexión.\n'+err.message);}
+  finally{btn.textContent='RE-EXTRAER →';btn.disabled=false;}
+}
+
+async function guardarDesdeURL(){
+  if(!urlResultado)return;
+  let lat=parseFloat(urlResultado.lat)||GEO.cLat;
+  let lng=parseFloat(urlResultado.lng)||GEO.cLng;
+  guardar({id:Date.now(),
+    titulo:document.getElementById('ur-titulo').textContent.trim(),
+    tipo:document.getElementById('ur-tipo').value,
+    fuente:fuenteURL,
+    lugar:document.getElementById('ur-lugar').textContent.trim()||'Irapuato',
+    colonia:urlResultado.colonia||extraerColonia(document.getElementById('ur-lugar').textContent),
+    descripcion:document.getElementById('ur-resumen').textContent.trim(),
+    url:urlResultado.url||'',
+    fecha:new Date().toISOString(),lat,lng,viaIA:true});
+  cerrarURL();
+}
+
+// ── MODAL IA TEXTO ─────────────────────────────────────────────
 function abrirIA(){document.getElementById('m-ia').classList.add('open');resetIA();}
 function cerrarIA(){document.getElementById('m-ia').classList.remove('open');resetIA();}
 function resetIA(){
@@ -827,7 +1087,14 @@ function resetIA(){
   document.getElementById('btn-guardar-ia').style.display='none';
   iaResultado=null;
 }
-function selF(el){document.querySelectorAll('.fuente-btn').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');fuenteIA=el.getAttribute('data-f');}
+
+function selF(el,ctx){
+  const parent=el.parentElement;
+  parent.querySelectorAll('.fuente-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+  if(ctx==='url')fuenteURL=el.getAttribute('data-f');
+  else fuenteIA=el.getAttribute('data-f');
+}
 
 async function analizar(){
   const texto=document.getElementById('ia-texto').value.trim();
@@ -838,8 +1105,8 @@ async function analizar(){
     const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,
-        messages:[{role:"user",content:`Analiza este texto de Irapuato, Guanajuato y responde SOLO JSON sin markdown:
-{"titulo":"título corto (máx 80 chars)","tipo":"seguridad|accidente|evento|rumor","lugar":"lugar específico","resumen":"2-3 oraciones","lat":número entre 20.640-20.730,"lng":número entre -101.415 y -101.310,"confianza":"alta|media|baja"}
+        messages:[{role:"user",content:`Analiza este texto de Irapuato y responde SOLO JSON sin markdown:
+{"titulo":"título corto (máx 80 chars)","tipo":"seguridad|accidente|evento|rumor","lugar":"lugar específico","colonia":"nombre de colonia","resumen":"2-3 oraciones","lat":número entre 20.640-20.730,"lng":número entre -101.415 y -101.310,"confianza":"alta|media|baja"}
 TEXTO: """${texto}"""`}]})
     });
     const data=await res.json();
@@ -852,40 +1119,49 @@ TEXTO: """${texto}"""`}]})
     document.getElementById('ia-conf').textContent={'alta':'✓ ALTA CONFIANZA','media':'⚠ MEDIA','baja':'? BAJA'}[r.confianza]||'✓ OK';
     document.getElementById('ia-result').style.display='block';
     document.getElementById('btn-guardar-ia').style.display='inline-block';
+    // Geocodificar
+    if(r.lugar&&r.lugar!=='Irapuato'){
+      const geo=await geocodificar(r.lugar);
+      if(geo){iaResultado.lat=geo.lat;iaResultado.lng=geo.lng;}
+    }
   }catch(err){alert('Error al analizar.\n'+err.message);}
   finally{const b=document.getElementById('btn-analizar');b.textContent='RE-ANALIZAR →';b.disabled=false;}
 }
 
-function guardarIA(){
+async function guardarIA(){
   if(!iaResultado)return;
-  guardar({id:Date.now(),titulo:document.getElementById('r-titulo').textContent.trim(),
+  guardar({id:Date.now(),
+    titulo:document.getElementById('r-titulo').textContent.trim(),
     tipo:document.getElementById('r-tipo').value,fuente:fuenteIA,
     lugar:document.getElementById('r-lugar').textContent.trim()||'Irapuato',
+    colonia:iaResultado.colonia||extraerColonia(document.getElementById('r-lugar').textContent),
     descripcion:document.getElementById('r-resumen').textContent.trim(),
-    fecha:new Date().toISOString(),
-    lat:parseFloat(iaResultado.lat)||GEO.cLat,lng:parseFloat(iaResultado.lng)||GEO.cLng,viaIA:true});
+    url:'',fecha:new Date().toISOString(),
+    lat:parseFloat(iaResultado.lat)||GEO.cLat,
+    lng:parseFloat(iaResultado.lng)||GEO.cLng,viaIA:true});
   cerrarIA();
 }
 
+// ── GUARDAR ────────────────────────────────────────────────────
 function guardar(ev){
   eventos.unshift(ev);
-  localStorage.setItem('ira-v6',JSON.stringify(eventos));
-  renderMarcadores();renderLista();verificarAlertas();renderCercanos();
+  localStorage.setItem('ira-v7',JSON.stringify(eventos));
+  renderMarcadores();renderLista();verificarAlertas();renderCercanos();actualizarStats();
 }
 
 // ── RESPONSIVE ─────────────────────────────────────────────────
 function checkResponsive(){
   const isMobile=window.innerWidth<700;
-  if(isMobile)document.getElementById('sidebar-desktop').style.display='none';
-  else if(modo==='escritorio')document.getElementById('sidebar-desktop').style.display='flex';
+  document.getElementById('sidebar').style.display=
+    !isMobile&&vista!=='campo'?'flex':'none';
 }
-
-window.addEventListener('resize',()=>{checkResponsive();resizeRadar();map.invalidateSize();});
+window.addEventListener('resize',()=>{checkResponsive();map.invalidateSize();});
 
 // ── INIT ───────────────────────────────────────────────────────
 checkResponsive();
 renderMarcadores();
 renderLista();
+actualizarStats();
 </script>
 </body>
 </html>
