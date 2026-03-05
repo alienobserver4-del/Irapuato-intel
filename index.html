@@ -546,9 +546,11 @@ header{display:flex;flex-direction:column;background:var(--surface);border-botto
   </div>
 </div>
 
-<!-- FIREBASE + LEAFLET -->
+<!-- LEAFLET + FIREBASE v8 (compatible con Android) -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <script>
 // Script de seguridad: si Firebase o el módulo JS fallan, mostrar la app de todas formas
@@ -576,9 +578,8 @@ window.addEventListener('error', function(e) {
 });
 </script>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+<script>
+// Firebase v8 cargado via script tags — no requiere imports
 
 // ── FIREBASE CONFIG ─────────────────────────────────────────────
 const firebaseConfig = {
@@ -590,8 +591,8 @@ const firebaseConfig = {
   appId: "1:39562297804:web:5d5c488450b21dbcfbdd69"
 };
 
-const fbApp = initializeApp(firebaseConfig);
-const db = getFirestore(fbApp);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 // ── CONSTANTES ──────────────────────────────────────────────────
 const GEO = {cLat:20.6795, cLng:-101.3540};
@@ -631,8 +632,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 map.on('click', e => { coordsClick = {lat:e.latlng.lat, lng:e.latlng.lng}; abrirManual(null); });
 
 // ── FIREBASE LISTENER ───────────────────────────────────────────
-const q = query(collection(db,'eventos'), orderBy('fecha','desc'));
-onSnapshot(q, snap => {
+db.collection('eventos').orderBy('fecha','desc').onSnapshot(snap => {
   eventos = snap.docs.map(d => ({id:d.id, ...d.data()}));
   document.getElementById('dbdot').className = 'db-dot ok';
   document.getElementById('dblbl').textContent = `Firebase OK — ${eventos.length} eventos`;
@@ -1183,7 +1183,7 @@ window.selF=selF;
 // ── GUARDAR EN FIREBASE ───────────────────────────────────────────
 async function guardar(ev) {
   try {
-    await addDoc(collection(db,'eventos'), {...ev, fecha:serverTimestamp()});
+    await db.collection('eventos').add({...ev, fecha:firebase.firestore.FieldValue.serverTimestamp()});
   } catch(e) {
     console.error('Error guardando:', e);
     alert('Error al guardar. Verifica conexión.');
@@ -1195,7 +1195,7 @@ async function guardar(ev) {
 async function borrarEvento(id) {
   if(!confirm('¿Borrar este evento del mapa?')) return;
   try {
-    await deleteDoc(doc(db, 'eventos', id));
+    await db.collection('eventos').doc(id).delete();
     if(markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
     toast('✓ Evento eliminado','ok',2000);
   } catch(e) {
