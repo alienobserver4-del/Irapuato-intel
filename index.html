@@ -241,6 +241,22 @@ header{display:flex;align-items:center;padding:6px 10px;background:var(--surface
 #loading p{font-size:9px;color:var(--muted);letter-spacing:2px;}
 .spinner{width:30px;height:30px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* MINI-MAPA PIN */
+#pin-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:3000;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:0;}
+#pin-modal.on{display:flex;}
+.pin-box{background:#030810;border:1px solid var(--cyan);width:100%;max-width:500px;border-radius:6px 6px 0 0;overflow:hidden;display:flex;flex-direction:column;}
+.pin-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.pin-title{font-family:'Orbitron',monospace;font-size:9px;color:var(--cyan);letter-spacing:2px;}
+.pin-hint{font-size:8px;color:var(--muted);padding:5px 14px;border-bottom:1px solid var(--border);flex-shrink:0;}
+#pin-map{height:300px;flex-shrink:0;}
+.pin-actions{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;}
+.pin-place{font-size:8px;color:var(--muted);padding:6px 14px;border-top:1px solid var(--border);flex-shrink:0;font-style:italic;}
+
+/* TOAST */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#030810;border:1px solid var(--green);color:var(--green);padding:8px 16px;font-family:'Orbitron',monospace;font-size:8px;letter-spacing:1px;border-radius:3px;z-index:4000;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;box-shadow:0 0 14px rgba(0,255,136,.2);}
+#toast.err{border-color:var(--seg);color:var(--seg);box-shadow:0 0 14px rgba(255,34,85,.2);}
+#toast.show{opacity:1;}
 </style>
 </head>
 <body>
@@ -359,6 +375,26 @@ header{display:flex;align-items:center;padding:6px 10px;background:var(--surface
 
 <div class="ticker"><span class="tlbl">LIVE</span><span class="ttxt" id="ttxt">—</span></div>
 
+
+<!-- MINI-MAPA PIN -->
+<div id="pin-modal">
+  <div class="pin-box">
+    <div class="pin-header">
+      <span class="pin-title">📍 AJUSTAR UBICACIÓN</span>
+      <button class="bclose" onclick="cerrarPin()" style="position:relative;top:0;right:0;">✕</button>
+    </div>
+    <div class="pin-hint">Gemini estimó esta ubicación. Arrastra el pin azul para corregirla si es necesario.</div>
+    <div class="pin-place" id="pin-place-lbl">—</div>
+    <div id="pin-map"></div>
+    <div class="pin-actions">
+      <button class="bcan" onclick="cerrarPin()" style="flex:1">CANCELAR</button>
+      <button class="bsave bc2" onclick="confirmarPin()" style="flex:2">✓ CONFIRMAR POSICIÓN →</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
 </div><!-- /app -->
 
 <!-- MODAL MANUAL -->
@@ -888,11 +924,26 @@ window.togglePB=togglePB; window.setPBT=setPBT;
 async function llamarGemini(prompt) {
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,{
     method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.1}})
   });
   const data = await res.json();
-  const txt = data.candidates[0].content.parts[0].text;
-  return JSON.parse(txt.replace(/```json|```/g,'').trim());
+  // Manejo robusto de respuesta
+  if(!data.candidates || !data.candidates[0]) {
+    const motivo = data.promptFeedback?.blockReason || 'Sin respuesta de Gemini';
+    throw new Error('Gemini bloqueó la solicitud: ' + motivo);
+  }
+  const txt = data.candidates[0].content?.parts?.[0]?.text || '';
+  if(!txt) throw new Error('Gemini no devolvió texto');
+  // Extraer JSON aunque venga con texto extra alrededor
+  const match = txt.match(/\{[\s\S]*\}/);
+  if(!match) throw new Error('No se encontró JSON en la respuesta de Gemini');
+  try {
+    return JSON.parse(match[0]);
+  } catch(e) {
+    // Intentar limpiar y parsear de nuevo
+    const clean = match[0].replace(/[\x00-\x1F\x7F]/g,' ').replace(/,\s*}/g,'}').replace(/,\s*]/g,']');
+    return JSON.parse(clean);
+  }
 }
 
 // ── MODAL URL ────────────────────────────────────────────────────
@@ -918,7 +969,10 @@ NOTICIA: """${txt}"""`);
     document.getElementById('uconf').textContent = {'alta':'✓ ALTA CONFIANZA','media':'⚠ MEDIA','baja':'? BAJA'}[r.confianza]||'✓ OK';
     document.getElementById('ures').style.display='block';
     document.getElementById('b-gurl').style.display='inline-block';
-    if(r.lugar && r.lugar!=='Irapuato') { const g=await geocodificar(r.lugar); if(g){urlRes.lat=g.lat;urlRes.lng=g.lng;} }
+    // Geocodificación con mini-mapa de confirmación
+    const latEst = parseFloat(r.lat)||GEO.cLat;
+    const lngEst = parseFloat(r.lng)||GEO.cLng;
+    await geoConPin(r.lugar||'Irapuato', latEst, lngEst, pos=>{ urlRes.lat=pos.lat; urlRes.lng=pos.lng; });
   } catch(e) { alert('Error al extraer: '+e.message); }
   finally { btn.textContent='RE-EXTRAER →'; btn.disabled=false; }
 }
@@ -962,7 +1016,10 @@ TEXTO: """${txt}"""`);
     document.getElementById('iconf').textContent = {'alta':'✓ ALTA CONFIANZA','media':'⚠ MEDIA','baja':'? BAJA'}[r.confianza]||'✓ OK';
     document.getElementById('ires').style.display='block';
     document.getElementById('b-gia').style.display='inline-block';
-    if(r.lugar&&r.lugar!=='Irapuato'){const g=await geocodificar(r.lugar);if(g){iaRes.lat=g.lat;iaRes.lng=g.lng;}}
+    // Geocodificación con mini-mapa de confirmación
+    const latEst2 = parseFloat(r.lat)||GEO.cLat;
+    const lngEst2 = parseFloat(r.lng)||GEO.cLng;
+    await geoConPin(r.lugar||'Irapuato', latEst2, lngEst2, pos=>{ iaRes.lat=pos.lat; iaRes.lng=pos.lng; });
   } catch(e) { alert('Error: '+e.message); }
   finally { btn.textContent='RE-ANALIZAR →'; btn.disabled=false; }
 }
@@ -998,7 +1055,16 @@ async function guardarManual() {
   if(!tit) { alert('El título es obligatorio.'); return; }
   const lugar = document.getElementById('f-lug').value.trim()||'Irapuato';
   let lat = coordsClick?coordsClick.lat:null, lng = coordsClick?coordsClick.lng:null;
-  if(!lat) { const g=await geocodificar(lugar); if(g){lat=g.lat;lng=g.lng;} else{lat=GEO.cLat+(Math.random()-.5)*.015;lng=GEO.cLng+(Math.random()-.5)*.015;} }
+  if(!lat) {
+    // Intentar geocodificar y mostrar mini-mapa para confirmar
+    await new Promise(resolve => {
+      geoConPin(lugar, GEO.cLat, GEO.cLng, pos=>{ lat=pos.lat; lng=pos.lng; resolve(); });
+      // Si el usuario cierra sin confirmar, usar centro de Irapuato
+      const orig = pinCallback;
+      pinCallback = pos=>{ lat=pos.lat; lng=pos.lng; if(orig)orig(pos); resolve(); };
+    });
+    if(!lat){lat=GEO.cLat;lng=GEO.cLng;}
+  }
   await guardar({titulo:tit, tipo:document.getElementById('f-tipo').value, fuente:document.getElementById('f-fue').value, lugar, colonia:extraColonia(lugar), descripcion:document.getElementById('f-desc').value.trim()||'Sin descripción.', url:document.getElementById('f-url').value.trim(), lat, lng, viaIA:false});
   cerrarManual();
 }
@@ -1021,6 +1087,54 @@ async function guardar(ev) {
     console.error('Error guardando:', e);
     alert('Error al guardar. Verifica conexión.');
   }
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────
+function toast(msg, tipo, dur) {
+  dur = dur||3000;
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = tipo==='err' ? 'err show' : 'show';
+  clearTimeout(t._tmr); t._tmr = setTimeout(()=>t.classList.remove('show'), dur);
+}
+
+// ── MINI-MAPA PIN ─────────────────────────────────────────────────
+let pinMap=null, pinMarker=null, pinCallback=null, pinPos=null;
+function abrirPin(lat, lng, label, cb) {
+  pinCallback=cb; pinPos={lat,lng};
+  document.getElementById('pin-place-lbl').textContent = '📍 ' + (label||'Irapuato');
+  document.getElementById('pin-modal').classList.add('on');
+  setTimeout(()=>{
+    if(!pinMap) {
+      pinMap = L.map('pin-map',{center:[lat,lng],zoom:16,zoomControl:true,attributionControl:false});
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(pinMap);
+    } else { pinMap.setView([lat,lng],16); }
+    if(pinMarker) pinMap.removeLayer(pinMarker);
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36" style="filter:drop-shadow(0 0 6px #00ccff)"><path d="M14 0C6 0 0 6 0 14C0 22 14 36 14 36S28 22 28 14C28 6 22 0 14 0Z" fill="#00ccff" opacity=".9"/><circle cx="14" cy="14" r="6" fill="white" opacity=".9"/></svg>`;
+    pinMarker = L.marker([lat,lng],{icon:L.divIcon({html:svg,className:'',iconSize:[28,36],iconAnchor:[14,36]}),draggable:true}).addTo(pinMap);
+    pinMarker.on('dragend',e=>{ pinPos={lat:e.target.getLatLng().lat,lng:e.target.getLatLng().lng}; });
+    pinMap.on('click',e=>{ pinPos={lat:e.latlng.lat,lng:e.latlng.lng}; pinMarker.setLatLng(e.latlng); });
+    pinMap.invalidateSize();
+  },200);
+}
+function cerrarPin(){ document.getElementById('pin-modal').classList.remove('on'); pinCallback=null; }
+function confirmarPin(){ if(pinCallback&&pinPos) pinCallback(pinPos); cerrarPin(); }
+window.cerrarPin=cerrarPin; window.confirmarPin=confirmarPin;
+
+async function geocodificarMejorado(lugar) {
+  let r = await geocodificar(lugar + ', Irapuato');
+  if(r && r.lat>20.5 && r.lat<20.85) return r;
+  r = await geocodificar(lugar + ', Irapuato, Guanajuato');
+  if(r && r.lat>20.5 && r.lat<20.85) return r;
+  const col = extraColonia(lugar);
+  if(col && col!=='Sin colonia') { r = await geocodificar(col+', Irapuato'); if(r && r.lat>20.5&&r.lat<20.85) return r; }
+  return null;
+}
+async function geoConPin(lugar, latE, lngE, cb) {
+  toast('🔍 Buscando calle...','ok',5000);
+  const geo = await geocodificarMejorado(lugar);
+  document.getElementById('toast').classList.remove('show');
+  if(geo) { toast('📍 Calle encontrada — confirma el pin','ok',3000); abrirPin(geo.lat,geo.lng,lugar,cb); }
+  else { toast('⚠ No encontré la calle — mueve el pin al lugar correcto','err',5000); abrirPin(latE||GEO.cLat,lngE||GEO.cLng,lugar,cb); }
 }
 
 // ── RESPONSIVE ────────────────────────────────────────────────────
