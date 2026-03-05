@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IRAPUATO INTEL v4</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0c10; --surface:#111318; --border:#1e2230;
+  --accent:#00e5ff; --text:#e0e6f0; --muted:#4a5270;
+  --seguridad:#ff3d71; --accidente:#ff9f43;
+  --evento:#00e5ff; --rumor:#6c7a9c; --ia:#a78bfa;
+  --alerta:#ff3d71; --ok:#26de81;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);}
+
+/* ── LAYOUT ── */
+#app{display:flex;flex-direction:column;height:100vh;}
+
+/* ── HEADER ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;}
+.logo{display:flex;align-items:center;gap:8px;}
+.logo-icon{width:22px;height:22px;background:var(--accent);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);animation:pulse 2s ease-in-out infinite;flex-shrink:0;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(.9)}}
+.logo-text h1{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;letter-spacing:2px;color:var(--accent);}
+.logo-text span{font-size:8px;color:var(--muted);letter-spacing:1px;font-family:'Space Mono',monospace;}
+.mode-toggle{display:flex;gap:4px;}
+.mode-btn{padding:5px 10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Space Mono',monospace;font-size:9px;cursor:pointer;border-radius:2px;transition:all .2s;}
+.mode-btn.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+.mode-btn.campo.active{background:var(--ok);border-color:var(--ok);}
+
+/* ── ALERTA BANNER ── */
+#alerta-banner{display:none;background:var(--alerta);color:white;padding:8px 14px;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;text-align:center;animation:blink 1s ease-in-out infinite;flex-shrink:0;}
+#alerta-banner.visible{display:block;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.7}}
+
+/* ── GPS STATUS BAR ── */
+#gps-bar{display:none;align-items:center;justify-content:space-between;padding:5px 14px;background:#0d1117;border-bottom:1px solid var(--border);flex-shrink:0;}
+#gps-bar.visible{display:flex;}
+.gps-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);margin-right:6px;flex-shrink:0;}
+.gps-dot.fix{background:var(--ok);animation:gps-pulse 1.5s ease-in-out infinite;}
+@keyframes gps-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.gps-info{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);display:flex;align-items:center;}
+.gps-coords{font-family:'Space Mono',monospace;font-size:8px;color:var(--accent);}
+.radio-control{display:flex;align-items:center;gap:5px;font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);}
+.radio-control input{accent-color:var(--accent);width:60px;}
+
+/* ── MAIN AREA ── */
+.main{flex:1;display:flex;overflow:hidden;position:relative;}
+
+/* ── MAPA ── */
+.map-wrap{flex:1;position:relative;}
+#mapa-canvas{width:100%;height:100%;cursor:crosshair;display:block;}
+
+/* ── POPUP ── */
+.map-popup{position:absolute;background:var(--surface);border:1px solid var(--border);padding:10px 12px;min-width:180px;max-width:240px;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.7);pointer-events:none;display:none;border-radius:3px;}
+.map-popup.visible{display:block;}
+.pop-tipo{font-size:8px;font-family:'Space Mono',monospace;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:1px;display:inline-block;margin-bottom:4px;}
+.pop-titulo{font-size:12px;font-weight:700;margin-bottom:3px;line-height:1.3;}
+.pop-lugar{font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:3px;}
+.pop-desc{font-size:10px;color:#8a94b0;line-height:1.4;margin-bottom:4px;}
+.pop-dist{font-size:9px;color:var(--ok);font-family:'Space Mono',monospace;font-weight:700;}
+.pop-meta{font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;border-top:1px solid var(--border);padding-top:4px;margin-top:4px;}
+
+/* ── PANEL CAMPO (derecha en desktop, bottom en móvil) ── */
+#panel-campo{display:none;width:260px;background:var(--surface);border-left:1px solid var(--border);flex-direction:column;overflow:hidden;}
+#panel-campo.visible{display:flex;}
+.panel-title{padding:10px 12px;border-bottom:1px solid var(--border);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--accent);display:flex;justify-content:space-between;align-items:center;}
+.cercanos-list{flex:1;overflow-y:auto;padding:6px;}
+.cercanos-list::-webkit-scrollbar{width:3px;}
+.cercanos-list::-webkit-scrollbar-thumb{background:var(--border);}
+.cercano-card{padding:8px 10px;border:1px solid var(--border);border-left:3px solid var(--muted);margin-bottom:6px;border-radius:2px;cursor:pointer;transition:all .2s;}
+.cercano-card:hover{background:#0f1118;}
+.cercano-card[data-tipo="seguridad"]{border-left-color:var(--seguridad);}
+.cercano-card[data-tipo="accidente"]{border-left-color:var(--accidente);}
+.cercano-card[data-tipo="evento"]{border-left-color:var(--evento);}
+.cercano-card[data-tipo="rumor"]{border-left-color:var(--rumor);}
+.cc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.cc-tipo{font-size:7px;font-family:'Space Mono',monospace;letter-spacing:1px;text-transform:uppercase;padding:1px 4px;border-radius:1px;}
+.cc-dist{font-size:9px;font-family:'Space Mono',monospace;color:var(--ok);font-weight:700;}
+.cc-dist.alerta{color:var(--alerta);}
+.cc-titulo{font-size:11px;font-weight:600;line-height:1.3;}
+.cc-lugar{font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:2px;}
+
+/* ── BOTTOM PANEL MÓVIL ── */
+#panel-bottom{display:none;background:var(--surface);border-top:1px solid var(--border);max-height:40vh;flex-direction:column;flex-shrink:0;}
+#panel-bottom.visible{display:flex;}
+.bottom-handle{padding:6px;text-align:center;cursor:pointer;border-bottom:1px solid var(--border);}
+.bottom-handle::before{content:'';display:inline-block;width:32px;height:3px;background:var(--border);border-radius:2px;}
+.bottom-tabs{display:flex;border-bottom:1px solid var(--border);}
+.btab{flex:1;padding:7px;font-family:'Space Mono',monospace;font-size:9px;text-align:center;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;}
+.btab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.bottom-content{flex:1;overflow-y:auto;padding:6px;}
+
+/* ── FAB (Botón flotante reporte rápido) ── */
+#fab{position:absolute;bottom:20px;right:16px;width:48px;height:48px;background:var(--accent);border:none;border-radius:50%;font-size:22px;cursor:pointer;z-index:200;box-shadow:0 4px 16px rgba(0,229,255,.4);transition:all .2s;display:none;align-items:center;justify-content:center;}
+#fab.visible{display:flex;}
+#fab:hover{transform:scale(1.1);background:#33eaff;}
+#fab:active{transform:scale(.95);}
+
+/* ── MODO ESCRITORIO: sidebar ── */
+#sidebar-desktop{width:270px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.filters{padding:10px;border-bottom:1px solid var(--border);}
+.filters-title{font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:7px;font-family:'Space Mono',monospace;}
+.filter-chips{display:flex;flex-wrap:wrap;gap:4px;}
+.chip{padding:3px 7px;border:1px solid var(--border);border-radius:2px;font-size:8px;font-family:'Space Mono',monospace;cursor:pointer;transition:all .2s;color:var(--muted);background:transparent;}
+.chip.active{color:var(--bg);}
+.chip[data-type="todos"].active{background:var(--accent);border-color:var(--accent);color:var(--bg);}
+.chip[data-type="seguridad"].active{background:var(--seguridad);border-color:var(--seguridad);}
+.chip[data-type="accidente"].active{background:var(--accidente);border-color:var(--accidente);}
+.chip[data-type="evento"].active{background:var(--evento);border-color:var(--evento);}
+.chip[data-type="rumor"].active{background:var(--rumor);border-color:var(--rumor);color:var(--text);}
+.chip[data-type="ia"].active{background:var(--ia);border-color:var(--ia);}
+.eventos-list{flex:1;overflow-y:auto;padding:6px;}
+.eventos-list::-webkit-scrollbar{width:3px;}
+.eventos-list::-webkit-scrollbar-thumb{background:var(--border);}
+.evento-card{padding:8px 10px;border:1px solid var(--border);border-left:3px solid var(--muted);margin-bottom:6px;cursor:pointer;transition:all .2s;background:var(--bg);border-radius:2px;}
+.evento-card:hover{border-color:var(--accent);background:#0f1118;}
+.evento-card[data-type="seguridad"]{border-left-color:var(--seguridad);}
+.evento-card[data-type="accidente"]{border-left-color:var(--accidente);}
+.evento-card[data-type="evento"]{border-left-color:var(--evento);}
+.evento-card[data-type="rumor"]{border-left-color:var(--rumor);}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px;}
+.card-tipo{font-size:7px;font-family:'Space Mono',monospace;letter-spacing:1px;text-transform:uppercase;padding:2px 4px;border-radius:1px;}
+[data-type="seguridad"] .card-tipo{background:rgba(255,61,113,.15);color:var(--seguridad);}
+[data-type="accidente"] .card-tipo{background:rgba(255,159,67,.15);color:var(--accidente);}
+[data-type="evento"] .card-tipo{background:rgba(0,229,255,.15);color:var(--evento);}
+[data-type="rumor"] .card-tipo{background:rgba(108,122,156,.15);color:var(--rumor);}
+.card-fecha{font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;}
+.card-titulo{font-size:11px;font-weight:600;margin-bottom:2px;line-height:1.3;}
+.card-lugar{font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;}
+.badge-ia{font-size:7px;background:rgba(167,139,250,.15);color:var(--ia);padding:1px 4px;border-radius:1px;font-family:'Space Mono',monospace;margin-left:3px;}
+
+/* ── HEADER BTNS ── */
+.header-btns{display:flex;gap:5px;}
+.hbtn{border:none;padding:5px 10px;font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;cursor:pointer;border-radius:2px;transition:all .2s;}
+.hbtn-ia{background:var(--ia);color:var(--bg);}
+.hbtn-ia:hover{background:#c4b5fd;}
+.hbtn-add{background:var(--accent);color:var(--bg);}
+.hbtn-add:hover{background:#33eaff;}
+
+/* ── LEGEND ── */
+.legend{padding:8px 10px;border-top:1px solid var(--border);}
+.legend-title{font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;font-family:'Space Mono',monospace;}
+.legend-items{display:flex;flex-direction:column;gap:3px;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+/* ── TICKER ── */
+.ticker{background:#0a0e14;border-top:1px solid var(--border);padding:4px 14px;font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-shrink:0;overflow:hidden;}
+.ticker-label{color:var(--accent);font-weight:700;flex-shrink:0;letter-spacing:1px;}
+.ticker-text{animation:ticker 40s linear infinite;white-space:nowrap;}
+@keyframes ticker{from{transform:translateX(100vw)}to{transform:translateX(-200%)}}
+
+/* ── MODALES ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:2000;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+@media(min-width:600px){.modal-overlay{align-items:center;}}
+.modal{background:var(--surface);border:1px solid var(--border);width:100%;max-width:480px;padding:20px;position:relative;animation:slideUp .25s ease;max-height:90vh;overflow-y:auto;border-radius:6px 6px 0 0;}
+@media(min-width:600px){.modal{border-radius:4px;}}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.modal-title{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--accent);margin-bottom:14px;text-transform:uppercase;}
+.modal-title.ia-c{color:var(--ia);}
+.form-group{margin-bottom:11px;}
+.form-label{font-size:8px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;font-family:'Space Mono',monospace;display:block;margin-bottom:4px;}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 10px;font-family:'Syne',sans-serif;font-size:13px;outline:none;transition:border-color .2s;border-radius:3px;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent);}
+.form-select option{background:var(--surface);}
+.form-textarea{resize:none;min-height:80px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.modal-hint{font-size:9px;color:var(--muted);margin-bottom:12px;font-family:'Space Mono',monospace;padding:7px 9px;border:1px solid var(--border);border-left:3px solid var(--accent);line-height:1.6;}
+.modal-hint.ia-h{border-left-color:var(--ia);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;}
+.btn-cancel{background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 14px;font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;border-radius:3px;}
+.btn-save{background:var(--accent);color:var(--bg);border:none;padding:8px 18px;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;cursor:pointer;border-radius:3px;}
+.btn-save.ia{background:var(--ia);}
+.btn-close{position:absolute;top:12px;right:12px;background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;}
+
+.fuentes-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:12px;}
+.fuente-btn{padding:7px 4px;border:1px solid var(--border);background:var(--bg);color:var(--muted);font-family:'Space Mono',monospace;font-size:8px;cursor:pointer;transition:all .2s;text-align:center;border-radius:3px;}
+.fuente-btn:hover,.fuente-btn.sel{border-color:var(--ia);color:var(--ia);background:rgba(167,139,250,.08);}
+.fuente-btn .fi{font-size:14px;display:block;margin-bottom:2px;}
+.ia-result{border:1px solid rgba(167,139,250,.3);background:rgba(167,139,250,.05);padding:12px;border-radius:3px;margin-bottom:12px;display:none;}
+.ia-result-title{font-size:8px;letter-spacing:2px;color:var(--ia);font-family:'Space Mono',monospace;text-transform:uppercase;margin-bottom:8px;}
+.rf{margin-bottom:7px;}
+.rl{font-size:7px;color:var(--ia);font-family:'Space Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;}
+.rv{font-size:11px;color:var(--text);padding:5px 7px;background:var(--bg);border:1px solid var(--border);border-radius:2px;}
+.rv[contenteditable="true"]{cursor:text;}
+.rv[contenteditable="true"]:focus{outline:none;border-color:var(--ia);}
+
+/* ── STATS ROW ── */
+.stats-row{display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;}
+.stat-box{flex:1;text-align:center;padding:6px 4px;border-right:1px solid var(--border);}
+.stat-box:last-child{border-right:none;}
+.stat-num{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--accent);}
+.stat-label{font-size:7px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon"></div>
+      <div class="logo-text">
+        <h1>IRAPUATO INTEL</h1>
+        <span id="modo-label">MODO ESCRITORIO</span>
+      </div>
+    </div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btn-escritorio" onclick="setModo('escritorio')">🖥 ESCRITORIO</button>
+      <button class="mode-btn campo" id="btn-campo" onclick="setModo('campo')">📍 CAMPO</button>
+    </div>
+    <div class="header-btns" id="header-btns-desktop">
+      <button class="hbtn hbtn-ia" onclick="abrirIA()">🤖 IA</button>
+      <button class="hbtn hbtn-add" onclick="abrirManual()">+ REPORTE</button>
+    </div>
+  </header>
+
+  <!-- ALERTA BANNER -->
+  <div id="alerta-banner">⚠ ALERTA: Hay eventos de seguridad a menos de 2km de tu posición</div>
+
+  <!-- GPS BAR -->
+  <div id="gps-bar">
+    <div class="gps-info">
+      <div class="gps-dot" id="gps-dot"></div>
+      <span id="gps-status">Obteniendo GPS...</span>
+    </div>
+    <div class="gps-coords" id="gps-coords">—</div>
+    <div class="radio-control">
+      <span>Radio:</span>
+      <input type="range" min="500" max="5000" step="500" value="2000" id="radio-slider" oninput="cambiarRadio(this.value)">
+      <span id="radio-label">2km</span>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-num" id="s-total">0</div><div class="stat-label">Eventos</div></div>
+    <div class="stat-box"><div class="stat-num" id="s-cercanos" style="color:var(--ok)">—</div><div class="stat-label">Cercanos</div></div>
+    <div class="stat-box"><div class="stat-num" id="s-rumor">0</div><div class="stat-label">Rumores</div></div>
+    <div class="stat-box"><div class="stat-num" id="s-ia">0</div><div class="stat-label">Vía IA</div></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- SIDEBAR ESCRITORIO -->
+    <div id="sidebar-desktop">
+      <div class="filters">
+        <div class="filters-title">Filtrar</div>
+        <div class="filter-chips">
+          <button class="chip active" data-type="todos" onclick="filtrar('todos',this)">TODOS</button>
+          <button class="chip" data-type="seguridad" onclick="filtrar('seguridad',this)">🔴 SEG</button>
+          <button class="chip" data-type="accidente" onclick="filtrar('accidente',this)">🟠 ACC</button>
+          <button class="chip" data-type="evento" onclick="filtrar('evento',this)">🔵 EVE</button>
+          <button class="chip" data-type="rumor" onclick="filtrar('rumor',this)">⚪ RUM</button>
+          <button class="chip" data-type="ia" onclick="filtrar('ia',this)">🤖 IA</button>
+        </div>
+      </div>
+      <div class="eventos-list" id="eventos-list"></div>
+      <div class="legend">
+        <div class="legend-title">Leyenda</div>
+        <div class="legend-items">
+          <div class="legend-item"><span class="dot" style="background:#ff3d71"></span>Seguridad</div>
+          <div class="legend-item"><span class="dot" style="background:#ff9f43"></span>Accidente</div>
+          <div class="legend-item"><span class="dot" style="background:#00e5ff"></span>Evento</div>
+          <div class="legend-item"><span class="dot" style="background:#6c7a9c"></span>Rumor</div>
+          <div class="legend-item"><span class="dot" style="background:#a78bfa"></span>Procesado IA</div>
+          <div class="legend-item"><span class="dot" style="background:#26de81"></span>Mi posición</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAPA -->
+    <div class="map-wrap">
+      <canvas id="mapa-canvas"></canvas>
+      <div class="map-popup" id="popup">
+        <span class="pop-tipo" id="p-tipo"></span>
+        <div class="pop-titulo" id="p-titulo"></div>
+        <div class="pop-lugar" id="p-lugar"></div>
+        <div class="pop-desc" id="p-desc"></div>
+        <div class="pop-dist" id="p-dist"></div>
+        <div class="pop-meta" id="p-meta"></div>
+      </div>
+      <!-- FAB modo campo -->
+      <button id="fab" onclick="abrirReporteRapido()" title="Reportar aquí">📍</button>
+    </div>
+
+    <!-- PANEL CAMPO (lateral en desktop) -->
+    <div id="panel-campo">
+      <div class="panel-title">
+        <span>📡 EVENTOS CERCANOS</span>
+        <span id="campo-radio-label" style="color:var(--muted)">radio 2km</span>
+      </div>
+      <div class="cercanos-list" id="cercanos-list">
+        <div style="padding:20px;text-align:center;color:var(--muted);font-family:'Space Mono',monospace;font-size:10px;">
+          Activando GPS...
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PANEL BOTTOM (móvil modo campo) -->
+  <div id="panel-bottom">
+    <div class="bottom-handle" onclick="toggleBottom()"></div>
+    <div class="bottom-tabs">
+      <div class="btab active" onclick="setBottomTab('cercanos',this)">📡 CERCANOS</div>
+      <div class="btab" onclick="setBottomTab('todos',this)">📋 TODOS</div>
+    </div>
+    <div class="bottom-content" id="bottom-content"></div>
+  </div>
+
+  <!-- TICKER -->
+  <div class="ticker">
+    <span class="ticker-label">LIVE</span>
+    <span class="ticker-text" id="ticker-text">Cargando...</span>
+  </div>
+
+</div>
+
+<!-- MODAL MANUAL -->
+<div class="modal-overlay" id="m-manual">
+  <div class="modal">
+    <button class="btn-close" onclick="cerrarManual()">✕</button>
+    <div class="modal-title">// NUEVO REPORTE</div>
+    <div class="modal-hint" id="hint-coords">📍 Haz clic en el mapa para fijar ubicación. En modo campo se usa tu posición GPS automáticamente.</div>
+    <div class="form-group">
+      <label class="form-label">Título *</label>
+      <input class="form-input" id="f-titulo" placeholder="Describe brevemente el evento"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Tipo *</label>
+        <select class="form-select" id="f-tipo">
+          <option value="seguridad">🔴 Seguridad</option>
+          <option value="accidente">🟠 Accidente</option>
+          <option value="evento">🔵 Evento</option>
+          <option value="rumor">⚪ Rumor</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fuente</label>
+        <select class="form-select" id="f-fuente">
+          <option>Reporte manual</option>
+          <option>AM Guanajuato</option>
+          <option>Periódico Correo</option>
+          <option>En Tinta Negra</option>
+          <option>Zona Franca</option>
+          <option>Facebook</option>
+          <option>WhatsApp</option>
+          <option>Observación directa</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Colonia / Lugar</label>
+      <input class="form-input" id="f-lugar" placeholder="Ej: Col. Centro, Blvd. Arandas"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Descripción</label>
+      <textarea class="form-textarea" id="f-desc" placeholder="Describe el evento..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarManual()">CANCELAR</button>
+      <button class="btn-save" onclick="guardarManual()">REGISTRAR →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IA -->
+<div class="modal-overlay" id="m-ia">
+  <div class="modal">
+    <button class="btn-close" onclick="cerrarIA()">✕</button>
+    <div class="modal-title ia-c">🤖 ANALIZADOR IA</div>
+    <div class="modal-hint ia-h">Pega el texto de una noticia de AM, Correo, En Tinta Negra, Facebook o WhatsApp.</div>
+    <div class="form-group">
+      <label class="form-label">Fuente</label>
+      <div class="fuentes-grid">
+        <button class="fuente-btn sel" data-f="AM Guanajuato" onclick="selF(this)"><span class="fi">📰</span>AM Gto.</button>
+        <button class="fuente-btn" data-f="Periódico Correo" onclick="selF(this)"><span class="fi">📰</span>Correo</button>
+        <button class="fuente-btn" data-f="En Tinta Negra" onclick="selF(this)"><span class="fi">📰</span>Tinta Negra</button>
+        <button class="fuente-btn" data-f="Zona Franca" onclick="selF(this)"><span class="fi">📰</span>Zona Franca</button>
+        <button class="fuente-btn" data-f="Facebook" onclick="selF(this)"><span class="fi">📘</span>Facebook</button>
+        <button class="fuente-btn" data-f="WhatsApp" onclick="selF(this)"><span class="fi">💬</span>WhatsApp</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Texto de la noticia</label>
+      <textarea class="form-textarea" id="ia-texto" style="min-height:100px;" placeholder="Pega aquí el texto completo..."></textarea>
+    </div>
+    <div class="ia-result" id="ia-result">
+      <div class="ia-result-title" id="ia-conf">✓ ANÁLISIS COMPLETADO</div>
+      <div class="rf"><div class="rl">Título</div><div class="rv" id="r-titulo" contenteditable="true"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="rf"><div class="rl">Tipo</div>
+          <select class="form-input" id="r-tipo" style="font-size:11px;">
+            <option value="seguridad">🔴 Seguridad</option>
+            <option value="accidente">🟠 Accidente</option>
+            <option value="evento">🔵 Evento</option>
+            <option value="rumor">⚪ Rumor</option>
+          </select>
+        </div>
+        <div class="rf"><div class="rl">Lugar</div><div class="rv" id="r-lugar" contenteditable="true"></div></div>
+      </div>
+      <div class="rf"><div class="rl">Resumen</div><div class="rv" id="r-resumen" contenteditable="true" style="min-height:40px;"></div></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarIA()">CANCELAR</button>
+      <button class="btn-save ia" id="btn-analizar" onclick="analizar()">ANALIZAR →</button>
+      <button class="btn-save" id="btn-guardar-ia" onclick="guardarIA()" style="display:none;">GUARDAR →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── GEO IRAPUATO ───────────────────────────────────────────────
+const GEO = { latMin:20.640, latMax:20.730, lngMin:-101.415, lngMax:-101.310, cLat:20.6795, cLng:-101.3540 };
+const COLORES = { seguridad:'#ff3d71', accidente:'#ff9f43', evento:'#00e5ff', rumor:'#6c7a9c' };
+const RADIO_ALERTA = 2000; // metros
+
+// ── ESTADO ─────────────────────────────────────────────────────
+let eventos = JSON.parse(localStorage.getItem('ira-v4') || 'null') || [
+  {id:1,titulo:"Accidente en Blvd. Arandas",tipo:"accidente",lugar:"Blvd. Arandas / Libramiento",descripcion:"Choque entre dos vehículos. Tráfico lento.",fuente:"Observación directa",fecha:new Date().toISOString(),lat:20.6834,lng:-101.3510,viaIA:false},
+  {id:2,titulo:"Feria de empleo en el Centro",tipo:"evento",lugar:"Jardín Principal, Centro",descripcion:"Feria de empleo municipal. 30+ empresas.",fuente:"AM Guanajuato",fecha:new Date().toISOString(),lat:20.6795,lng:-101.3540,viaIA:false},
+  {id:3,titulo:"Rumor: corte de agua Col. Delegaciones",tipo:"rumor",lugar:"Col. Delegaciones",descripcion:"Posible corte de agua. No confirmado por SAPAL.",fuente:"WhatsApp",fecha:new Date().toISOString(),lat:20.6750,lng:-101.3480,viaIA:false},
+  {id:4,titulo:"Robo a negocio en Col. Centro",tipo:"seguridad",lugar:"Calle Obregón, Col. Centro",descripcion:"Robo a tienda de conveniencia en madrugada.",fuente:"Facebook",fecha:new Date().toISOString(),lat:20.6810,lng:-101.3555,viaIA:false}
+];
+
+let modo = 'escritorio';
+let filtroActivo = 'todos';
+let coordsClick = null;
+let fuenteIA = 'AM Guanajuato';
+let iaResultado = null;
+let miPosicion = null;
+let radioAlerta = 2000;
+let gpsWatcher = null;
+let alertaActiva = false;
+let bottomTab = 'cercanos';
+let bottomOpen = true;
+
+// ── CANVAS ─────────────────────────────────────────────────────
+const canvas = document.getElementById('mapa-canvas');
+const ctx = canvas.getContext('2d');
+
+function resize(){
+  const w = canvas.parentElement;
+  canvas.width = w.clientWidth;
+  canvas.height = w.clientHeight;
+  dibujar();
+}
+
+function geoToPixel(lat,lng){
+  return {
+    x:(lng-GEO.lngMin)/(GEO.lngMax-GEO.lngMin)*canvas.width,
+    y:(1-(lat-GEO.latMin)/(GEO.latMax-GEO.latMin))*canvas.height
+  };
+}
+function pixelToGeo(x,y){
+  return {
+    lat:(1-y/canvas.height)*(GEO.latMax-GEO.latMin)+GEO.latMin,
+    lng:x/canvas.width*(GEO.lngMax-GEO.lngMin)+GEO.lngMin
+  };
+}
+
+function dibujar(){
+  const W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0d1117'; ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle='#1a1f2e'; ctx.lineWidth=0.5;
+  for(let i=0;i<W;i+=40){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();}
+  for(let j=0;j<H;j+=40){ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(W,j);ctx.stroke();}
+
+  // Gradiente urbano
+  const grad=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)/2);
+  grad.addColorStop(0,'rgba(30,40,70,0.35)'); grad.addColorStop(1,'rgba(10,12,16,0)');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+
+  // Río
+  const r=geoToPixel(20.6770,-101.410);
+  ctx.beginPath(); ctx.strokeStyle='rgba(0,120,200,0.2)'; ctx.lineWidth=6;
+  ctx.moveTo(0,r.y);
+  ctx.bezierCurveTo(W*.2,r.y-18,W*.4,r.y+14,W*.6,r.y-8);
+  ctx.bezierCurveTo(W*.75,r.y-18,W*.9,r.y+4,W,r.y);
+  ctx.stroke();
+
+  // Calles
+  ctx.lineWidth=1.2; ctx.strokeStyle='rgba(40,55,90,0.75)';
+  [[20.700,-101.415,20.700,-101.310],[20.685,-101.415,20.685,-101.310],
+   [20.670,-101.415,20.670,-101.310],[20.655,-101.415,20.655,-101.310],
+   [20.715,-101.415,20.715,-101.310],[20.730,-101.395,20.640,-101.395],
+   [20.730,-101.375,20.640,-101.375],[20.730,-101.355,20.640,-101.355],
+   [20.730,-101.335,20.640,-101.335],[20.730,-101.315,20.640,-101.315],
+   [20.720,-101.410,20.645,-101.320],[20.710,-101.415,20.650,-101.315]
+  ].forEach(([a,b,c,d])=>{
+    const pa=geoToPixel(a,b),pb=geoToPixel(c,d);
+    ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);ctx.stroke();
+  });
+
+  // Boulevares
+  ctx.lineWidth=3; ctx.strokeStyle='rgba(60,80,130,0.85)';
+  [[20.700,-101.415,20.700,-101.310],[20.730,-101.355,20.640,-101.355],[20.720,-101.410,20.645,-101.320]
+  ].forEach(([a,b,c,d])=>{
+    const pa=geoToPixel(a,b),pb=geoToPixel(c,d);
+    ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);ctx.stroke();
+  });
+
+  // Etiquetas
+  ctx.font='9px Space Mono,monospace'; ctx.fillStyle='rgba(74,82,112,0.8)'; ctx.textAlign='center';
+  [{lat:20.6795,lng:-101.354,t:'CENTRO'},{lat:20.702,lng:-101.390,t:'NORTE'},
+   {lat:20.660,lng:-101.330,t:'ORIENTE'},{lat:20.660,lng:-101.398,t:'PONIENTE'},
+   {lat:20.700,lng:-101.328,t:'LIBRAMIENTO'}
+  ].forEach(l=>{const p=geoToPixel(l.lat,l.lng);ctx.fillText(l.t,p.x,p.y);});
+
+  // Nombre
+  const cen=geoToPixel(20.6795,-101.354);
+  ctx.font='bold 11px Space Mono,monospace'; ctx.fillStyle='rgba(0,229,255,0.25)'; ctx.textAlign='center';
+  ctx.fillText('IRAPUATO, GTO.',cen.x,cen.y-14);
+  ctx.beginPath();ctx.arc(cen.x,cen.y,4,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,229,255,0.15)';ctx.fill();
+  ctx.strokeStyle='rgba(0,229,255,0.4)';ctx.lineWidth=1;ctx.stroke();
+
+  // Radio de alerta (si hay GPS)
+  if(miPosicion){
+    const mp=geoToPixel(miPosicion.lat,miPosicion.lng);
+    // Calcular radio en pixels aproximado
+    const radioLng=radioAlerta/1000*0.011;
+    const borde=geoToPixel(miPosicion.lat,miPosicion.lng+radioLng);
+    const radioPixels=Math.abs(borde.x-mp.x);
+    ctx.beginPath();
+    ctx.arc(mp.x,mp.y,radioPixels,0,Math.PI*2);
+    ctx.strokeStyle=alertaActiva?'rgba(255,61,113,0.25)':'rgba(38,222,129,0.2)';
+    ctx.lineWidth=1.5;
+    ctx.setLineDash([5,5]);
+    ctx.stroke();
+    ctx.fillStyle=alertaActiva?'rgba(255,61,113,0.06)':'rgba(38,222,129,0.06)';
+    ctx.fill();
+    ctx.setLineDash([]);
+  }
+
+  // Marcadores
+  const filtrados = filtroActivo==='ia'?eventos.filter(e=>e.viaIA):
+                    filtroActivo==='todos'?eventos:eventos.filter(e=>e.tipo===filtroActivo);
+  filtrados.forEach(ev=>{
+    const p=geoToPixel(ev.lat,ev.lng);
+    const color=COLORES[ev.tipo]||COLORES.rumor;
+    const cercano=miPosicion&&distancia(miPosicion.lat,miPosicion.lng,ev.lat,ev.lng)<=radioAlerta;
+
+    ctx.beginPath();ctx.arc(p.x,p.y,cercano?16:13,0,Math.PI*2);
+    ctx.fillStyle=color+(cercano?'33':'18');ctx.fill();
+
+    if(ev.viaIA){
+      ctx.beginPath();ctx.arc(p.x,p.y,10,0,Math.PI*2);
+      ctx.strokeStyle='#a78bfa';ctx.lineWidth=1.5;
+      ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
+    }
+
+    ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);
+    ctx.fillStyle=color;ctx.fill();
+    ctx.strokeStyle='#0a0c10';ctx.lineWidth=2;ctx.stroke();
+
+    const icons={seguridad:'!',accidente:'~',evento:'★',rumor:'?'};
+    ctx.font='8px sans-serif';ctx.textAlign='center';
+    ctx.fillStyle='#0a0c10';ctx.fillText(icons[ev.tipo]||'●',p.x,p.y+3);
+
+    if(cercano){
+      ctx.font='bold 8px Space Mono,monospace';
+      ctx.fillStyle=color;ctx.textAlign='center';
+      const d=distancia(miPosicion.lat,miPosicion.lng,ev.lat,ev.lng);
+      ctx.fillText(d<1000?Math.round(d)+'m':(d/1000).toFixed(1)+'km',p.x,p.y-12);
+    }
+  });
+
+  // Mi posición GPS
+  if(miPosicion){
+    const mp=geoToPixel(miPosicion.lat,miPosicion.lng);
+    ctx.beginPath();ctx.arc(mp.x,mp.y,18,0,Math.PI*2);
+    ctx.fillStyle='rgba(38,222,129,0.12)';ctx.fill();
+    ctx.beginPath();ctx.arc(mp.x,mp.y,10,0,Math.PI*2);
+    ctx.fillStyle='rgba(38,222,129,0.3)';ctx.fill();
+    ctx.beginPath();ctx.arc(mp.x,mp.y,6,0,Math.PI*2);
+    ctx.fillStyle='#26de81';ctx.fill();
+    ctx.strokeStyle='white';ctx.lineWidth=2;ctx.stroke();
+    ctx.font='bold 9px Space Mono,monospace';
+    ctx.fillStyle='#26de81';ctx.textAlign='center';
+    ctx.fillText('YO',mp.x,mp.y-14);
+  }
+
+  // Crosshair click
+  if(coordsClick){
+    const p=geoToPixel(coordsClick.lat,coordsClick.lng);
+    ctx.strokeStyle='#00e5ff';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(p.x-12,p.y);ctx.lineTo(p.x+12,p.y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(p.x,p.y-12);ctx.lineTo(p.x,p.y+12);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);
+    ctx.strokeStyle='#00e5ff';ctx.lineWidth=2;ctx.stroke();
+  }
+}
+
+// ── GPS ────────────────────────────────────────────────────────
+function iniciarGPS(){
+  if(!navigator.geolocation){
+    document.getElementById('gps-status').textContent='GPS no disponible';
+    return;
+  }
+  document.getElementById('gps-status').textContent='Buscando señal GPS...';
+  gpsWatcher = navigator.geolocation.watchPosition(
+    pos=>{
+      miPosicion={lat:pos.coords.latitude,lng:pos.coords.longitude,acc:pos.coords.accuracy};
+      document.getElementById('gps-dot').classList.add('fix');
+      document.getElementById('gps-status').textContent=`GPS activo (±${Math.round(pos.coords.accuracy)}m)`;
+      document.getElementById('gps-coords').textContent=`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+      verificarAlertas();
+      renderCercanos();
+      dibujar();
+    },
+    err=>{
+      document.getElementById('gps-status').textContent='Sin acceso GPS — actívalo en tu navegador';
+      // Demo: simular posición en centro de Irapuato
+      miPosicion={lat:GEO.cLat,lng:GEO.cLng,acc:50};
+      document.getElementById('gps-coords').textContent='DEMO: Centro Irapuato';
+      verificarAlertas();
+      renderCercanos();
+      dibujar();
+    },
+    {enableHighAccuracy:true,timeout:10000,maximumAge:5000}
+  );
+}
+
+function detenerGPS(){
+  if(gpsWatcher!==null){navigator.geolocation.clearWatch(gpsWatcher);gpsWatcher=null;}
+  miPosicion=null;
+  document.getElementById('gps-dot').classList.remove('fix');
+  document.getElementById('gps-status').textContent='GPS desactivado';
+  document.getElementById('gps-coords').textContent='—';
+  alertaActiva=false;
+  document.getElementById('alerta-banner').classList.remove('visible');
+  document.getElementById('s-cercanos').textContent='—';
+}
+
+function distancia(lat1,lng1,lat2,lng2){
+  const R=6371000;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)*Math.sin(dLat/2)+
+          Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+          Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function verificarAlertas(){
+  if(!miPosicion)return;
+  const peligrosos=eventos.filter(ev=>
+    ev.tipo==='seguridad'&&distancia(miPosicion.lat,miPosicion.lng,ev.lat,ev.lng)<=radioAlerta
+  );
+  alertaActiva=peligrosos.length>0;
+  const banner=document.getElementById('alerta-banner');
+  if(alertaActiva){
+    banner.textContent=`⚠ ALERTA: ${peligrosos.length} evento(s) de seguridad a menos de ${radioAlerta>=1000?radioAlerta/1000+'km':radioAlerta+'m'} de tu posición`;
+    banner.classList.add('visible');
+    if(navigator.vibrate)navigator.vibrate([200,100,200]);
+  } else {
+    banner.classList.remove('visible');
+  }
+}
+
+function renderCercanos(){
+  if(!miPosicion)return;
+  const cercanos=eventos.map(ev=>({
+    ...ev, dist:distancia(miPosicion.lat,miPosicion.lng,ev.lat,ev.lng)
+  })).filter(ev=>ev.dist<=radioAlerta).sort((a,b)=>a.dist-b.dist);
+
+  document.getElementById('s-cercanos').textContent=cercanos.length;
+
+  const html=cercanos.length===0
+    ?'<div style="padding:20px;text-align:center;color:var(--muted);font-family:Space Mono,monospace;font-size:10px;">Sin eventos en radio de '+
+      (radioAlerta>=1000?radioAlerta/1000+'km':radioAlerta+'m')+'</div>'
+    :cercanos.map(ev=>{
+      const d=ev.dist<1000?Math.round(ev.dist)+'m':(ev.dist/1000).toFixed(1)+'km';
+      const esAlerta=ev.tipo==='seguridad'&&ev.dist<=radioAlerta;
+      return `<div class="cercano-card" data-tipo="${ev.tipo}" onclick="enfocarEvento(${ev.id})">
+        <div class="cc-header">
+          <span class="cc-tipo" style="background:${COLORES[ev.tipo]}22;color:${COLORES[ev.tipo]}">${ev.tipo.toUpperCase()}</span>
+          <span class="cc-dist${esAlerta?' alerta':''}">${d}</span>
+        </div>
+        <div class="cc-titulo">${ev.titulo}</div>
+        <div class="cc-lugar">📍 ${ev.lugar}</div>
+      </div>`;
+    }).join('');
+
+  document.getElementById('cercanos-list').innerHTML=html;
+  if(document.getElementById('panel-bottom').classList.contains('visible')&&bottomTab==='cercanos'){
+    document.getElementById('bottom-content').innerHTML=html;
+  }
+}
+
+function cambiarRadio(val){
+  radioAlerta=parseInt(val);
+  const label=radioAlerta>=1000?radioAlerta/1000+'km':radioAlerta+'m';
+  document.getElementById('radio-label').textContent=label;
+  document.getElementById('campo-radio-label').textContent='radio '+label;
+  verificarAlertas();
+  renderCercanos();
+  dibujar();
+}
+
+// ── MODOS ──────────────────────────────────────────────────────
+function setModo(m){
+  modo=m;
+  const isEscritorio=m==='escritorio';
+  const isMobile=window.innerWidth<700;
+
+  document.getElementById('btn-escritorio').classList.toggle('active',isEscritorio);
+  document.getElementById('btn-campo').classList.toggle('active',!isEscritorio);
+  document.getElementById('modo-label').textContent=isEscritorio?'MODO ESCRITORIO':'MODO CAMPO — GPS ACTIVO';
+
+  document.getElementById('gps-bar').classList.toggle('visible',!isEscritorio);
+  document.getElementById('sidebar-desktop').style.display=isEscritorio&&!isMobile?'flex':'none';
+  document.getElementById('header-btns-desktop').style.display=isEscritorio?'flex':'none';
+
+  const fab=document.getElementById('fab');
+  fab.classList.toggle('visible',!isEscritorio);
+
+  if(!isEscritorio){
+    iniciarGPS();
+    if(!isMobile){
+      document.getElementById('panel-campo').classList.add('visible');
+    } else {
+      document.getElementById('panel-bottom').classList.add('visible');
+    }
+  } else {
+    detenerGPS();
+    document.getElementById('panel-campo').classList.remove('visible');
+    document.getElementById('panel-bottom').classList.remove('visible');
+  }
+  dibujar();
+}
+
+// ── BOTTOM PANEL ───────────────────────────────────────────────
+function toggleBottom(){
+  bottomOpen=!bottomOpen;
+  const panel=document.getElementById('panel-bottom');
+  panel.style.maxHeight=bottomOpen?'40vh':'44px';
+}
+function setBottomTab(tab,el){
+  bottomTab=tab;
+  document.querySelectorAll('.btab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  if(tab==='cercanos')renderCercanos();
+  else renderLista();
+}
+
+// ── CANVAS EVENTOS ─────────────────────────────────────────────
+const popup=document.getElementById('popup');
+canvas.addEventListener('mousemove',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  let found=null;
+  const filtrados=filtroActivo==='ia'?eventos.filter(e=>e.viaIA):
+                  filtroActivo==='todos'?eventos:eventos.filter(e=>e.tipo===filtroActivo);
+  for(const ev of filtrados){
+    const p=geoToPixel(ev.lat,ev.lng);
+    if(Math.hypot(mx-p.x,my-p.y)<14){found=ev;break;}
+  }
+  if(found){
+    canvas.style.cursor='pointer';
+    const color=COLORES[found.tipo]||COLORES.rumor;
+    document.getElementById('p-tipo').textContent=found.tipo.toUpperCase();
+    document.getElementById('p-tipo').style.background=color+'22';
+    document.getElementById('p-tipo').style.color=color;
+    document.getElementById('p-titulo').textContent=found.titulo;
+    document.getElementById('p-lugar').textContent='📍 '+found.lugar;
+    document.getElementById('p-desc').textContent=found.descripcion;
+    if(miPosicion){
+      const d=distancia(miPosicion.lat,miPosicion.lng,found.lat,found.lng);
+      document.getElementById('p-dist').textContent='📡 '+( d<1000?Math.round(d)+'m':(d/1000).toFixed(1)+'km de ti');
+      document.getElementById('p-dist').style.display='block';
+    } else { document.getElementById('p-dist').style.display='none'; }
+    const fecha=new Date(found.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+    document.getElementById('p-meta').textContent=`${found.fuente} | ${fecha}${found.viaIA?' | 🤖 IA':''}`;
+    let px=e.clientX-canvas.getBoundingClientRect().left+14;
+    let py=e.clientY-canvas.getBoundingClientRect().top-20;
+    if(px+250>canvas.width)px-=264;
+    if(py+160>canvas.height)py-=160;
+    popup.style.left=px+'px'; popup.style.top=py+'px';
+    popup.classList.add('visible');
+  } else {
+    canvas.style.cursor='crosshair';
+    popup.classList.remove('visible');
+  }
+});
+
+canvas.addEventListener('mouseleave',()=>popup.classList.remove('visible'));
+
+canvas.addEventListener('click',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const filtrados=filtroActivo==='ia'?eventos.filter(ev=>ev.viaIA):
+                  filtroActivo==='todos'?eventos:eventos.filter(ev=>ev.tipo===filtroActivo);
+  for(const ev of filtrados){
+    const p=geoToPixel(ev.lat,ev.lng);
+    if(Math.hypot(mx-p.x,my-p.y)<14)return;
+  }
+  coordsClick=pixelToGeo(mx,my);
+  dibujar();
+  abrirManual();
+});
+
+// Touch support
+canvas.addEventListener('touchend',e=>{
+  e.preventDefault();
+  const t=e.changedTouches[0];
+  const rect=canvas.getBoundingClientRect();
+  const mx=t.clientX-rect.left, my=t.clientY-rect.top;
+  const filtrados=filtroActivo==='ia'?eventos.filter(ev=>ev.viaIA):
+                  filtroActivo==='todos'?eventos:eventos.filter(ev=>ev.tipo===filtroActivo);
+  let found=null;
+  for(const ev of filtrados){
+    const p=geoToPixel(ev.lat,ev.lng);
+    if(Math.hypot(mx-p.x,my-p.y)<18){found=ev;break;}
+  }
+  if(found){
+    const color=COLORES[found.tipo]||COLORES.rumor;
+    document.getElementById('p-tipo').textContent=found.tipo.toUpperCase();
+    document.getElementById('p-tipo').style.background=color+'22';
+    document.getElementById('p-tipo').style.color=color;
+    document.getElementById('p-titulo').textContent=found.titulo;
+    document.getElementById('p-lugar').textContent='📍 '+found.lugar;
+    document.getElementById('p-desc').textContent=found.descripcion;
+    if(miPosicion){const d=distancia(miPosicion.lat,miPosicion.lng,found.lat,found.lng);document.getElementById('p-dist').textContent='📡 '+(d<1000?Math.round(d)+'m':(d/1000).toFixed(1)+'km de ti');document.getElementById('p-dist').style.display='block';}
+    else document.getElementById('p-dist').style.display='none';
+    const fecha=new Date(found.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+    document.getElementById('p-meta').textContent=`${found.fuente} | ${fecha}`;
+    popup.style.left='10px'; popup.style.top='10px';
+    popup.classList.add('visible');
+    setTimeout(()=>popup.classList.remove('visible'),3000);
+  } else {
+    popup.classList.remove('visible');
+    coordsClick=pixelToGeo(mx,my);
+    dibujar();
+    abrirManual();
+  }
+},{passive:false});
+
+// ── FILTROS ────────────────────────────────────────────────────
+function filtrar(tipo,el){
+  filtroActivo=tipo;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderLista(); dibujar();
+}
+
+function enfocarEvento(id){
+  const ev=eventos.find(e=>e.id===id);
+  if(!ev)return;
+  dibujar();
+}
+
+// ── LISTA ──────────────────────────────────────────────────────
+function renderLista(){
+  const lista=document.getElementById('eventos-list');
+  const hoy=new Date().toDateString();
+  const filtrados=filtroActivo==='ia'?eventos.filter(e=>e.viaIA):
+                  filtroActivo==='todos'?eventos:eventos.filter(e=>e.tipo===filtroActivo);
+  const html=filtrados.map(ev=>{
+    const fecha=new Date(ev.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short'});
+    return `<div class="evento-card" data-type="${ev.tipo}" onclick="enfocarEvento(${ev.id})">
+      <div class="card-header">
+        <span class="card-tipo">${ev.tipo.toUpperCase()}${ev.viaIA?'<span class="badge-ia">IA</span>':''}</span>
+        <span class="card-fecha">${fecha}</span>
+      </div>
+      <div class="card-titulo">${ev.titulo}</div>
+      <div class="card-lugar">📍 ${ev.lugar}</div>
+    </div>`;
+  }).join('');
+  lista.innerHTML=html;
+  if(bottomTab==='todos'&&document.getElementById('panel-bottom').classList.contains('visible')){
+    document.getElementById('bottom-content').innerHTML=html;
+  }
+  document.getElementById('s-total').textContent=eventos.length;
+  document.getElementById('s-rumor').textContent=eventos.filter(e=>e.tipo==='rumor').length;
+  document.getElementById('s-ia').textContent=eventos.filter(e=>e.viaIA).length;
+  document.getElementById('ticker-text').textContent=
+    eventos.slice(0,5).map(e=>`${e.tipo.toUpperCase()}: ${e.titulo} — ${e.lugar}`).join(' • ');
+}
+
+// ── MODALES ────────────────────────────────────────────────────
+function abrirManual(){
+  const hint=document.getElementById('hint-coords');
+  if(modo==='campo'&&miPosicion){
+    hint.textContent=`📍 Se usará tu posición GPS actual: ${miPosicion.lat.toFixed(4)}, ${miPosicion.lng.toFixed(4)}`;
+    coordsClick=miPosicion;
+  } else if(coordsClick){
+    hint.textContent=`📍 Ubicación seleccionada: ${coordsClick.lat.toFixed(4)}, ${coordsClick.lng.toFixed(4)}`;
+  } else {
+    hint.textContent='📍 Haz clic en el mapa para fijar ubicación.';
+  }
+  document.getElementById('m-manual').classList.add('open');
+}
+function cerrarManual(){
+  document.getElementById('m-manual').classList.remove('open');
+  coordsClick=null; dibujar();
+  ['f-titulo','f-lugar','f-desc'].forEach(id=>document.getElementById(id).value='');
+}
+function guardarManual(){
+  const titulo=document.getElementById('f-titulo').value.trim();
+  if(!titulo){alert('El título es obligatorio.');return;}
+  const lat=coordsClick?coordsClick.lat:GEO.cLat+(Math.random()-.5)*.02;
+  const lng=coordsClick?coordsClick.lng:GEO.cLng+(Math.random()-.5)*.02;
+  guardar({id:Date.now(),titulo,tipo:document.getElementById('f-tipo').value,
+    fuente:document.getElementById('f-fuente').value,
+    lugar:document.getElementById('f-lugar').value.trim()||'Irapuato',
+    descripcion:document.getElementById('f-desc').value.trim()||'Sin descripción.',
+    fecha:new Date().toISOString(),lat,lng,viaIA:false});
+  cerrarManual();
+}
+
+function abrirReporteRapido(){
+  if(miPosicion)coordsClick=miPosicion;
+  abrirManual();
+}
+
+function abrirIA(){document.getElementById('m-ia').classList.add('open');resetIA();}
+function cerrarIA(){document.getElementById('m-ia').classList.remove('open');resetIA();}
+function resetIA(){
+  document.getElementById('ia-texto').value='';
+  document.getElementById('ia-result').style.display='none';
+  document.getElementById('btn-analizar').style.display='inline-block';
+  document.getElementById('btn-analizar').textContent='ANALIZAR →';
+  document.getElementById('btn-analizar').disabled=false;
+  document.getElementById('btn-guardar-ia').style.display='none';
+  iaResultado=null;
+}
+function selF(el){document.querySelectorAll('.fuente-btn').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');fuenteIA=el.getAttribute('data-f');}
+
+async function analizar(){
+  const texto=document.getElementById('ia-texto').value.trim();
+  if(!texto){alert('Pega el texto primero.');return;}
+  const btn=document.getElementById('btn-analizar');
+  btn.textContent='⏳ ANALIZANDO...';btn.disabled=true;
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,
+        messages:[{role:"user",content:`Analiza este texto de Irapuato, Guanajuato y responde SOLO JSON sin markdown:
+{"titulo":"título corto (máx 80 chars)","tipo":"seguridad|accidente|evento|rumor","lugar":"lugar específico","resumen":"2-3 oraciones","lat":número entre 20.640-20.730,"lng":número entre -101.415 y -101.310,"confianza":"alta|media|baja"}
+Tipos: seguridad=robos/violencia, accidente=choques, evento=actividades, rumor=no verificado.
+Sin lugar específico usa lat:20.6795,lng:-101.3540.
+TEXTO: """${texto}"""`}]})
+    });
+    const data=await res.json();
+    const r=JSON.parse(data.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim());
+    iaResultado=r;
+    document.getElementById('r-titulo').textContent=r.titulo||'Sin título';
+    document.getElementById('r-tipo').value=r.tipo||'rumor';
+    document.getElementById('r-lugar').textContent=r.lugar||'Irapuato';
+    document.getElementById('r-resumen').textContent=r.resumen||texto.slice(0,200);
+    document.getElementById('ia-conf').textContent={'alta':'✓ ALTA CONFIANZA','media':'⚠ MEDIA CONFIANZA','baja':'? BAJA CONFIANZA'}[r.confianza]||'✓ COMPLETADO';
+    document.getElementById('ia-result').style.display='block';
+    document.getElementById('btn-guardar-ia').style.display='inline-block';
+  }catch(err){alert('Error al analizar. Abre el archivo en tu navegador para usar esta función.\n'+err.message);}
+  finally{btn.textContent='RE-ANALIZAR →';btn.disabled=false;}
+}
+
+function guardarIA(){
+  if(!iaResultado)return;
+  guardar({id:Date.now(),titulo:document.getElementById('r-titulo').textContent.trim(),
+    tipo:document.getElementById('r-tipo').value,fuente:fuenteIA,
+    lugar:document.getElementById('r-lugar').textContent.trim()||'Irapuato',
+    descripcion:document.getElementById('r-resumen').textContent.trim(),
+    fecha:new Date().toISOString(),lat:parseFloat(iaResultado.lat)||GEO.cLat,
+    lng:parseFloat(iaResultado.lng)||GEO.cLng,viaIA:true});
+  cerrarIA();
+}
+
+function guardar(ev){
+  eventos.unshift(ev);
+  localStorage.setItem('ira-v4',JSON.stringify(eventos));
+  renderLista();verificarAlertas();renderCercanos();dibujar();
+}
+
+// ── RESPONSIVE ─────────────────────────────────────────────────
+function checkResponsive(){
+  const isMobile=window.innerWidth<700;
+  if(isMobile){
+    document.getElementById('sidebar-desktop').style.display='none';
+    document.getElementById('header-btns-desktop').style.display=modo==='escritorio'?'flex':'none';
+  }
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+window.addEventListener('resize',()=>{resize();checkResponsive();});
+checkResponsive();
+resize();
+renderLista();
+</script>
+</body>
+</html>
