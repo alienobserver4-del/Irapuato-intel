@@ -24,12 +24,12 @@ header{display:flex;align-items:center;padding:6px 10px;background:var(--surface
 @keyframes pd{0%,100%{opacity:1}50%{opacity:.4}}
 .logo h1{font-family:'Orbitron',monospace;font-size:11px;font-weight:900;letter-spacing:2px;color:var(--cyan);text-shadow:0 0 10px var(--cyan);white-space:nowrap;}
 .nav{display:flex;gap:3px;flex:1;justify-content:center;}
-.ntab{padding:5px 8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;border-radius:2px;letter-spacing:0;white-space:nowrap;transition:all .2s;}
+.ntab{padding:8px 10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;border-radius:2px;letter-spacing:0;white-space:nowrap;transition:all .2s;min-height:36px;-webkit-tap-highlight-color:rgba(0,0,0,0);}
 .ntab.on{background:rgba(0,245,255,.12);color:var(--cyan);border-color:var(--cyan);}
 .ntab.campo-on{background:rgba(0,255,136,.12);color:var(--green);border-color:var(--green);}
 .ntab.stats-on{background:rgba(255,0,170,.12);color:var(--magenta);border-color:var(--magenta);}
-.acts{display:flex;gap:3px;flex-shrink:0;}
-.abtn{padding:5px 7px;font-family:'Orbitron',monospace;font-size:8px;font-weight:700;cursor:pointer;border-radius:2px;white-space:nowrap;}
+.acts{display:flex;gap:4px;flex-shrink:0;}
+.abtn{padding:8px 10px;font-family:'Orbitron',monospace;font-size:9px;font-weight:700;cursor:pointer;border-radius:3px;white-space:nowrap;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:rgba(0,0,0,0);}
 .abtn-url{background:rgba(255,0,170,.12);color:var(--magenta);border:1px solid var(--magenta);}
 .abtn-ia{background:rgba(170,119,255,.2);color:var(--ia);border:1px solid var(--ia);}
 .abtn-add{background:rgba(0,245,255,.12);color:var(--cyan);border:1px solid var(--cyan);}
@@ -550,7 +550,7 @@ const db = getFirestore(fbApp);
 // ── CONSTANTES ──────────────────────────────────────────────────
 const GEO = {cLat:20.6795, cLng:-101.3540};
 const COLORES = {seguridad:'#ff2255',accidente:'#ffaa00',evento:'#00ccff',rumor:'#3a6a8a'};
-const GEMINI_KEY = 'AIzaSyBEOLcxYFZFk6_IM4iZ9WjeLoUJi1RgAnw';
+const GEMINI_KEY = 'AIzaSyCCjfKqqAY9NCtMHE2mJhlkEBFRb6HDBJI';
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 
 // ── ESTADO ──────────────────────────────────────────────────────
