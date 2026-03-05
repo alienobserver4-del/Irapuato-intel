@@ -18,21 +18,23 @@ html,body{height:100%;overflow:hidden;font-family:'Share Tech Mono',monospace;ba
 #app{display:flex;flex-direction:column;height:100dvh;}
 
 /* HEADER */
-header{display:flex;align-items:center;padding:6px 10px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:6px;}
+header{display:flex;flex-direction:column;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.hrow1{display:flex;align-items:center;padding:6px 10px;gap:8px;}
 .logo{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-.diamond{width:14px;height:14px;background:var(--cyan);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);animation:pd 2s ease-in-out infinite;}
+.diamond{width:14px;height:14px;background:var(--cyan);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);animation:pd 2s ease-in-out infinite;flex-shrink:0;}
 @keyframes pd{0%,100%{opacity:1}50%{opacity:.4}}
 .logo h1{font-family:'Orbitron',monospace;font-size:11px;font-weight:900;letter-spacing:2px;color:var(--cyan);text-shadow:0 0 10px var(--cyan);white-space:nowrap;}
-.nav{display:flex;gap:3px;flex:1;justify-content:center;}
-.ntab{padding:8px 10px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;border-radius:2px;letter-spacing:0;white-space:nowrap;transition:all .2s;min-height:36px;-webkit-tap-highlight-color:rgba(0,0,0,0);}
+.hrow2{display:flex;align-items:center;padding:0 8px 6px;gap:5px;}
+.nav{display:flex;gap:4px;flex:1;}
+.ntab{padding:8px 12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Orbitron',monospace;font-size:9px;cursor:pointer;border-radius:3px;white-space:nowrap;transition:all .2s;min-height:36px;flex:1;text-align:center;-webkit-tap-highlight-color:transparent;}
 .ntab.on{background:rgba(0,245,255,.12);color:var(--cyan);border-color:var(--cyan);}
 .ntab.campo-on{background:rgba(0,255,136,.12);color:var(--green);border-color:var(--green);}
 .ntab.stats-on{background:rgba(255,0,170,.12);color:var(--magenta);border-color:var(--magenta);}
 .acts{display:flex;gap:4px;flex-shrink:0;}
-.abtn{padding:8px 10px;font-family:'Orbitron',monospace;font-size:9px;font-weight:700;cursor:pointer;border-radius:3px;white-space:nowrap;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:rgba(0,0,0,0);}
-.abtn-url{background:rgba(255,0,170,.12);color:var(--magenta);border:1px solid var(--magenta);}
-.abtn-ia{background:rgba(170,119,255,.2);color:var(--ia);border:1px solid var(--ia);}
-.abtn-add{background:rgba(0,245,255,.12);color:var(--cyan);border:1px solid var(--cyan);}
+.abtn{padding:8px 10px;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;cursor:pointer;border-radius:3px;white-space:nowrap;min-width:40px;min-height:36px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;border:none;}
+.abtn-url{background:rgba(255,0,170,.15);color:var(--magenta);border:1px solid var(--magenta)!important;}
+.abtn-ia{background:rgba(170,119,255,.2);color:var(--ia);border:1px solid var(--ia)!important;}
+.abtn-add{background:rgba(0,245,255,.15);color:var(--cyan);border:1px solid var(--cyan)!important;}
 
 /* STATUS BAR */
 #status-bar{display:flex;align-items:center;justify-content:space-between;padding:3px 10px;background:rgba(0,0,0,.4);border-bottom:1px solid var(--border);flex-shrink:0;font-size:8px;color:var(--muted);}
@@ -286,20 +288,24 @@ header{display:flex;align-items:center;padding:6px 10px;background:var(--surface
 <div id="app" style="display:none;">
 
 <header>
-  <div class="logo">
-    <div class="diamond"></div>
-    <h1>IRA INTEL</h1>
+  <div class="hrow1">
+    <div class="logo">
+      <div class="diamond"></div>
+      <h1>IRAPUATO INTEL</h1>
+    </div>
+    <div class="acts" style="margin-left:auto;">
+      <button class="abtn" style="background:rgba(0,255,136,.15);color:var(--green);border:1px solid var(--green)!important;" onclick="abrirRSS()">📡</button>
+      <button class="abtn abtn-url" onclick="abrirURL()">🔗</button>
+      <button class="abtn abtn-ia" onclick="abrirIA()">🤖</button>
+      <button class="abtn abtn-add" onclick="abrirManual(null)">＋</button>
+    </div>
   </div>
-  <div class="nav">
-    <button class="ntab on" id="tab-mapa" onclick="setVista('mapa')">🗺 MAPA</button>
-    <button class="ntab" id="tab-campo" onclick="setVista('campo')">📡 CAMPO</button>
-    <button class="ntab" id="tab-stats" onclick="setVista('stats')">📊 STATS</button>
-  </div>
-  <div class="acts">
-    <button class="abtn" style="background:rgba(0,255,136,.12);color:var(--green);border:1px solid var(--green);" onclick="abrirRSS()">📡</button>
-    <button class="abtn abtn-url" onclick="abrirURL()">🔗</button>
-    <button class="abtn abtn-ia" onclick="abrirIA()">🤖</button>
-    <button class="abtn abtn-add" onclick="abrirManual(null)">+</button>
+  <div class="hrow2">
+    <div class="nav">
+      <button class="ntab on" id="tab-mapa" onclick="setVista('mapa')">🗺 MAPA</button>
+      <button class="ntab" id="tab-campo" onclick="setVista('campo')">📡 CAMPO</button>
+      <button class="ntab" id="tab-stats" onclick="setVista('stats')">📊 STATS</button>
+    </div>
   </div>
 </header>
 
@@ -989,11 +995,13 @@ async function extraer() {
   const btn = document.getElementById('b-ext');
   btn.textContent='⏳ EXTRAYENDO...'; btn.disabled=true;
   try {
-    // Truncar texto a 1500 chars para evitar filtros de Gemini
-    const txtCorto = txt.length > 1500 ? txt.slice(0,1500) + '...' : txt;
-    const r = await llamarGemini(`Eres un asistente periodístico. Extrae datos estructurados de esta nota informativa de Irapuato, Guanajuato. Responde ÚNICAMENTE con JSON válido sin markdown ni explicaciones:
-{"titulo":"titular periodístico corto","tipo":"seguridad|accidente|evento|rumor","lugar":"calle o colonia mencionada","colonia":"nombre de colonia","resumen":"qué ocurrió en 2 oraciones","lat":latitud numérica Irapuato 20.64-20.73,"lng":longitud numérica -101.41 a -101.31,"confianza":"alta|media|baja"}
-NOTA: """${txtCorto}"""`);
+    // Solo primeras 400 chars — evita filtros de contenido de Gemini
+    const fragmento = txt.slice(0,400).replace(/[<>]/g,' ');
+    const r = await llamarGemini(`Clasifica esta nota periodística. JSON sin markdown:
+{"titulo":"string","tipo":"seguridad|accidente|evento|rumor","lugar":"string","colonia":"string","resumen":"string","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}
+Texto: ${fragmento}`);
+    // Rellenar resumen con más texto si Gemini no lo puso bien
+    if(!r.resumen || r.resumen.length < 20) r.resumen = txt.slice(0,300);
     urlRes = {...r, url:document.getElementById('u-link').value.trim()};
     document.getElementById('ur-tit').textContent = r.titulo||'';
     document.getElementById('ur-tipo').value = r.tipo||'rumor';
@@ -1038,10 +1046,11 @@ async function analizar() {
   const btn = document.getElementById('b-ana');
   btn.textContent='⏳ ANALIZANDO...'; btn.disabled=true;
   try {
-    const txtCorto2 = txt.length > 1500 ? txt.slice(0,1500) + '...' : txt;
-    const r = await llamarGemini(`Eres un asistente periodístico. Extrae datos de este texto informativo de Irapuato. Responde ÚNICAMENTE JSON válido sin markdown:
-{"titulo":"titular corto","tipo":"seguridad|accidente|evento|rumor","lugar":"calle o lugar específico","colonia":"colonia mencionada","resumen":"qué ocurrió en 2 oraciones","lat":latitud 20.64-20.73,"lng":longitud -101.41 a -101.31,"confianza":"alta|media|baja"}
-TEXTO: """${txtCorto2}"""`);
+    const fragmento2 = txt.slice(0,400).replace(/[<>]/g,' ');
+    const r = await llamarGemini(`Clasifica esta nota periodística de Irapuato. JSON sin markdown:
+{"titulo":"string","tipo":"seguridad|accidente|evento|rumor","lugar":"string","colonia":"string","resumen":"string","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}
+Texto: ${fragmento2}`);
+    if(!r.resumen || r.resumen.length < 20) r.resumen = txt.slice(0,300);
     iaRes = r;
     document.getElementById('r-tit').textContent = r.titulo||'';
     document.getElementById('r-tipo').value = r.tipo||'rumor';
@@ -1232,9 +1241,11 @@ async function agregarDesdeRSS() {
   try {
     const texto = item.titulo + '. ' + item.desc;
     const txtCorto = texto.length>1200 ? texto.slice(0,1200)+'...' : texto;
-    const r = await llamarGemini(`Eres un asistente periodístico. Extrae datos de esta nota de Irapuato. Responde ÚNICAMENTE JSON sin markdown:
-{"titulo":"titular corto","tipo":"seguridad|accidente|evento|rumor","lugar":"calle o lugar específico en Irapuato","colonia":"colonia","resumen":"qué ocurrió en 2 oraciones","lat":latitud 20.64-20.73,"lng":longitud -101.41 a -101.31,"confianza":"alta|media|baja"}
-NOTA: """${txtCorto}"""`);
+    const fragmento3 = texto.slice(0,400).replace(/[<>]/g,' ');
+    const r = await llamarGemini(`Clasifica esta nota de Irapuato. JSON sin markdown:
+{"titulo":"string","tipo":"seguridad|accidente|evento|rumor","lugar":"string","colonia":"string","resumen":"string","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}
+Texto: ${fragmento3}`);
+    if(!r.resumen || r.resumen.length < 20) r.resumen = texto.slice(0,300);
     // Geocodificar con pin
     await geoConPin(r.lugar||'Irapuato', parseFloat(r.lat)||GEO.cLat, parseFloat(r.lng)||GEO.cLng, async pos=>{
       await guardar({
