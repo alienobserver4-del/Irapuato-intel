@@ -274,6 +274,19 @@ header{display:flex;flex-direction:column;background:var(--surface);border-botto
 #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#030810;border:1px solid var(--green);color:var(--green);padding:8px 16px;font-family:'Orbitron',monospace;font-size:8px;letter-spacing:1px;border-radius:3px;z-index:4000;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;box-shadow:0 0 14px rgba(0,255,136,.2);}
 #toast.err{border-color:var(--seg);color:var(--seg);box-shadow:0 0 14px rgba(255,34,85,.2);}
 #toast.show{opacity:1;}
+
+@media (max-width:699px) {
+  #sidebar { display:none !important; }
+  #pcampo { display:none !important; }
+  .hrow1 { padding:5px 8px; }
+  .logo h1 { font-size:10px; letter-spacing:1px; }
+  .diamond { width:12px; height:12px; }
+  .abtn { min-width:38px; min-height:38px; font-size:13px; padding:6px 8px; }
+  .ntab { font-size:8px; padding:7px 6px; min-height:34px; }
+  .srow { padding:2px 0; }
+  .snum { font-size:11px; }
+  .slbl { font-size:6px; }
+}
 </style>
 </head>
 <body>
@@ -945,42 +958,57 @@ window.togglePB=togglePB; window.setPBT=setPBT;
 
 // ── GEMINI API ───────────────────────────────────────────────────
 async function llamarGemini(prompt) {
-  // Usar 1.5-flash que tiene filtros menos agresivos para noticias
-  const modelos = [
-    'gemini-1.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-pro'
-  ];
-  let ultimoError = null;
+  const modelos = ['gemini-1.5-flash','gemini-2.0-flash'];
   for(const modelo of modelos) {
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${GEMINI_KEY}`,{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          contents:[{parts:[{text:prompt}]}],
-          generationConfig:{temperature:0.1, maxOutputTokens:800},
-          safetySettings:[
-            {category:'HARM_CATEGORY_HARASSMENT',threshold:'BLOCK_NONE'},
-            {category:'HARM_CATEGORY_HATE_SPEECH',threshold:'BLOCK_NONE'},
-            {category:'HARM_CATEGORY_SEXUALLY_EXPLICIT',threshold:'BLOCK_NONE'},
-            {category:'HARM_CATEGORY_DANGEROUS_CONTENT',threshold:'BLOCK_NONE'}
-          ]
-        })
-      });
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${GEMINI_KEY}`,
+        { method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            contents:[{parts:[{text:prompt}]}],
+            generationConfig:{temperature:0.1, maxOutputTokens:400},
+            safetySettings:[
+              {category:'HARM_CATEGORY_HARASSMENT',threshold:'BLOCK_NONE'},
+              {category:'HARM_CATEGORY_HATE_SPEECH',threshold:'BLOCK_NONE'},
+              {category:'HARM_CATEGORY_SEXUALLY_EXPLICIT',threshold:'BLOCK_NONE'},
+              {category:'HARM_CATEGORY_DANGEROUS_CONTENT',threshold:'BLOCK_NONE'}
+            ]
+          })
+        }
+      );
+      if(!res.ok) continue;
       const data = await res.json();
-      if(!data.candidates || !data.candidates[0]) {
-        ultimoError = data.promptFeedback?.blockReason || 'Sin respuesta';
-        continue; // intentar siguiente modelo
-      }
-      const txt = data.candidates[0].content?.parts?.[0]?.text || '';
-      if(!txt) { ultimoError = 'Sin texto'; continue; }
+      const cand = data?.candidates?.[0];
+      if(!cand) continue;
+      const txt = cand.content?.parts?.[0]?.text || '';
+      if(!txt) continue;
       const match = txt.match(/\{[\s\S]*?\}/);
-      if(!match) { ultimoError = 'Sin JSON'; continue; }
-      const clean = match[0].replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g,' ');
-      return JSON.parse(clean);
-    } catch(e) { ultimoError = e.message; continue; }
+      if(!match) continue;
+      return JSON.parse(match[0].replace(/[ --]/g,' '));
+    } catch(e) { continue; }
   }
-  throw new Error('No se pudo procesar la noticia: ' + ultimoError);
+  // Gemini no disponible — retornar null para activar modo manual
+  return null;
+}
+
+// Clasificación local cuando Gemini falla
+function clasificarLocal(texto) {
+  const t = texto.toLowerCase();
+  let tipo = 'rumor';
+  if(/bala|dispar|herido|matan|muri|fallec|homicid|asesinat|ejecut|atac|robo|asalt|secuestr|narcot|cartel|arma|detenid|captur|golpe|cuchillo|apuñal|asesin/i.test(t)) tipo='seguridad';
+  else if(/accidente|choque|volcadura|atropell|colisión|derrumbe|incendi|explosi/i.test(t)) tipo='accidente';
+  else if(/festival|feria|concierto|evento|ceremonia|inaugur|aniversario|celebr/i.test(t)) tipo='evento';
+
+  // Extraer lugar mencionado
+  const lugarMatch = texto.match(/(?:en|frente a|sobre|colonia|barrio|calle|blvd|boulevard|avenida|av\.?)\s+([A-ZÁÉÍÓÚÑ][^\.,
+]{3,40})/i);
+  const lugar = lugarMatch ? lugarMatch[0].trim() : 'Irapuato, Guanajuato';
+
+  // Extraer título (primer oración)
+  const titulo = texto.split(/[.
+]/)[0].trim().slice(0,80) || texto.slice(0,80);
+
+  return { titulo, tipo, lugar, colonia: extraColonia(lugar), resumen: texto.slice(0,300), lat: GEO.cLat, lng: GEO.cLng, confianza:'media' };
 }
 
 // ── MODAL URL ────────────────────────────────────────────────────
@@ -995,12 +1023,11 @@ async function extraer() {
   const btn = document.getElementById('b-ext');
   btn.textContent='⏳ EXTRAYENDO...'; btn.disabled=true;
   try {
-    // Solo primeras 400 chars — evita filtros de contenido de Gemini
     const fragmento = txt.slice(0,400).replace(/[<>]/g,' ');
-    const r = await llamarGemini(`Clasifica esta nota periodística. JSON sin markdown:
+    let r = await llamarGemini(`Clasifica esta nota. Responde SOLO JSON valido:
 {"titulo":"string","tipo":"seguridad|accidente|evento|rumor","lugar":"string","colonia":"string","resumen":"string","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}
-Texto: ${fragmento}`);
-    // Rellenar resumen con más texto si Gemini no lo puso bien
+Nota: ${fragmento}`);
+    if(!r) { r = clasificarLocal(txt); toast('⚠ Gemini no disponible — clasificación local activada','err',4000); }
     if(!r.resumen || r.resumen.length < 20) r.resumen = txt.slice(0,300);
     urlRes = {...r, url:document.getElementById('u-link').value.trim()};
     document.getElementById('ur-tit').textContent = r.titulo||'';
@@ -1047,9 +1074,10 @@ async function analizar() {
   btn.textContent='⏳ ANALIZANDO...'; btn.disabled=true;
   try {
     const fragmento2 = txt.slice(0,400).replace(/[<>]/g,' ');
-    const r = await llamarGemini(`Clasifica esta nota periodística de Irapuato. JSON sin markdown:
+    let r = await llamarGemini(`Clasifica esta nota. Responde SOLO JSON valido:
 {"titulo":"string","tipo":"seguridad|accidente|evento|rumor","lugar":"string","colonia":"string","resumen":"string","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}
-Texto: ${fragmento2}`);
+Nota: ${fragmento2}`);
+    if(!r) { r = clasificarLocal(txt); toast('⚠ Gemini no disponible — clasificación local','err',4000); }
     if(!r.resumen || r.resumen.length < 20) r.resumen = txt.slice(0,300);
     iaRes = r;
     document.getElementById('r-tit').textContent = r.titulo||'';
@@ -1242,9 +1270,10 @@ async function agregarDesdeRSS() {
     const texto = item.titulo + '. ' + item.desc;
     const txtCorto = texto.length>1200 ? texto.slice(0,1200)+'...' : texto;
     const fragmento3 = texto.slice(0,400).replace(/[<>]/g,' ');
-    const r = await llamarGemini(`Clasifica esta nota de Irapuato. JSON sin markdown:
+    let r = await llamarGemini(`Clasifica esta nota. Responde SOLO JSON valido:
 {"titulo":"string","tipo":"seguridad|accidente|evento|rumor","lugar":"string","colonia":"string","resumen":"string","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}
-Texto: ${fragmento3}`);
+Nota: ${fragmento3}`);
+    if(!r) { r = clasificarLocal(texto); }
     if(!r.resumen || r.resumen.length < 20) r.resumen = texto.slice(0,300);
     // Geocodificar con pin
     await geoConPin(r.lugar||'Irapuato', parseFloat(r.lat)||GEO.cLat, parseFloat(r.lng)||GEO.cLng, async pos=>{
