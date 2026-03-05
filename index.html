@@ -18,23 +18,21 @@ html,body{height:100%;overflow:hidden;font-family:'Share Tech Mono',monospace;ba
 #app{display:flex;flex-direction:column;height:100dvh;}
 
 /* HEADER */
-header{display:flex;flex-direction:column;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
-.hrow1{display:flex;align-items:center;padding:6px 10px;gap:8px;}
+header{display:flex;align-items:center;padding:6px 10px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:6px;}
 .logo{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-.diamond{width:14px;height:14px;background:var(--cyan);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);animation:pd 2s ease-in-out infinite;flex-shrink:0;}
+.diamond{width:14px;height:14px;background:var(--cyan);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);animation:pd 2s ease-in-out infinite;}
 @keyframes pd{0%,100%{opacity:1}50%{opacity:.4}}
 .logo h1{font-family:'Orbitron',monospace;font-size:11px;font-weight:900;letter-spacing:2px;color:var(--cyan);text-shadow:0 0 10px var(--cyan);white-space:nowrap;}
-.hrow2{display:flex;align-items:center;padding:0 8px 6px;gap:5px;}
-.nav{display:flex;gap:4px;flex:1;}
-.ntab{padding:8px 12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Orbitron',monospace;font-size:9px;cursor:pointer;border-radius:3px;white-space:nowrap;transition:all .2s;min-height:36px;flex:1;text-align:center;-webkit-tap-highlight-color:transparent;}
+.nav{display:flex;gap:3px;flex:1;justify-content:center;}
+.ntab{padding:5px 8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;border-radius:2px;letter-spacing:0;white-space:nowrap;transition:all .2s;}
 .ntab.on{background:rgba(0,245,255,.12);color:var(--cyan);border-color:var(--cyan);}
 .ntab.campo-on{background:rgba(0,255,136,.12);color:var(--green);border-color:var(--green);}
 .ntab.stats-on{background:rgba(255,0,170,.12);color:var(--magenta);border-color:var(--magenta);}
-.acts{display:flex;gap:4px;flex-shrink:0;}
-.abtn{padding:8px 10px;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;cursor:pointer;border-radius:3px;white-space:nowrap;min-width:40px;min-height:36px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;border:none;}
-.abtn-url{background:rgba(255,0,170,.15);color:var(--magenta);border:1px solid var(--magenta)!important;}
-.abtn-ia{background:rgba(170,119,255,.2);color:var(--ia);border:1px solid var(--ia)!important;}
-.abtn-add{background:rgba(0,245,255,.15);color:var(--cyan);border:1px solid var(--cyan)!important;}
+.acts{display:flex;gap:3px;flex-shrink:0;}
+.abtn{padding:5px 7px;font-family:'Orbitron',monospace;font-size:8px;font-weight:700;cursor:pointer;border-radius:2px;white-space:nowrap;}
+.abtn-url{background:rgba(255,0,170,.12);color:var(--magenta);border:1px solid var(--magenta);}
+.abtn-ia{background:rgba(170,119,255,.2);color:var(--ia);border:1px solid var(--ia);}
+.abtn-add{background:rgba(0,245,255,.12);color:var(--cyan);border:1px solid var(--cyan);}
 
 /* STATUS BAR */
 #status-bar{display:flex;align-items:center;justify-content:space-between;padding:3px 10px;background:rgba(0,0,0,.4);border-bottom:1px solid var(--border);flex-shrink:0;font-size:8px;color:var(--muted);}
@@ -255,38 +253,10 @@ header{display:flex;flex-direction:column;background:var(--surface);border-botto
 .pin-actions{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;}
 .pin-place{font-size:8px;color:var(--muted);padding:6px 14px;border-top:1px solid var(--border);flex-shrink:0;font-style:italic;}
 
-
-/* BUSCADOR RSS */
-#m-rss .md{border-color:var(--green);}
-.rss-item{padding:9px;border:1px solid var(--border);border-left:2px solid var(--green);margin-bottom:6px;border-radius:2px;cursor:pointer;transition:all .2s;}
-.rss-item:hover{background:rgba(0,255,136,.04);}
-.rss-item.sel{background:rgba(0,255,136,.08);border-left-color:var(--green);}
-.rss-tit{font-size:10px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:3px;}
-.rss-meta{display:flex;justify-content:space-between;font-size:7px;color:var(--muted);}
-.rss-badge{font-size:6px;padding:1px 4px;border-radius:1px;font-family:Orbitron,monospace;}
-.rss-loading{text-align:center;padding:20px;font-family:Orbitron,monospace;font-size:8px;color:var(--muted);}
-
-/* BTN BORRAR EN POPUP */
-.lpbtn-del{background:rgba(255,34,85,.15);color:var(--seg);border:1px solid var(--seg);padding:3px 8px;font-family:Orbitron,monospace;font-size:7px;cursor:pointer;border-radius:2px;margin-top:5px;width:100%;}
-.lpbtn-del:hover{background:rgba(255,34,85,.3);}
-
 /* TOAST */
 #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#030810;border:1px solid var(--green);color:var(--green);padding:8px 16px;font-family:'Orbitron',monospace;font-size:8px;letter-spacing:1px;border-radius:3px;z-index:4000;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;box-shadow:0 0 14px rgba(0,255,136,.2);}
 #toast.err{border-color:var(--seg);color:var(--seg);box-shadow:0 0 14px rgba(255,34,85,.2);}
 #toast.show{opacity:1;}
-
-@media (max-width:699px) {
-  #sidebar { display:none !important; }
-  #pcampo { display:none !important; }
-  .hrow1 { padding:5px 8px; }
-  .logo h1 { font-size:10px; letter-spacing:1px; }
-  .diamond { width:12px; height:12px; }
-  .abtn { min-width:38px; min-height:38px; font-size:13px; padding:6px 8px; }
-  .ntab { font-size:8px; padding:7px 6px; min-height:34px; }
-  .srow { padding:2px 0; }
-  .snum { font-size:11px; }
-  .slbl { font-size:6px; }
-}
 </style>
 </head>
 <body>
@@ -301,24 +271,19 @@ header{display:flex;flex-direction:column;background:var(--surface);border-botto
 <div id="app" style="display:none;">
 
 <header>
-  <div class="hrow1">
-    <div class="logo">
-      <div class="diamond"></div>
-      <h1>IRAPUATO INTEL</h1>
-    </div>
-    <div class="acts" style="margin-left:auto;">
-      <button class="abtn" style="background:rgba(0,255,136,.15);color:var(--green);border:1px solid var(--green)!important;" onclick="abrirRSS()">📡</button>
-      <button class="abtn abtn-url" onclick="abrirURL()">🔗</button>
-      <button class="abtn abtn-ia" onclick="abrirIA()">🤖</button>
-      <button class="abtn abtn-add" onclick="abrirManual(null)">＋</button>
-    </div>
+  <div class="logo">
+    <div class="diamond"></div>
+    <h1>IRA INTEL</h1>
   </div>
-  <div class="hrow2">
-    <div class="nav">
-      <button class="ntab on" id="tab-mapa" onclick="setVista('mapa')">🗺 MAPA</button>
-      <button class="ntab" id="tab-campo" onclick="setVista('campo')">📡 CAMPO</button>
-      <button class="ntab" id="tab-stats" onclick="setVista('stats')">📊 STATS</button>
-    </div>
+  <div class="nav">
+    <button class="ntab on" id="tab-mapa" onclick="setVista('mapa')">🗺 MAPA</button>
+    <button class="ntab" id="tab-campo" onclick="setVista('campo')">📡 CAMPO</button>
+    <button class="ntab" id="tab-stats" onclick="setVista('stats')">📊 STATS</button>
+  </div>
+  <div class="acts">
+    <button class="abtn abtn-url" onclick="abrirURL()">🔗</button>
+    <button class="abtn abtn-ia" onclick="abrirIA()">🤖</button>
+    <button class="abtn abtn-add" onclick="abrirManual(null)">+</button>
   </div>
 </header>
 
@@ -546,43 +511,13 @@ header{display:flex;flex-direction:column;background:var(--surface);border-botto
   </div>
 </div>
 
-<!-- LEAFLET + FIREBASE v8 (compatible con Android) -->
+<!-- FIREBASE + LEAFLET -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
 <script>
-// Script de seguridad: si Firebase o el módulo JS fallan, mostrar la app de todas formas
-window.addEventListener('load', function() {
-  setTimeout(function() {
-    var loading = document.getElementById('loading');
-    var app = document.getElementById('app');
-    if(loading && loading.style.display !== 'none') {
-      loading.style.display = 'none';
-      if(app) { app.style.display = 'flex'; }
-    }
-    // Inicializar mapa siempre después de mostrar la app
-    setTimeout(function(){
-      if(typeof initMap === 'function') initMap();
-      if(window._map) { window._map.invalidateSize(); }
-    }, 400);
-  }, 4000);
-});
-// Capturar errores JS y mostrar la app si hay crash
-window.addEventListener('error', function(e) {
-  console.error('JS Error:', e.message);
-  var loading = document.getElementById('loading');
-  var app = document.getElementById('app');
-  if(loading && loading.style.display !== 'none') {
-    document.getElementById('load-msg').textContent = 'ERROR: ' + e.message.slice(0,50);
-    document.getElementById('load-msg').style.color = '#ff2255';
-  }
-});
-</script>
-
-<script>
-// Firebase v8 cargado via script tags — no requiere imports
+// Firebase v8 - cargado via script tags
 
 // ── FIREBASE CONFIG ─────────────────────────────────────────────
 const firebaseConfig = {
@@ -595,7 +530,7 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+var db = firebase.firestore();
 
 // ── CONSTANTES ──────────────────────────────────────────────────
 const GEO = {cLat:20.6795, cLng:-101.3540};
@@ -626,44 +561,27 @@ let heatLayer = null;
 let periodStats = 365;
 
 // ── MAPA ────────────────────────────────────────────────────────
-// El mapa se inicializa lazy — solo cuando el div #map tiene altura real
-let map = null;
-function initMap() {
-  if(map) return;
-  const el = document.getElementById('map');
-  if(!el || el.offsetHeight < 10) return;
-  map = L.map('map', {center:[GEO.cLat,GEO.cLng], zoom:14, zoomControl:false, attributionControl:true});
-  L.control.zoom({position:'topright'}).addTo(map);
-  window._map = map;
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution:'\u00a9 OpenStreetMap \u00a9 CARTO', subdomains:'abcd', maxZoom:19
-  }).addTo(map);
-  map.on('click', function(e) { coordsClick = {lat:e.latlng.lat, lng:e.latlng.lng}; abrirManual(null); });
+const map = L.map('map', {center:[GEO.cLat,GEO.cLng], zoom:14, zoomControl:false, attributionControl:true});
+L.control.zoom({position:'topright'}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19
+}).addTo(map);
+map.on('click', e => { coordsClick = {lat:e.latlng.lat, lng:e.latlng.lng}; abrirManual(null); });
+
+// ── FIREBASE LISTENER ───────────────────────────────────────────
+db.collection('eventos').orderBy('fecha','desc').onSnapshot(function(snap) {
+  eventos = snap.docs.map(d => ({id:d.id, ...d.data()}));
+  document.getElementById('dbdot').className = 'db-dot ok';
+  document.getElementById('dblbl').textContent = 'Firebase OK - ' + eventos.length + ' eventos';
   renderMarcadores();
   renderLista();
   actualizarStats();
-}
-
-// ── FIREBASE LISTENER ───────────────────────────────────────────
-db.collection('eventos').orderBy('fecha','desc').onSnapshot(snap => {
-  eventos = snap.docs.map(d => ({id:d.id, ...d.data()}));
-  document.getElementById('dbdot').className = 'db-dot ok';
-  document.getElementById('dblbl').textContent = 'Firebase OK — ' + eventos.length + ' eventos';
+  if(miPos) renderCercanos();
   if(document.getElementById('loading').style.display !== 'none'){
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
+    setTimeout(()=>map.invalidateSize(), 200);
   }
-  // Inicializar mapa si aún no existe
-  setTimeout(function(){
-    initMap();
-    if(map) {
-      map.invalidateSize();
-      renderMarcadores();
-      renderLista();
-      actualizarStats();
-      if(miPos) renderCercanos();
-    }
-  }, 300);
 }, err => {
   console.error(err);
   document.getElementById('dbdot').className = 'db-dot err';
@@ -681,13 +599,13 @@ setTimeout(()=>{
     document.getElementById('app').style.display = 'flex';
     setTimeout(()=>map.invalidateSize(), 200);
   }
-}, 3000);
+}, 6000);
 
 // ── GEOCODIFICACIÓN ─────────────────────────────────────────────
 async function geocodificar(lugar) {
   try {
     const q2 = encodeURIComponent(lugar + ', Irapuato, Guanajuato, Mexico');
-    const res = await fetch(`${NOMINATIM}?q=${q2}&format=json&limit=1&countrycodes=mx`);
+    const res = await fetch('' + (NOMINATIM) + '?q=' + (q2) + '&format=json&limit=1&countrycodes=mx');
     const data = await res.json();
     if(data && data.length > 0) return {lat:parseFloat(data[0].lat), lng:parseFloat(data[0].lon)};
   } catch(e) {}
@@ -697,42 +615,40 @@ async function geocodificar(lugar) {
 // ── ICONOS ──────────────────────────────────────────────────────
 function crearIcono(tipo, viaIA, cercano) {
   const c = COLORES[tipo]||COLORES.rumor;
-  const g = cercano ? `filter:drop-shadow(0 0 5px ${c})` : `filter:drop-shadow(0 0 2px ${c}88)`;
-  const ring = viaIA ? `<circle cx="16" cy="16" r="13" fill="none" stroke="#aa77ff" stroke-width="1" stroke-dasharray="3,2"/>` : '';
+  const g = cercano ? 'filter:drop-shadow(0 0 5px ' + (c) + ')' : 'filter:drop-shadow(0 0 2px ' + (c) + '88)';
+  const ring = viaIA ? '<circle cx="16" cy="16" r="13" fill="none" stroke="#aa77ff" stroke-width="1" stroke-dasharray="3,2"/>' : '';
   const ico = {seguridad:'!',accidente:'~',evento:'★',rumor:'?'};
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" style="${g}">
-    <circle cx="16" cy="16" r="14" fill="${c}15" stroke="${c}44" stroke-width="1"/>
-    <circle cx="16" cy="16" r="9" fill="${c}"/>
-    <circle cx="16" cy="16" r="4" fill="${c}99"/>
-    <text x="16" y="20" text-anchor="middle" font-size="9" font-weight="bold" fill="#000" font-family="sans-serif">${ico[tipo]||'●'}</text>
-    ${ring}
-  </svg>`;
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" style="' + (g) + '">
+    <circle cx="16" cy="16" r="14" fill="' + (c) + '15" stroke="' + (c) + '44" stroke-width="1"/>
+    <circle cx="16" cy="16" r="9" fill="' + (c) + '"/>
+    <circle cx="16" cy="16" r="4" fill="' + (c) + '99"/>
+    <text x="16" y="20" text-anchor="middle" font-size="9" font-weight="bold" fill="#000" font-family="sans-serif">' + (ico[tipo]||'●') + '</text>
+    ' + (ring) + '
+  </svg>';
   return L.divIcon({html:svg, className:'', iconSize:[32,32], iconAnchor:[16,16], popupAnchor:[0,-18]});
 }
 
 function crearPopup(ev) {
-  const c = COLORES[ev.tipo]||COLORES.rumor;
-  const fecha = (ev.fecha && ev.fecha.toDate) ? ev.fecha.toDate().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-  const distH = miPos ? `<div class="lpdist" style="color:${c}">📡 ${fmtD(dist(miPos.lat,miPos.lng,ev.lat,ev.lng))} de ti</div>` : '';
-  const linkH = ev.url ? `<a href="${ev.url}" target="_blank" class="lplink">↗ VER NOTICIA</a>` : '';
-  return `<div>
-    <span class="lpt" style="background:${c}22;color:${c}">${(ev.tipo||'').toUpperCase()}${ev.viaIA?' 🤖':''}</span>
-    <div class="lptit">${ev.titulo||''}</div>
-    <div class="lplug">📍 ${ev.lugar||''}</div>
-    <div class="lpdesc">${ev.descripcion||''}</div>
-    ${distH}
-    <div class="lpmeta"><span>${ev.fuente||''} | ${fecha}</span>${linkH}</div>
-    <button class="lpbtn-del" onclick="borrarEvento('${ev.id}')">🗑 ELIMINAR ESTE EVENTO</button>
-  </div>`;
+  var c = COLORES[ev.tipo] || COLORES.rumor;
+  var fecha = (ev.fecha && ev.fecha.toDate) ? ev.fecha.toDate().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '-';
+  var distH = miPos ? '<div class="lpdist" style="color:' + c + '">&#128225; ' + fmtD(dist(miPos.lat,miPos.lng,ev.lat,ev.lng)) + ' de ti</div>' : '';
+  var linkH = ev.url ? '<a href="' + ev.url + '" target="_blank" class="lplink">&#8599; VER NOTICIA</a>' : '';
+  return '<div>' +
+    '<span class="lpt" style="background:' + c + '22;color:' + c + '">' + (ev.tipo||'').toUpperCase() + (ev.viaIA?' IA':'') + '</span>' +
+    '<div class="lptit">' + (ev.titulo||'') + '</div>' +
+    '<div class="lplug">&#128205; ' + (ev.lugar||'') + '</div>' +
+    '<div class="lpdesc">' + (ev.descripcion||'') + '</div>' +
+    distH +
+    '<div class="lpmeta"><span>' + (ev.fuente||'') + ' | ' + fecha + '</span>' + linkH + '</div>' +
+    '<button onclick="borrarEvento(\'' + ev.id + '\')" style="margin-top:6px;width:100%;background:rgba(255,34,85,.15);color:#ff2255;border:1px solid #ff2255;padding:5px;font-family:Orbitron,monospace;font-size:7px;cursor:pointer;border-radius:2px;">ELIMINAR EVENTO</button>' +
+    '</div>';
 }
 
-// ── HEATMAP ─────────────────────────────────────────────────────
 function actualizarHeat() {
-  if(!map) return;
   if(heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
   const corte = periodStats > 0 ? Date.now() - periodStats*86400000 : 0;
   const pts = eventos
-    .filter(ev => ev.tipo==='seguridad' && ev.lat && ev.lng && (periodStats===0 || (ev.(fecha && fecha.toDate)?ev.fecha.toDate().getTime():0) >= corte))
+    .filter(ev => ev.tipo==='seguridad' && ev.lat && ev.lng && (periodStats===0 || (ev.fecha && ev.fecha.toDate?ev.fecha.toDate().getTime():0) >= corte))
     .map(ev => [ev.lat, ev.lng, 1.0]);
   if(pts.length === 0) return;
   heatLayer = L.heatLayer(pts, {
@@ -746,13 +662,12 @@ function getF() {
   const corte = filtroDias > 0 ? Date.now() - filtroDias*86400000 : 0;
   return eventos.filter(ev => {
     const tipoOk = filtroTipo==='todos' || ev.tipo===filtroTipo;
-    const t = (ev.fecha && ev.fecha.toDate) ? ev.fecha.toDate().getTime() : Date.now();
+    const t = ev.fecha && ev.fecha.toDate ? ev.fecha.toDate().getTime() : Date.now();
     return tipoOk && (filtroDias===0 || t>=corte);
   });
 }
 
 function renderMarcadores() {
-  if(!map) return;
   Object.values(markers).forEach(m => map.removeLayer(m));
   markers = {};
   getF().forEach(ev => {
@@ -778,8 +693,8 @@ function iniciarGPS() {
   gpsW = navigator.geolocation.watchPosition(pos => {
     miPos = {lat:pos.coords.latitude, lng:pos.coords.longitude, acc:pos.coords.accuracy};
     document.getElementById('gdot').className = 'gdot fix';
-    document.getElementById('gst').textContent = `GPS ±${Math.round(pos.coords.accuracy)}m`;
-    document.getElementById('gcoords').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+    document.getElementById('gst').textContent = 'GPS ±' + (Math.round(pos.coords.accuracy)) + 'm';
+    document.getElementById('gcoords').textContent = '' + (pos.coords.latitude.toFixed(4)) + ', ' + (pos.coords.longitude.toFixed(4)) + '';
     actualizarPos(); actualizarIconos(); verificarAlertas(); renderCercanos();
   }, () => {
     miPos = {lat:GEO.cLat, lng:GEO.cLng, acc:50};
@@ -803,15 +718,15 @@ function detenerGPS() {
 }
 
 function actualizarPos() {
-  if(!map || !miPos) return;
+  if(!miPos) return;
   if(radioCircle) map.removeLayer(radioCircle);
   radioCircle = L.circle([miPos.lat,miPos.lng], {radius:radio, color:'#00ff88', fillColor:'#00ff88', fillOpacity:.04, weight:1, dashArray:'4,4'}).addTo(map);
   if(posMarker) map.removeLayer(posMarker);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26" style="filter:drop-shadow(0 0 5px #00ff88)">
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26" style="filter:drop-shadow(0 0 5px #00ff88)">
     <circle cx="13" cy="13" r="11" fill="rgba(0,255,136,.12)" stroke="#00ff88" stroke-width="1.5"/>
     <circle cx="13" cy="13" r="6" fill="#00ff88" stroke="white" stroke-width="1.5"/>
     <circle cx="13" cy="13" r="2" fill="white"/>
-  </svg>`;
+  </svg>';
   posMarker = L.marker([miPos.lat,miPos.lng], {icon:L.divIcon({html:svg,className:'',iconSize:[26,26],iconAnchor:[13,13]}), zIndexOffset:1000}).addTo(map);
 }
 
@@ -827,7 +742,7 @@ function verificarAlertas() {
   const p = eventos.filter(ev=>ev.tipo==='seguridad'&&ev.lat&&ev.lng&&dist(miPos.lat,miPos.lng,ev.lat,ev.lng)<=radio);
   const el = document.getElementById('alerta');
   if(p.length>0) {
-    el.textContent = `⚠ ALERTA — ${p.length} EVENTO(S) DE SEGURIDAD EN RADIO ${fmtD(radio).toUpperCase()}`;
+    el.textContent = '⚠ ALERTA — ' + (p.length) + ' EVENTO(S) DE SEGURIDAD EN RADIO ' + (fmtD(radio).toUpperCase()) + '';
     el.classList.add('on');
     const now = Date.now();
     if(navigator.vibrate && now-ultimaAlerta>30000) { navigator.vibrate([300,150,300]); ultimaAlerta=now; }
@@ -860,7 +775,7 @@ function setVista(v) {
   if(v==='campo') iniciarGPS();
   else detenerGPS();
   if(v==='stats') renderStats();
-  setTimeout(function(){ initMap(); if(map) map.invalidateSize(); }, 150);
+  setTimeout(()=>map.invalidateSize(), 150);
 }
 window.setVista = setVista;
 
@@ -885,13 +800,13 @@ window.filtrarT = filtrarT;
 function renderLista() {
   const f = getF();
   const html = f.map(ev=>{
-    const fecha = ev.(fecha && fecha.toDate) ? ev.fecha.toDate().toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : '—';
-    const lnk = ev.url ? `<a href="${ev.url}" target="_blank" class="elink">↗ ver noticia</a>` : '';
-    return `<div class="ecard" data-t="${ev.tipo}" onclick="enfocar('${ev.id}')">
-      <div class="ech"><span class="etipo">${(ev.tipo||'').toUpperCase()}${ev.viaIA?'<span class="bia">IA</span>':''}</span><span class="efecha">${fecha}</span></div>
-      <div class="etit">${ev.titulo||''}</div>
-      <div class="elug">📍 ${ev.lugar||''}</div>${lnk}
-    </div>`;
+    const fecha = ev.fecha && ev.fecha.toDate ? ev.fecha.toDate().toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : '—';
+    const lnk = ev.url ? '<a href="' + (ev.url) + '" target="_blank" class="elink">↗ ver noticia</a>' : '';
+    return '<div class="ecard" data-t="' + (ev.tipo) + '" onclick="enfocar('' + (ev.id) + '')">
+      <div class="ech"><span class="etipo">' + ((ev.tipo||'').toUpperCase()) + '' + (ev.viaIA?'<span class="bia">IA</span>':'') + '</span><span class="efecha">' + (fecha) + '</span></div>
+      <div class="etit">' + (ev.titulo||'') + '</div>
+      <div class="elug">📍 ' + (ev.lugar||'') + '</div>' + (lnk) + '
+    </div>';
   }).join('');
   document.getElementById('evlist').innerHTML = html || '<div style="padding:14px;text-align:center;color:var(--muted);font-size:8px;">SIN EVENTOS</div>';
   if(pbtab==='t') document.getElementById('pbcont').innerHTML = html;
@@ -902,7 +817,7 @@ function actualizarStats() {
   document.getElementById('s-tot').textContent = eventos.length;
   document.getElementById('s-seg').textContent = eventos.filter(e=>e.tipo==='seguridad').length;
   document.getElementById('s-ia').textContent = eventos.filter(e=>e.viaIA).length;
-  document.getElementById('ttxt').textContent = eventos.slice(0,6).map(e=>`${(e.tipo||'').toUpperCase()}: ${e.titulo||''} — ${e.lugar||''}`).join(' ⬡ ') || 'Sin eventos';
+  document.getElementById('ttxt').textContent = eventos.slice(0,6).map(e=>'' + ((e.tipo||'').toUpperCase()) + ': ' + (e.titulo||'') + ' — ' + (e.lugar||'') + '').join(' ⬡ ') || 'Sin eventos';
 }
 
 function renderCercanos() {
@@ -911,17 +826,17 @@ function renderCercanos() {
     .filter(ev=>ev.d<=radio).sort((a,b)=>a.d-b.d);
   document.getElementById('s-cer').textContent = c.length;
   const html = c.length===0
-    ? `<div style="padding:14px;text-align:center;color:var(--muted);font-size:8px;font-family:Orbitron,monospace;">SIN EVENTOS EN ${fmtD(radio).toUpperCase()}</div>`
+    ? '<div style="padding:14px;text-align:center;color:var(--muted);font-size:8px;font-family:Orbitron,monospace;">SIN EVENTOS EN ' + (fmtD(radio).toUpperCase()) + '</div>'
     : c.map(ev=>{
       const col = COLORES[ev.tipo]||COLORES.rumor;
-      return `<div class="ccard" data-t="${ev.tipo}" onclick="enfocar('${ev.id}')">
+      return '<div class="ccard" data-t="' + (ev.tipo) + '" onclick="enfocar('' + (ev.id) + '')">
         <div class="ccr">
-          <span class="cctipo" style="background:${col}22;color:${col}">${(ev.tipo||'').toUpperCase()}</span>
-          <span class="ccdist" style="color:${ev.tipo==='seguridad'?'#ff2255':col}">${fmtD(ev.d)}</span>
+          <span class="cctipo" style="background:' + (col) + '22;color:' + (col) + '">' + ((ev.tipo||'').toUpperCase()) + '</span>
+          <span class="ccdist" style="color:' + (ev.tipo==='seguridad'?'#ff2255':col) + '">' + (fmtD(ev.d)) + '</span>
         </div>
-        <div class="cctit">${ev.titulo||''}</div>
-        <div class="cclug">📍 ${ev.lugar||''}</div>
-      </div>`;
+        <div class="cctit">' + (ev.titulo||'') + '</div>
+        <div class="cclug">📍 ' + (ev.lugar||'') + '</div>
+      </div>';
     }).join('');
   document.getElementById('clist').innerHTML = html;
   if(pbtab==='c') document.getElementById('pbcont').innerHTML = html;
@@ -937,103 +852,77 @@ window.enfocar = enfocar;
 
 // ── STATS ────────────────────────────────────────────────────────
 function renderStats() {
-  const corte = periodStats>0 ? Date.now()-periodStats*86400000 : 0;
-  const evs = eventos.filter(ev=>{
-    const t = (ev.fecha && ev.fecha.toDate) ? ev.fecha.toDate().getTime() : 0;
-    return periodStats===0 || t>=corte;
-  });
-  const segs = evs.filter(e=>e.tipo==='seguridad');
-  const colMap = {};
-  segs.forEach(ev=>{ const c=ev.colonia||extraColonia(ev.lugar||''); colMap[c]=(colMap[c]||0)+1; });
-  const ranking = Object.entries(colMap).sort((a,b)=>b[1]-a[1]);
-  const maxV = ranking[0]?ranking[0][1]:1;
-  const tipos = ['seguridad','accidente','evento','rumor'];
-  const cnts = tipos.map(t=>evs.filter(e=>e.tipo===t).length);
-  const maxC = Math.max(...cnts,1);
-  const sems = [];
-  for(let i=3;i>=0;i--){
-    const ini=Date.now()-(i+1)*7*86400000, fin=Date.now()-i*7*86400000;
-    sems.push({l:`S-${i+1}`, v:segs.filter(e=>{ const t=e.(fecha && fecha.toDate)?e.fecha.toDate().getTime():0; return t>=ini&&t<fin; }).length});
+  var segs = eventos.filter(function(e){ return e.tipo==='seguridad'; });
+  var accs = eventos.filter(function(e){ return e.tipo==='accidente'; });
+  var evts = eventos.filter(function(e){ return e.tipo==='evento'; });
+  var rums = eventos.filter(function(e){ return e.tipo==='rumor'; });
+  var total = eventos.length || 1;
+
+  // Barras de tipo
+  function pct(n){ return Math.round(n/total*100); }
+  var tipos = [
+    {l:'SEG', v:segs.length, c:'#ff2255'},
+    {l:'ACC', v:accs.length, c:'#ffaa00'},
+    {l:'EVE', v:evts.length, c:'#00ccff'},
+    {l:'RUM', v:rums.length, c:'#3a6a8a'}
+  ];
+
+  // Semanas (últimas 4)
+  var sems = [];
+  for(var i=3; i>=0; i--) {
+    var desde = Date.now() - (i+1)*7*86400000;
+    var hasta = Date.now() - i*7*86400000;
+    var cnt = segs.filter(function(e){
+      var t = (e.fecha && e.fecha.toDate) ? e.fecha.toDate().getTime() : 0;
+      return t>=desde && t<hasta;
+    }).length;
+    sems.push({l:'S-'+(4-i), v:cnt});
   }
-  const maxS = Math.max(...sems.map(s=>s.v),1);
-  document.getElementById('stbody').innerHTML=`
-    <div style="font-size:7px;color:var(--muted);font-family:Orbitron,monospace;letter-spacing:2px;">PERIODO</div>
-    <div class="psel">
-      ${[{d:7,l:'7D'},{d:14,l:'2SEM'},{d:30,l:'1MES'},{d:90,l:'3MES'},{d:180,l:'6MES'},{d:365,l:'1AÑO'},{d:0,l:'TODO'}]
-        .map(p=>`<button class="pbtn${periodStats===p.d?' on':''}" onclick="setPStat(${p.d})">${p.l}</button>`).join('')}
-    </div>
-    <div class="scards">
-      <div class="scard" style="border-color:var(--seg)20"><div class="scnum" style="color:var(--seg);text-shadow:0 0 10px var(--seg)">${segs.length}</div><div class="sclbl">SEGURIDAD</div></div>
-      <div class="scard"><div class="scnum" style="color:var(--cyan)">${evs.length}</div><div class="sclbl">TOTAL</div></div>
-    </div>
-    <div class="chart">
-      <div class="cht">TENDENCIA SEMANAL — SEGURIDAD</div>
-      <div class="bars">${sems.map(s=>`<div class="bc"><div class="bv">${s.v}</div><div class="bar" style="height:${Math.max(s.v/maxS*60,2)}px;background:linear-gradient(to top,var(--seg),${s.v?'#ff227788':'#1a2030'})"></div><div class="bl">${s.l}</div></div>`).join('')}</div>
-    </div>
-    <div class="chart">
-      <div class="cht">DISTRIBUCIÓN POR TIPO</div>
-      <div class="bars">${tipos.map((t,i)=>`<div class="bc"><div class="bv" style="color:${COLORES[t]}">${cnts[i]}</div><div class="bar" style="height:${Math.max(cnts[i]/maxC*60,2)}px;background:${COLORES[t]}"></div><div class="bl" style="color:${COLORES[t]}">${t.slice(0,3).toUpperCase()}</div></div>`).join('')}</div>
-    </div>
-    ${ranking.length?`
-    <div>
-      <div style="font-size:7px;color:var(--magenta);font-family:Orbitron,monospace;letter-spacing:2px;margin-bottom:7px;">📍 ÍNDICE DELICTIVO POR COLONIA</div>
-      <div class="rlist">${ranking.slice(0,8).map(([col,cnt],i)=>`
-        <div class="ritem">
-          <div class="rnum">#${i+1}</div>
-          <div class="rbw"><div class="rcol">${col}</div><div class="rbar"><div class="rfill" style="width:${cnt/maxV*100}%;background:linear-gradient(to right,var(--seg)88,var(--seg))"></div></div></div>
-          <div class="rcnt">${cnt}</div>
-        </div>`).join('')}
-      </div>
-    </div>`:''}
-  `;
+
+  // Ranking colonias
+  var colonias = {};
+  eventos.forEach(function(e){
+    var c = e.colonia || 'Sin colonia';
+    colonias[c] = (colonias[c]||0)+1;
+  });
+  var ranking = Object.keys(colonias).map(function(k){ return [k, colonias[k]]; });
+  ranking.sort(function(a,b){ return b[1]-a[1]; });
+
+  var maxSem = Math.max.apply(null, sems.map(function(s){return s.v;}).concat([1]));
+  var maxTipo = Math.max.apply(null, tipos.map(function(t){return t.v;}).concat([1]));
+
+  // Construir HTML sin template literals
+  var semHtml = '';
+  sems.forEach(function(s){
+    var h = Math.round(s.v/maxSem*60)+4;
+    semHtml += '<div class="bc"><div class="bv" style="height:'+h+'px;background:#ff2255;">'+s.v+'</div><div class="bl">'+s.l+'</div></div>';
+  });
+
+  var tipoHtml = '';
+  tipos.forEach(function(t){
+    var h = Math.round(t.v/maxTipo*60)+4;
+    tipoHtml += '<div class="bc"><div class="bv" style="height:'+h+'px;background:'+t.c+';">'+t.v+'</div><div class="bl">'+t.l+'</div></div>';
+  });
+
+  var rankHtml = '';
+  ranking.slice(0,8).forEach(function(r, i){
+    rankHtml += '<div class="ritem"><div class="rpos">'+(i+1)+'</div><div class="rcol">'+r[0]+'</div><div class="rcnt">'+r[1]+'</div></div>';
+  });
+
+  document.getElementById('stbody').innerHTML =
+    '<div style="font-size:7px;color:var(--muted);margin-bottom:8px;">INCIDENTES POR SEMANA (SEG)</div>' +
+    '<div class="bars">' + semHtml + '</div>' +
+    '<div style="font-size:7px;color:var(--muted);margin:8px 0;">DISTRIBUCION POR TIPO</div>' +
+    '<div class="bars">' + tipoHtml + '</div>' +
+    (ranking.length ? '<div style="font-size:7px;color:var(--muted);margin:8px 0;">COLONIAS CON MAS EVENTOS</div><div class="rlist">' + rankHtml + '</div>' : '');
+
   actualizarHeat();
 }
+
 window.renderStats = renderStats;
 
 function setPStat(d) { periodStats=d; renderStats(); }
 window.setPStat = setPStat;
-
-
-// ── BOTTOM PANEL ─────────────────────────────────────────────────
-function togglePB() { pbOpen=!pbOpen; document.getElementById('pbottom').classList.toggle('col',!pbOpen); }
-function setPBT(tab,el) { pbtab=tab; document.querySelectorAll('.pbt').forEach(b=>b.classList.remove('on')); el.classList.add('on'); if(tab==='c')renderCercanos(); else renderLista(); }
-window.togglePB=togglePB; window.setPBT=setPBT;
-
-// ── GEMINI API ───────────────────────────────────────────────────
-async function llamarGemini(prompt) {
-  const modelos = ['gemini-1.5-flash','gemini-2.0-flash'];
-  for(const modelo of modelos) {
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${GEMINI_KEY}`,
-        { method:'POST', headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({
-            contents:[{parts:[{text:prompt}]}],
-            generationConfig:{temperature:0.1, maxOutputTokens:400},
-            safetySettings:[
-              {category:'HARM_CATEGORY_HARASSMENT',threshold:'BLOCK_NONE'},
-              {category:'HARM_CATEGORY_HATE_SPEECH',threshold:'BLOCK_NONE'},
-              {category:'HARM_CATEGORY_SEXUALLY_EXPLICIT',threshold:'BLOCK_NONE'},
-              {category:'HARM_CATEGORY_DANGEROUS_CONTENT',threshold:'BLOCK_NONE'}
-            ]
-          })
-        }
-      );
-      if(!res.ok) continue;
-      const data = await res.json();
-      const cand = (data && data.candidates && data.candidates[0]);
-      if(!cand) continue;
-      const txt = (cand.content && cand.content.parts && cand.content.parts[0] && cand.content.parts[0].text) || '';
-      if(!txt) continue;
-      const match = txt.match(/\{[\s\S]*?\}/);
-      if(!match) continue;
-      return JSON.parse(match[0].replace(/[ --]/g,' '));
-    } catch(e) { continue; }
-  }
-  // Gemini no disponible — retornar null para activar modo manual
-  return null;
-}
-
 
 function extraColonia(lugar) {
   const m = lugar.match(/Col\.\s*([^,]+)/i)||lugar.match(/Colonia\s*([^,]+)/i);
@@ -1042,30 +931,65 @@ function extraColonia(lugar) {
   return p[p.length-1].trim()||lugar.slice(0,25)||'Sin colonia';
 }
 
-// Clasificación local cuando Gemini falla
-function clasificarLocal(texto) {
-  const t = texto.toLowerCase();
+// ── BOTTOM PANEL ─────────────────────────────────────────────────
+function togglePB() { pbOpen=!pbOpen; document.getElementById('pbottom').classList.toggle('col',!pbOpen); }
+function setPBT(tab,el) { pbtab=tab; document.querySelectorAll('.pbt').forEach(b=>b.classList.remove('on')); el.classList.add('on'); if(tab==='c')renderCercanos(); else renderLista(); }
+window.togglePB=togglePB; window.setPBT=setPBT;
+
+// ── GEMINI API ───────────────────────────────────────────────────
+async function llamarGemini(prompt) {
+  const modelos = ['gemini-1.5-flash', 'gemini-2.0-flash'];
+  for (let i = 0; i < modelos.length; i++) {
+    const modelo = modelos[i];
+    try {
+      const res = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/' + modelo + ':generateContent?key=' + GEMINI_KEY,
+        {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            contents: [{parts: [{text: prompt}]}],
+            generationConfig: {temperature: 0.1, maxOutputTokens: 500},
+            safetySettings: [
+              {category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_NONE'},
+              {category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_NONE'},
+              {category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE'},
+              {category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE'}
+            ]
+          })
+        }
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (!data.candidates || !data.candidates[0]) continue;
+      const parts = data.candidates[0].content && data.candidates[0].content.parts;
+      const txt = parts && parts[0] && parts[0].text ? parts[0].text : '';
+      if (!txt) continue;
+      const match = txt.match(/\{[\s\S]*\}/);
+      if (!match) continue;
+      const clean = match[0].replace(/[ --]/g, ' ');
+      return JSON.parse(clean);
+    } catch(e) { continue; }
+  }
+  // Fallback: clasificación local sin IA
+  return null;
+}
+
+function clasificarLocal(txt) {
+  const t = txt.toLowerCase();
+  const palabrasSeg = ['bala','disparo','herido','matan','fallecio','homicid','asesinat','ejecut','asalto','robo','secuestr','narcot','cartel','detenido','captura','asesin','muerto','cadaver','armado','tiro','balacera','navaja'];
+  const palabrasAcc = ['accidente','choque','volcadura','atropell','colision','incendio','explosion','derrumbe'];
+  const palabrasEve = ['festival','feria','concierto','evento','ceremonia','inauguracion','aniversario','celebracion'];
   let tipo = 'rumor';
-  // Clasificación por palabras clave separadas (compatible con todos los navegadores)
-  const palabrasSeg = ['bala','dispar','herido','matan','fallec','homicid','asesinat','ejecut','asalt','robo','secuestr','narcot','cartel','detenid','captur','apunal','asesin','muerto','cadaver','golpe','navaja','cuchillo','armado','tiro'];
-  const palabrasAcc = ['accidente','choque','volcadura','atropell','colision','incendi','explosi','derrumbe'];
-  const palabrasEve = ['festival','feria','concierto','evento','ceremonia','inaugur','aniversario','celebr'];
-  if(palabrasSeg.some(function(p){ return t.indexOf(p) >= 0; })) tipo='seguridad';
-  else if(palabrasAcc.some(function(p){ return t.indexOf(p) >= 0; })) tipo='accidente';
-  else if(palabrasEve.some(function(p){ return t.indexOf(p) >= 0; })) tipo='evento';
-  else if(palabrasAcc.some(function(p){ return t.indexOf(p) >= 0; })) tipo='accidente';
-  else if(/festival|feria|concierto|evento|ceremonia|inaugur|aniversario|celebr/i.test(t)) tipo='evento';
-
-  // Extraer lugar mencionado
-  const lugarMatch = texto.match(/(?:en|frente a|sobre|colonia|barrio|calle|blvd|boulevard|avenida|av\.?)\s+([A-ZÁÉÍÓÚÑ][^\.,
-]{3,40})/i);
-  const lugar = lugarMatch ? lugarMatch[0].trim() : 'Irapuato, Guanajuato';
-
-  // Extraer título (primer oración)
-  const titulo = texto.split(/[.
-]/)[0].trim().slice(0,80) || texto.slice(0,80);
-
-  return { titulo, tipo, lugar, colonia: extraColonia(lugar), resumen: texto.slice(0,300), lat: GEO.cLat, lng: GEO.cLng, confianza:'media' };
+  for (let i = 0; i < palabrasSeg.length; i++) { if (t.indexOf(palabrasSeg[i]) >= 0) { tipo = 'seguridad'; break; } }
+  if (tipo === 'rumor') { for (let i = 0; i < palabrasAcc.length; i++) { if (t.indexOf(palabrasAcc[i]) >= 0) { tipo = 'accidente'; break; } } }
+  if (tipo === 'rumor') { for (let i = 0; i < palabrasEve.length; i++) { if (t.indexOf(palabrasEve[i]) >= 0) { tipo = 'evento'; break; } } }
+  const lugarMatch = txt.match(/(?:en |calle |colonia |barrio )([A-Za-z][^.,
+]{3,35})/i);
+  const lugar = lugarMatch ? lugarMatch[0].trim() : 'Irapuato';
+  const titulo = txt.split(/[.
+]/)[0].trim().slice(0, 80) || txt.slice(0, 80);
+  return {titulo: titulo, tipo: tipo, lugar: lugar, colonia: extraColonia(lugar), resumen: txt.slice(0, 300), lat: GEO.cLat, lng: GEO.cLng, confianza: 'media'};
 }
 
 // ── MODAL URL ────────────────────────────────────────────────────
@@ -1080,12 +1004,10 @@ async function extraer() {
   const btn = document.getElementById('b-ext');
   btn.textContent='⏳ EXTRAYENDO...'; btn.disabled=true;
   try {
-    const fragmento = txt.slice(0,400).replace(/[<>]/g,' ');
-    let r = await llamarGemini(`Clasifica esta nota. Responde SOLO JSON valido:
-{"titulo":"string","tipo":"seguridad|accidente|evento|rumor","lugar":"string","colonia":"string","resumen":"string","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}
-Nota: ${fragmento}`);
-    if(!r) { r = clasificarLocal(txt); toast('⚠ Gemini no disponible — clasificación local activada','err',4000); }
-    if(!r.resumen || r.resumen.length < 20) r.resumen = txt.slice(0,300);
+    const frag = txt.slice(0, 500);
+    let r = await llamarGemini('Clasifica esta nota periodistica. Responde SOLO JSON valido, sin texto extra:\n{"titulo":"string","tipo":"seguridad|accidente|evento|rumor","lugar":"string","colonia":"string","resumen":"string","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}\nNota: ' + frag);
+    if (!r) { r = clasificarLocal(txt); }
+    if (!r.resumen || r.resumen.length < 20) r.resumen = txt.slice(0, 300);
     urlRes = {...r, url:document.getElementById('u-link').value.trim()};
     document.getElementById('ur-tit').textContent = r.titulo||'';
     document.getElementById('ur-tipo').value = r.tipo||'rumor';
@@ -1130,12 +1052,10 @@ async function analizar() {
   const btn = document.getElementById('b-ana');
   btn.textContent='⏳ ANALIZANDO...'; btn.disabled=true;
   try {
-    const fragmento2 = txt.slice(0,400).replace(/[<>]/g,' ');
-    let r = await llamarGemini(`Clasifica esta nota. Responde SOLO JSON valido:
-{"titulo":"string","tipo":"seguridad|accidente|evento|rumor","lugar":"string","colonia":"string","resumen":"string","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}
-Nota: ${fragmento2}`);
-    if(!r) { r = clasificarLocal(txt); toast('⚠ Gemini no disponible — clasificación local','err',4000); }
-    if(!r.resumen || r.resumen.length < 20) r.resumen = txt.slice(0,300);
+    const frag2 = txt.slice(0, 500);
+    let r = await llamarGemini('Clasifica esta nota periodistica. Responde SOLO JSON valido, sin texto extra:\n{"titulo":"string","tipo":"seguridad|accidente|evento|rumor","lugar":"string","colonia":"string","resumen":"string","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}\nNota: ' + frag2);
+    if (!r) { r = clasificarLocal(txt); }
+    if (!r.resumen || r.resumen.length < 20) r.resumen = txt.slice(0, 300);
     iaRes = r;
     document.getElementById('r-tit').textContent = r.titulo||'';
     document.getElementById('r-tipo').value = r.tipo||'rumor';
@@ -1170,7 +1090,7 @@ window.guardarIA=guardarIA;
 // ── MODAL MANUAL ──────────────────────────────────────────────────
 function abrirManual(src) {
   const hint = document.getElementById('mhint');
-  if(src==='gps'&&miPos) { coordsClick={lat:miPos.lat,lng:miPos.lng}; hint.textContent=`📍 GPS: ${miPos.lat.toFixed(4)}, ${miPos.lng.toFixed(4)}`; }
+  if(src==='gps'&&miPos) { coordsClick={lat:miPos.lat,lng:miPos.lng}; hint.textContent='📍 GPS: ' + (miPos.lat.toFixed(4)) + ', ' + (miPos.lng.toFixed(4)) + ''; }
   else if(coordsClick) hint.textContent='📍 Ubicación marcada en el mapa.';
   else hint.textContent='📍 Toca el mapa para fijar ubicación, o se geocodificará el lugar.';
   document.getElementById('m-man').classList.add('on');
@@ -1210,147 +1130,12 @@ window.selF=selF;
 // ── GUARDAR EN FIREBASE ───────────────────────────────────────────
 async function guardar(ev) {
   try {
-    await db.collection('eventos').add({...ev, fecha:firebase.firestore.FieldValue.serverTimestamp()});
+    await db.collection('eventos').add(Object.assign({}, ev, {fecha: firebase.firestore.FieldValue.serverTimestamp()}));
   } catch(e) {
     console.error('Error guardando:', e);
     alert('Error al guardar. Verifica conexión.');
   }
 }
-
-
-// ── BORRAR EVENTO ─────────────────────────────────────────────────
-async function borrarEvento(id) {
-  if(!confirm('¿Borrar este evento del mapa?')) return;
-  try {
-    await db.collection('eventos').doc(id).delete();
-    if(markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
-    toast('✓ Evento eliminado','ok',2000);
-  } catch(e) {
-    toast('Error al borrar: '+e.message,'err',3000);
-  }
-}
-window.borrarEvento=borrarEvento;
-
-// ── RSS BUSCADOR ──────────────────────────────────────────────────
-const RSS_FUENTES = {
-  sol: {
-    nombre:'El Sol de Irapuato',
-    // Usar proxy CORS gratuito para leer RSS
-    url:'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://oem.com.mx/elsoldeirapuato/feed/'),
-  },
-  am: {
-    nombre:'AM Guanajuato',
-    url:'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.am.com.mx/guanajuato/rss.xml'),
-  },
-  correo: {
-    nombre:'Periódico Correo',
-    url:'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://periodicocorreo.com.mx/feed/'),
-  }
-};
-
-let rssItems = [];
-let rssSelIdx = null;
-let rssFuenteActual = 'sol';
-
-function abrirRSS() {
-  document.getElementById('m-rss').classList.add('on');
-  cargarRSS('sol');
-}
-function cerrarRSS() { document.getElementById('m-rss').classList.remove('on'); rssItems=[]; rssSelIdx=null; }
-window.abrirRSS=abrirRSS; window.cerrarRSS=cerrarRSS;
-
-function selFuenteRSS(el) {
-  document.querySelectorAll('#rss-fuentes .tc').forEach(b=>b.classList.remove('on'));
-  el.classList.add('on');
-  cargarRSS(el.getAttribute('data-src'));
-}
-window.selFuenteRSS=selFuenteRSS;
-
-async function cargarRSS(fuente) {
-  rssFuenteActual = fuente;
-  rssSelIdx = null;
-  document.getElementById('b-rss-agregar').style.display='none';
-  const lista = document.getElementById('rss-lista');
-  lista.innerHTML = '<div class="rss-loading">⏳ Cargando noticias...</div>';
-  try {
-    const src = RSS_FUENTES[fuente];
-    const res = await fetch(src.url, {signal: AbortSignal.timeout(8000)});
-    const txt = await res.text();
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(txt, 'application/xml');
-    const items = [...xml.querySelectorAll('item')].slice(0,15);
-    if(items.length === 0) { lista.innerHTML='<div class="rss-loading">Sin noticias disponibles en este momento.</div>'; return; }
-    rssItems = items.map((item,i) => ({
-      idx:i,
-      titulo: (item.querySelector('title') ? item.querySelector('title').textContent.trim() : 'Sin título'),
-      desc: (item.querySelector('description') ? item.querySelector('description').textContent.replace(/<[^>]*>/g,'').trim().slice(0,300) : ''),
-      link: (item.querySelector('link') ? item.querySelector('link').textContent.trim() : ''),
-      fecha: (item.querySelector('pubDate') ? item.querySelector('pubDate').textContent.trim() : ''),
-      fuente: src.nombre
-    }));
-    // Filtrar solo las de Irapuato
-    const deIrapuato = rssItems.filter(it =>
-      (it.titulo+it.desc).toLowerCase().includes('irapuato') ||
-      (it.titulo+it.desc).toLowerCase().includes('santiaguito') ||
-      (it.titulo+it.desc).toLowerCase().includes('guanajuato')
-    );
-    const mostrar = deIrapuato.length > 0 ? deIrapuato : rssItems;
-    lista.innerHTML = mostrar.map(it=>`
-      <div class="rss-item" id="rss-${it.idx}" onclick="selRSS(${it.idx})">
-        <div class="rss-tit">${it.titulo}</div>
-        <div class="rss-meta">
-          <span>${it.fuente}</span>
-          <span>${it.fecha ? new Date(it.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : ''}</span>
-        </div>
-      </div>`).join('');
-  } catch(e) {
-    lista.innerHTML = `<div class="rss-loading" style="color:var(--seg)">⚠ No se pudo cargar el feed.<br><span style="font-size:7px;color:var(--muted)">Verifica conexión a internet.</span></div>`;
-  }
-}
-
-function selRSS(idx) {
-  rssSelIdx = idx;
-  document.querySelectorAll('.rss-item').forEach(el=>el.classList.remove('sel'));
-  const el = document.getElementById('rss-'+idx);
-  if(el) el.classList.add('sel');
-  document.getElementById('b-rss-agregar').style.display='inline-block';
-}
-window.selRSS=selRSS;
-
-async function agregarDesdeRSS() {
-  if(rssSelIdx===null) return;
-  const item = rssItems.find(it=>it.idx===rssSelIdx);
-  if(!item) return;
-  const btn = document.getElementById('b-rss-agregar');
-  btn.textContent='⏳ ANALIZANDO...'; btn.disabled=true;
-  try {
-    const texto = item.titulo + '. ' + item.desc;
-    const txtCorto = texto.length>1200 ? texto.slice(0,1200)+'...' : texto;
-    const fragmento3 = texto.slice(0,400).replace(/[<>]/g,' ');
-    let r = await llamarGemini(`Clasifica esta nota. Responde SOLO JSON valido:
-{"titulo":"string","tipo":"seguridad|accidente|evento|rumor","lugar":"string","colonia":"string","resumen":"string","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}
-Nota: ${fragmento3}`);
-    if(!r) { r = clasificarLocal(texto); }
-    if(!r.resumen || r.resumen.length < 20) r.resumen = texto.slice(0,300);
-    // Geocodificar con pin
-    await geoConPin(r.lugar||'Irapuato', parseFloat(r.lat)||GEO.cLat, parseFloat(r.lng)||GEO.cLng, async pos=>{
-      await guardar({
-        titulo:r.titulo||item.titulo, tipo:r.tipo||'evento',
-        fuente:RSS_FUENTES[rssFuenteActual].nombre,
-        lugar:r.lugar||'Irapuato',
-        colonia:r.colonia||extraColonia(r.lugar||''),
-        descripcion:r.resumen||item.desc.slice(0,300),
-        url:item.link||'', lat:pos.lat, lng:pos.lng, viaIA:true
-      });
-      toast('✓ Noticia agregada al mapa','ok',3000);
-      cerrarRSS();
-    });
-  } catch(e) {
-    toast('Error: '+e.message,'err',4000);
-  } finally { btn.textContent='🤖 ANALIZAR Y AGREGAR →'; btn.disabled=false; }
-}
-window.agregarDesdeRSS=agregarDesdeRSS;
-
 
 // ── TOAST ─────────────────────────────────────────────────────────
 function toast(msg, tipo, dur) {
@@ -1372,7 +1157,7 @@ function abrirPin(lat, lng, label, cb) {
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(pinMap);
     } else { pinMap.setView([lat,lng],16); }
     if(pinMarker) pinMap.removeLayer(pinMarker);
-    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36" style="filter:drop-shadow(0 0 6px #00ccff)"><path d="M14 0C6 0 0 6 0 14C0 22 14 36 14 36S28 22 28 14C28 6 22 0 14 0Z" fill="#00ccff" opacity=".9"/><circle cx="14" cy="14" r="6" fill="white" opacity=".9"/></svg>`;
+    const svg='<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36" style="filter:drop-shadow(0 0 6px #00ccff)"><path d="M14 0C6 0 0 6 0 14C0 22 14 36 14 36S28 22 28 14C28 6 22 0 14 0Z" fill="#00ccff" opacity=".9"/><circle cx="14" cy="14" r="6" fill="white" opacity=".9"/></svg>';
     pinMarker = L.marker([lat,lng],{icon:L.divIcon({html:svg,className:'',iconSize:[28,36],iconAnchor:[14,36]}),draggable:true}).addTo(pinMap);
     pinMarker.on('dragend',e=>{ pinPos={lat:e.target.getLatLng().lat,lng:e.target.getLatLng().lng}; });
     pinMap.on('click',e=>{ pinPos={lat:e.latlng.lat,lng:e.latlng.lng}; pinMarker.setLatLng(e.latlng); });
@@ -1400,14 +1185,29 @@ async function geoConPin(lugar, latE, lngE, cb) {
   else { toast('⚠ No encontré la calle — mueve el pin al lugar correcto','err',5000); abrirPin(latE||GEO.cLat,lngE||GEO.cLng,lugar,cb); }
 }
 
+
+async function borrarEvento(id) {
+  if (!confirm('¿Borrar este evento del mapa?')) return;
+  try {
+    await db.collection('eventos').doc(id).delete();
+    if (markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
+    alert('Evento eliminado');
+  } catch(e) {
+    alert('Error al borrar: ' + e.message);
+  }
+}
+window.borrarEvento = borrarEvento;
+
 // ── RESPONSIVE ────────────────────────────────────────────────────
 function checkR() {
   const mob = window.innerWidth < 700;
   document.getElementById('sidebar').style.display = vista!=='campo'&&!mob?'flex':'none';
 }
-window.addEventListener('resize', function(){ checkR(); if(map) map.invalidateSize(); });
+window.addEventListener('resize', ()=>{ checkR(); map.invalidateSize(); });
 checkR();
 
 </script>
+</body>
+</html></script>
 </body>
 </html>
