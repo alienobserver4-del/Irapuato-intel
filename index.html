@@ -361,8 +361,10 @@ header {
       <div class="sec-header">// FUENTES RSS — <span>AUTOMÁTICO</span></div>
 
       <div class="rss-controles">
-        <button class="rss-btn rss-sol" onclick="cargarRSS('sol')">☀ EL SOL</button>
-        <button class="rss-btn rss-am"  onclick="cargarRSS('am')">📰 AM GTO</button>
+        <button class="rss-btn rss-sol" onclick="cargarRSS('sol_local')">☀ SOL LOCAL</button>
+        <button class="rss-btn rss-sol" onclick="cargarRSS('sol_policiaca')">🚨 SOL POLICIACA</button>
+        <button class="rss-btn rss-am"  onclick="cargarRSS('am_irapuato')">📰 AM IRAPUATO</button>
+        <button class="rss-btn rss-am"  onclick="cargarRSS('am_sucesos')">⚡ AM SUCESOS</button>
         <button class="rss-btn rss-correo" onclick="cargarRSS('correo')">📋 CORREO</button>
         <button class="rss-btn" style="color:var(--muted);border-color:var(--muted);" onclick="cargarTodas()">⟳ TODAS</button>
       </div>
@@ -473,18 +475,40 @@ var firebaseConfig = {
   appId: "1:39562297804:web:5d5c488450b21dbcfbdd69"
 };
 
+// Proxies alternativos para mayor confiabilidad
+var PROXY1 = 'https://api.allorigins.win/raw?url=';
+var PROXY2 = 'https://corsproxy.io/?';
+
 var FUENTES_RSS = {
-  sol: {
-    nombre: 'El Sol de Irapuato',
-    proxy: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://oem.com.mx/elsoldeirapuato/feed/')
+  sol_local: {
+    nombre: 'El Sol — Local',
+    tipo: 'scraping',
+    proxy: PROXY1 + encodeURIComponent('https://oem.com.mx/elsoldeirapuato/local/')
   },
-  am: {
-    nombre: 'AM Guanajuato',
-    proxy: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.am.com.mx/guanajuato/rss.xml')
+  sol_policiaca: {
+    nombre: 'El Sol — Policiaca',
+    tipo: 'scraping',
+    proxy: PROXY1 + encodeURIComponent('https://oem.com.mx/elsoldeirapuato/policiaca/')
+  },
+  am_irapuato: {
+    nombre: 'AM Irapuato',
+    tipo: 'scraping',
+    proxy: PROXY1 + encodeURIComponent('https://www.am.com.mx/irapuato')
+  },
+  am_sucesos: {
+    nombre: 'AM Sucesos GTO',
+    tipo: 'scraping',
+    proxy: PROXY1 + encodeURIComponent('https://www.am.com.mx/temas/sucesos-9287.html')
+  },
+  am_rss: {
+    nombre: 'AM RSS (filtrado)',
+    tipo: 'rss',
+    proxy: PROXY1 + encodeURIComponent('https://am.com.mx/rss')
   },
   correo: {
     nombre: 'Periódico Correo',
-    proxy: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://periodicocorreo.com.mx/feed/')
+    tipo: 'rss',
+    proxy: PROXY1 + encodeURIComponent('https://periodicocorreo.com.mx/feed/')
   }
 };
 
@@ -640,50 +664,174 @@ function cargarRSS(fuente) {
   setEstadoRSS('⏳ Cargando ' + src.nombre + '...', 'cargando');
   document.getElementById('lista-rss').innerHTML = '';
 
-  fetch(src.proxy, { signal: AbortSignal.timeout(10000) })
-  .then(function(res) { return res.text(); })
-  .then(function(txt) {
-    var parser = new DOMParser();
-    var xml = parser.parseFromString(txt, 'application/xml');
-    var items = xml.querySelectorAll('item');
-    var arr = [];
-    for (var i = 0; i < items.length && i < 20; i++) {
-      var item = items[i];
-      var titulo = (item.querySelector('title') ? item.querySelector('title').textContent : '').trim();
-      var desc = (item.querySelector('description') ? item.querySelector('description').textContent : '').replace(/<[^>]*>/g, '').trim().slice(0, 400);
-      var link = (item.querySelector('link') ? item.querySelector('link').textContent : '').trim();
-      var fecha = (item.querySelector('pubDate') ? item.querySelector('pubDate').textContent : '').trim();
-      // Filtrar Irapuato
-      var completo = (titulo + ' ' + desc).toLowerCase();
-      if (completo.indexOf('irapuato') >= 0 || completo.indexOf('santiaguito') >= 0) {
-        arr.push({ titulo: titulo, desc: desc, link: link, fecha: fecha, fuente: src.nombre });
+  // Intentar con proxy1, si falla usar proxy2
+  var url1 = src.proxy;
+  var url2 = url1.replace('https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?');
+
+  function intentarFetch(url, esReintentoFallback) {
+    fetch(url)
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    })
+    .then(function(txt) {
+      if (src.tipo === 'rss') {
+        procesarRSS(txt, src.nombre);
+      } else {
+        procesarScraping(txt, src.nombre, src.proxy);
+      }
+    })
+    .catch(function(e) {
+      if (!esReintentoFallback) {
+        setEstadoRSS('Reintentando con proxy alternativo...', 'cargando');
+        intentarFetch(url2, true);
+      } else {
+        setEstadoRSS('Error al cargar ' + src.nombre + '. Intenta entrada manual.', 'error');
+      }
+    });
+  }
+  intentarFetch(url1, false);
+}
+
+function procesarRSS(txt, nombreFuente) {
+  var parser = new DOMParser();
+  var xml = parser.parseFromString(txt, 'application/xml');
+  var items = xml.querySelectorAll('item');
+  var arr = [];
+  for (var i = 0; i < items.length && i < 30; i++) {
+    var item = items[i];
+    var titulo = (item.querySelector('title') ? item.querySelector('title').textContent : '').trim();
+    var desc = (item.querySelector('description') ? item.querySelector('description').textContent : '').replace(/<[^>]*>/g, '').trim().slice(0, 400);
+    var link = (item.querySelector('link') ? item.querySelector('link').textContent : '').trim();
+    var fecha = (item.querySelector('pubDate') ? item.querySelector('pubDate').textContent : '').trim();
+    var completo = (titulo + ' ' + desc).toLowerCase();
+    if (completo.indexOf('irapuato') >= 0 || completo.indexOf('silao') >= 0 || completo.indexOf('salamanca') >= 0) {
+      arr.push({ titulo: titulo, desc: desc, link: link, fecha: fecha, fuente: nombreFuente });
+    }
+  }
+  if (arr.length === 0) {
+    setEstadoRSS('Sin noticias del Bajío en este feed. Prueba otra fuente.', 'error');
+    return;
+  }
+  setEstadoRSS(arr.length + ' noticias encontradas en ' + nombreFuente, 'ok');
+  renderTarjetasRSS(arr, nombreFuente);
+}
+
+function procesarScraping(html, nombreFuente, proxyUrl) {
+  // Extraer URL base del periódico del proxy URL
+  var urlMatch = proxyUrl.match(/url=([^&]+)/);
+  var baseUrl = urlMatch ? decodeURIComponent(urlMatch[1]) : '';
+  var dominio = baseUrl.match(/https?:\/\/[^\/]+/);
+  var base = dominio ? dominio[0] : '';
+
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, 'text/html');
+  var arr = [];
+
+  // Buscar artículos/noticias — patrones comunes en sitios de noticias
+  var selectores = ['article', '.post', '.news-item', '.nota', 'h2 a', 'h3 a', '.entry-title a'];
+  var encontrados = [];
+
+  // Buscar todos los enlaces con texto significativo
+  var links = doc.querySelectorAll('a');
+  for (var i = 0; i < links.length && arr.length < 15; i++) {
+    var a = links[i];
+    var titulo = (a.textContent || '').trim();
+    var href = a.getAttribute('href') || '';
+    // Filtrar: título largo (>20 chars), que sea noticia real
+    if (titulo.length > 25 && titulo.length < 200 && href && href.indexOf('#') < 0) {
+      // Construir URL completa
+      var urlCompleta = href;
+      if (href.indexOf('http') < 0) {
+        urlCompleta = href.indexOf('/') === 0 ? base + href : base + '/' + href;
+      }
+      // Evitar duplicados
+      var yaTiene = false;
+      for (var j = 0; j < arr.length; j++) {
+        if (arr[j].titulo === titulo) { yaTiene = true; break; }
+      }
+      if (!yaTiene) {
+        arr.push({ titulo: titulo, desc: '', link: urlCompleta, fecha: 'Hoy', fuente: nombreFuente });
       }
     }
-    if (arr.length === 0) {
-      setEstadoRSS('Sin noticias de Irapuato en este feed. Prueba otra fuente.', 'error');
-      return;
-    }
-    rssItems[fuente] = arr;
-    setEstadoRSS(arr.length + ' noticias de Irapuato encontradas en ' + src.nombre, 'ok');
-    renderTarjetasRSS(arr, src.nombre);
-  })
-  .catch(function(e) {
-    setEstadoRSS('Error al cargar ' + src.nombre + ' — verifica tu conexión', 'error');
-  });
+  }
+
+  if (arr.length === 0) {
+    setEstadoRSS('No se pudieron extraer noticias de ' + nombreFuente + '. El sitio puede bloquear el acceso.', 'error');
+    return;
+  }
+  setEstadoRSS(arr.length + ' noticias extraídas de ' + nombreFuente, 'ok');
+  renderTarjetasRSS(arr, nombreFuente);
 }
 window.cargarRSS = cargarRSS;
 
 function cargarTodas() {
-  var fuentes = ['sol', 'am', 'correo'];
+  var fuentes = ['sol_policiaca', 'am_irapuato', 'am_sucesos', 'correo'];
   var idx = 0;
+  document.getElementById('lista-rss').innerHTML = '';
   var siguiente = function() {
     if (idx < fuentes.length) {
-      cargarRSS(fuentes[idx]);
+      var f = fuentes[idx];
       idx++;
-      setTimeout(siguiente, 2000);
+      var src = FUENTES_RSS[f];
+      if (!src) { siguiente(); return; }
+      setEstadoRSS('⏳ Cargando ' + src.nombre + ' (' + idx + '/' + fuentes.length + ')...', 'cargando');
+      fetch(src.proxy)
+      .then(function(res) { return res.text(); })
+      .then(function(txt) {
+        if (src.tipo === 'rss') { procesarRSSAcumulado(txt, src.nombre); }
+        else { procesarScrapingAcumulado(txt, src.nombre, src.proxy); }
+        setTimeout(siguiente, 1500);
+      })
+      .catch(function() { setTimeout(siguiente, 1500); });
+    } else {
+      var count = document.getElementById('lista-rss').children.length;
+      setEstadoRSS(count + ' noticias cargadas de todas las fuentes', 'ok');
     }
   };
   siguiente();
+}
+
+function procesarRSSAcumulado(txt, nombreFuente) {
+  var parser = new DOMParser();
+  var xml = parser.parseFromString(txt, 'application/xml');
+  var items = xml.querySelectorAll('item');
+  var lista = document.getElementById('lista-rss');
+  for (var i = 0; i < items.length && i < 20; i++) {
+    var item = items[i];
+    var titulo = (item.querySelector('title') ? item.querySelector('title').textContent : '').trim();
+    var desc = (item.querySelector('description') ? item.querySelector('description').textContent : '').replace(/<[^>]*>/g,'').trim().slice(0,400);
+    var link = (item.querySelector('link') ? item.querySelector('link').textContent : '').trim();
+    var completo = (titulo + ' ' + desc).toLowerCase();
+    if (completo.indexOf('irapuato') >= 0 || completo.indexOf('silao') >= 0 || completo.indexOf('salamanca') >= 0) {
+      lista.appendChild(crearTarjetaRSS({ titulo:titulo, desc:desc, link:link, fecha:'', fuente:nombreFuente }));
+    }
+  }
+}
+
+function procesarScrapingAcumulado(html, nombreFuente, proxyUrl) {
+  var urlMatch = proxyUrl.match(/url=([^&]+)/);
+  var baseUrl = urlMatch ? decodeURIComponent(urlMatch[1]) : '';
+  var dominio = baseUrl.match(/https?:[/][/][^/]+/);
+  var base = dominio ? dominio[0] : '';
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, 'text/html');
+  var lista = document.getElementById('lista-rss');
+  var count = 0;
+  var links = doc.querySelectorAll('a');
+  for (var i = 0; i < links.length && count < 8; i++) {
+    var a = links[i];
+    var titulo = (a.textContent || '').trim();
+    var href = a.getAttribute('href') || '';
+    if (titulo.length > 25 && titulo.length < 200 && href && href.indexOf('#') < 0) {
+      var urlCompleta = href;
+      if (href.indexOf('http') < 0) {
+        urlCompleta = href.charAt(0) === '/' ? base + href : base + '/' + href;
+      }
+      lista.appendChild(crearTarjetaRSS({ titulo:titulo, desc:'', link:urlCompleta, fecha:'', fuente:nombreFuente }));
+      count++;
+    }
+  }
 }
 window.cargarTodas = cargarTodas;
 
@@ -1009,4 +1157,3 @@ function actualizarBadge() {
 
 </body>
 </html>
- 
