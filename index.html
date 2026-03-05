@@ -529,6 +529,10 @@ const firebaseConfig = {
   appId: "1:39562297804:web:5d5c488450b21dbcfbdd69"
 };
 
+// Mostrar app INMEDIATAMENTE sin esperar Firebase
+document.getElementById('loading').style.display = 'none';
+document.getElementById('app').style.display = 'flex';
+
 firebase.initializeApp(firebaseConfig);
 var db = firebase.firestore();
 
@@ -561,16 +565,23 @@ let heatLayer = null;
 let periodStats = 365;
 
 // ── MAPA ────────────────────────────────────────────────────────
-const map = L.map('map', {center:[GEO.cLat,GEO.cLng], zoom:14, zoomControl:false, attributionControl:true});
-L.control.zoom({position:'topright'}).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19
-}).addTo(map);
-map.on('click', e => { coordsClick = {lat:e.latlng.lat, lng:e.latlng.lng}; abrirManual(null); });
+var map = null;
+setTimeout(function() {
+  map = L.map('map', {center:[GEO.cLat,GEO.cLng], zoom:14, zoomControl:false, attributionControl:true});
+  L.control.zoom({position:'topright'}).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:19
+  }).addTo(map);
+  map.on('click', function(e){ coordsClick = {lat:e.latlng.lat, lng:e.latlng.lng}; abrirManual(null); });
+  map.invalidateSize();
+  renderMarcadores();
+  renderLista();
+  actualizarStats();
+}, 300);
 
 // ── FIREBASE LISTENER ───────────────────────────────────────────
 db.collection('eventos').orderBy('fecha','desc').onSnapshot(function(snap) {
-  eventos = snap.docs.map(d => ({id:d.id, ...d.data()}));
+  eventos = snap.docs.map(function(d){ var o=d.data(); o.id=d.id; return o; });
   document.getElementById('dbdot').className = 'db-dot ok';
   document.getElementById('dblbl').textContent = 'Firebase OK - ' + eventos.length + ' eventos';
   renderMarcadores();
@@ -580,24 +591,24 @@ db.collection('eventos').orderBy('fecha','desc').onSnapshot(function(snap) {
   if(document.getElementById('loading').style.display !== 'none'){
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
-    setTimeout(()=>map.invalidateSize(), 200);
+    setTimeout(function(){ return map.invalidateSize(; }), 200);
   }
-}, err => {
+}, function(err){
   console.error(err);
   document.getElementById('dbdot').className = 'db-dot err';
   document.getElementById('dblbl').textContent = 'Error de conexión';
   // Mostrar app igual aunque falle Firebase
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  setTimeout(()=>map.invalidateSize(), 200);
+  setTimeout(function(){ return map.invalidateSize(; }), 200);
 });
 
 // Timeout de seguridad — si Firebase tarda más de 6s, mostrar app de todas formas
-setTimeout(()=>{
+setTimeout(function(){
   if(document.getElementById('loading').style.display !== 'none'){
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
-    setTimeout(()=>map.invalidateSize(), 200);
+    setTimeout(function(){ return map.invalidateSize(; }), 200);
   }
 }, 6000);
 
@@ -648,8 +659,8 @@ function actualizarHeat() {
   if(heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
   const corte = periodStats > 0 ? Date.now() - periodStats*86400000 : 0;
   const pts = eventos
-    .filter(ev => ev.tipo==='seguridad' && ev.lat && ev.lng && (periodStats===0 || (ev.fecha && ev.fecha.toDate?ev.fecha.toDate().getTime():0) >= corte))
-    .map(ev => [ev.lat, ev.lng, 1.0]);
+    .filter(function(ev){ return ev.tipo==='seguridad' && ev.lat && ev.lng && (periodStats===0 || (ev.fecha && ev.fecha.toDate?ev.fecha.toDate(; }).getTime():0) >= corte))
+    .map(function(ev){ return [ev.lat; }, ev.lng, 1.0]);
   if(pts.length === 0) return;
   heatLayer = L.heatLayer(pts, {
     radius:40, blur:35, maxZoom:17,
@@ -660,7 +671,7 @@ function actualizarHeat() {
 // ── MARCADORES ──────────────────────────────────────────────────
 function getF() {
   const corte = filtroDias > 0 ? Date.now() - filtroDias*86400000 : 0;
-  return eventos.filter(ev => {
+  return eventos.filter(function(ev){
     const tipoOk = filtroTipo==='todos' || ev.tipo===filtroTipo;
     const t = ev.fecha && ev.fecha.toDate ? ev.fecha.toDate().getTime() : Date.now();
     return tipoOk && (filtroDias===0 || t>=corte);
@@ -668,9 +679,9 @@ function getF() {
 }
 
 function renderMarcadores() {
-  Object.values(markers).forEach(m => map.removeLayer(m));
+  Object.values(markers).forEach(function(m){ return map.removeLayer(m; }));
   markers = {};
-  getF().forEach(ev => {
+  getF().forEach(function(ev){
     if(!ev.lat || !ev.lng) return;
     const cerca = miPos && dist(miPos.lat,miPos.lng,ev.lat,ev.lng) <= radio;
     const m = L.marker([ev.lat,ev.lng], {icon:crearIcono(ev.tipo,ev.viaIA,cerca)})
@@ -681,8 +692,8 @@ function renderMarcadores() {
 }
 
 function actualizarIconos() {
-  Object.entries(markers).forEach(([id,m]) => {
-    const ev = eventos.find(e=>e.id===id);
+  Object.entries(markers).forEachfunction(([id,m]){
+    const ev = eventos.find(function(e){ return e.id===id; });
     if(ev) { const cerca=miPos&&dist(miPos.lat,miPos.lng,ev.lat,ev.lng)<=radio; m.setIcon(crearIcono(ev.tipo,ev.viaIA,cerca)); m.setPopupContent(crearPopup(ev)); }
   });
 }
@@ -690,13 +701,13 @@ function actualizarIconos() {
 // ── GPS ─────────────────────────────────────────────────────────
 function iniciarGPS() {
   if(!navigator.geolocation) { document.getElementById('gst').textContent='GPS no disponible'; return; }
-  gpsW = navigator.geolocation.watchPosition(pos => {
+  gpsW = navigator.geolocation.watchPosition(function(pos){
     miPos = {lat:pos.coords.latitude, lng:pos.coords.longitude, acc:pos.coords.accuracy};
     document.getElementById('gdot').className = 'gdot fix';
     document.getElementById('gst').textContent = 'GPS ±' + (Math.round(pos.coords.accuracy)) + 'm';
     document.getElementById('gcoords').textContent = '' + (pos.coords.latitude.toFixed(4)) + ', ' + (pos.coords.longitude.toFixed(4)) + '';
     actualizarPos(); actualizarIconos(); verificarAlertas(); renderCercanos();
-  }, () => {
+  }, function(){
     miPos = {lat:GEO.cLat, lng:GEO.cLng, acc:50};
     document.getElementById('gst').textContent = 'Sin GPS — modo demo';
     document.getElementById('gcoords').textContent = 'DEMO';
@@ -739,7 +750,7 @@ function fmtD(d) { return d<1000?Math.round(d)+'m':(d/1000).toFixed(1)+'km'; }
 
 function verificarAlertas() {
   if(!miPos) return;
-  const p = eventos.filter(ev=>ev.tipo==='seguridad'&&ev.lat&&ev.lng&&dist(miPos.lat,miPos.lng,ev.lat,ev.lng)<=radio);
+  const p = eventos.filter(function(ev){ return ev.tipo==='seguridad'&&ev.lat&&ev.lng&&dist(miPos.lat; },miPos.lng,ev.lat,ev.lng)<=radio);
   const el = document.getElementById('alerta');
   if(p.length>0) {
     el.textContent = '⚠ ALERTA — ' + (p.length) + ' EVENTO(S) DE SEGURIDAD EN RADIO ' + (fmtD(radio).toUpperCase()) + '';
@@ -762,7 +773,7 @@ window.cambiarRadio = cambiarRadio;
 function setVista(v) {
   vista = v;
   const mob = window.innerWidth < 700;
-  document.querySelectorAll('.ntab').forEach(t=>t.className='ntab');
+  document.querySelectorAll('.ntab').forEach(function(t){ return t.className='ntab'; });
   const tab = document.getElementById('tab-'+v);
   tab.classList.add(v==='campo'?'campo-on':v==='stats'?'stats-on':'on');
   document.getElementById('modo-lbl').textContent = v==='mapa'?'ESCRITORIO':v==='campo'?'CAMPO — GPS':' ESTADÍSTICAS';
@@ -775,14 +786,14 @@ function setVista(v) {
   if(v==='campo') iniciarGPS();
   else detenerGPS();
   if(v==='stats') renderStats();
-  setTimeout(()=>map.invalidateSize(), 150);
+  setTimeout(function(){ return map.invalidateSize(; }), 150);
 }
 window.setVista = setVista;
 
 // ── FILTROS ─────────────────────────────────────────────────────
 function filtrar(tipo, el) {
   filtroTipo = tipo;
-  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  document.querySelectorAll('.chip').forEach(function(c){ return c.classList.remove('on'; }));
   el.classList.add('on');
   renderMarcadores(); renderLista();
 }
@@ -790,7 +801,7 @@ window.filtrar = filtrar;
 
 function filtrarT(dias, el) {
   filtroDias = dias;
-  document.querySelectorAll('.tc').forEach(c=>c.classList.remove('on'));
+  document.querySelectorAll('.tc').forEach(function(c){ return c.classList.remove('on'; }));
   el.classList.add('on');
   renderMarcadores(); renderLista();
 }
@@ -799,7 +810,7 @@ window.filtrarT = filtrarT;
 // ── LISTAS ──────────────────────────────────────────────────────
 function renderLista() {
   const f = getF();
-  const html = f.map(ev=>{
+  const html = f.map(function(ev){
     const fecha = ev.fecha && ev.fecha.toDate ? ev.fecha.toDate().toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) : '—';
     const lnk = ev.url ? '<a href="' + (ev.url) + '" target="_blank" class="elink">↗ ver noticia</a>' : '';
     return '<div class="ecard" data-t="' + (ev.tipo) + '" onclick="enfocar('' + (ev.id) + '')">
@@ -815,19 +826,19 @@ function renderLista() {
 
 function actualizarStats() {
   document.getElementById('s-tot').textContent = eventos.length;
-  document.getElementById('s-seg').textContent = eventos.filter(e=>e.tipo==='seguridad').length;
-  document.getElementById('s-ia').textContent = eventos.filter(e=>e.viaIA).length;
-  document.getElementById('ttxt').textContent = eventos.slice(0,6).map(e=>'' + ((e.tipo||'').toUpperCase()) + ': ' + (e.titulo||'') + ' — ' + (e.lugar||'') + '').join(' ⬡ ') || 'Sin eventos';
+  document.getElementById('s-seg').textContent = eventos.filter(function(e){ return e.tipo==='seguridad'; }).length;
+  document.getElementById('s-ia').textContent = eventos.filter(function(e){ return e.viaIA; }).length;
+  document.getElementById('ttxt').textContent = eventos.slice(0,6).map(function(e){ return '' + ((e.tipo||''; }).toUpperCase()) + ': ' + (e.titulo||'') + ' — ' + (e.lugar||'') + '').join(' ⬡ ') || 'Sin eventos';
 }
 
 function renderCercanos() {
   if(!miPos) return;
-  const c = eventos.map(ev=>({...ev,d:dist(miPos.lat,miPos.lng,ev.lat||GEO.cLat,ev.lng||GEO.cLng)}))
-    .filter(ev=>ev.d<=radio).sort((a,b)=>a.d-b.d);
+  const c = eventos.map(function(ev){ var o={lat:ev.lat||GEO.cLat,lng:ev.lng||GEO.cLng,tipo:ev.tipo,titulo:ev.titulo,lugar:ev.lugar,id:ev.id,descripcion:ev.descripcion,fuente:ev.fuente,fecha:ev.fecha,url:ev.url,viaIA:ev.viaIA,colonia:ev.colonia}; o.d=dist(miPos.lat,miPos.lng,o.lat,o.lng); return o; })
+    .filter(function(ev){ return ev.d<=radio; }).sort(function(a,b){return a.d-b.d;});
   document.getElementById('s-cer').textContent = c.length;
   const html = c.length===0
     ? '<div style="padding:14px;text-align:center;color:var(--muted);font-size:8px;font-family:Orbitron,monospace;">SIN EVENTOS EN ' + (fmtD(radio).toUpperCase()) + '</div>'
-    : c.map(ev=>{
+    : c.map(function(ev){
       const col = COLORES[ev.tipo]||COLORES.rumor;
       return '<div class="ccard" data-t="' + (ev.tipo) + '" onclick="enfocar('' + (ev.id) + '')">
         <div class="ccr">
@@ -843,7 +854,7 @@ function renderCercanos() {
 }
 
 function enfocar(id) {
-  const ev = eventos.find(e=>e.id===id);
+  const ev = eventos.find(function(e){ return e.id===id; });
   if(!ev||!ev.lat) return;
   map.setView([ev.lat,ev.lng],16);
   if(markers[id]) markers[id].openPopup();
@@ -933,7 +944,7 @@ function extraColonia(lugar) {
 
 // ── BOTTOM PANEL ─────────────────────────────────────────────────
 function togglePB() { pbOpen=!pbOpen; document.getElementById('pbottom').classList.toggle('col',!pbOpen); }
-function setPBT(tab,el) { pbtab=tab; document.querySelectorAll('.pbt').forEach(b=>b.classList.remove('on')); el.classList.add('on'); if(tab==='c')renderCercanos(); else renderLista(); }
+function setPBT(tab,el) { pbtab=tab; document.querySelectorAll('.pbt').forEach(function(b){ return b.classList.remove('on'; })); el.classList.add('on'); if(tab==='c')renderCercanos(); else renderLista(); }
 window.togglePB=togglePB; window.setPBT=setPBT;
 
 // ── GEMINI API ───────────────────────────────────────────────────
@@ -1008,7 +1019,7 @@ async function extraer() {
     let r = await llamarGemini('Clasifica esta nota periodistica. Responde SOLO JSON valido, sin texto extra:\n{"titulo":"string","tipo":"seguridad|accidente|evento|rumor","lugar":"string","colonia":"string","resumen":"string","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}\nNota: ' + frag);
     if (!r) { r = clasificarLocal(txt); }
     if (!r.resumen || r.resumen.length < 20) r.resumen = txt.slice(0, 300);
-    urlRes = {...r, url:document.getElementById('u-link').value.trim()};
+    urlRes = r; urlRes.url = document.getElementById('u-link').value.trim();
     document.getElementById('ur-tit').textContent = r.titulo||'';
     document.getElementById('ur-tipo').value = r.tipo||'rumor';
     document.getElementById('ur-lug').textContent = r.lugar||'Irapuato';
@@ -1019,7 +1030,7 @@ async function extraer() {
     // Geocodificación con mini-mapa de confirmación
     const latEst = parseFloat(r.lat)||GEO.cLat;
     const lngEst = parseFloat(r.lng)||GEO.cLng;
-    await geoConPin(r.lugar||'Irapuato', latEst, lngEst, pos=>{ urlRes.lat=pos.lat; urlRes.lng=pos.lng; });
+    await geoConPin(r.lugar||'Irapuato', latEst, lngEst, function(pos){ urlRes.lat=pos.lat; urlRes.lng=pos.lng; });
   } catch(e) { alert('Error al extraer: '+e.message); }
   finally { btn.textContent='RE-EXTRAER →'; btn.disabled=false; }
 }
@@ -1067,7 +1078,7 @@ async function analizar() {
     // Geocodificación con mini-mapa de confirmación
     const latEst2 = parseFloat(r.lat)||GEO.cLat;
     const lngEst2 = parseFloat(r.lng)||GEO.cLng;
-    await geoConPin(r.lugar||'Irapuato', latEst2, lngEst2, pos=>{ iaRes.lat=pos.lat; iaRes.lng=pos.lng; });
+    await geoConPin(r.lugar||'Irapuato', latEst2, lngEst2, function(pos){ iaRes.lat=pos.lat; iaRes.lng=pos.lng; });
   } catch(e) { alert('Error: '+e.message); }
   finally { btn.textContent='RE-ANALIZAR →'; btn.disabled=false; }
 }
@@ -1095,7 +1106,7 @@ function abrirManual(src) {
   else hint.textContent='📍 Toca el mapa para fijar ubicación, o se geocodificará el lugar.';
   document.getElementById('m-man').classList.add('on');
 }
-function cerrarManual() { document.getElementById('m-man').classList.remove('on'); coordsClick=null; ['f-tit','f-lug','f-desc','f-url'].forEach(id=>document.getElementById(id).value=''); }
+function cerrarManual() { document.getElementById('m-man').classList.remove('on'); coordsClick=null; ['f-tit','f-lug','f-desc','f-url'].forEach(function(id){ return document.getElementById(id; }).value=''); }
 window.abrirManual=abrirManual; window.cerrarManual=cerrarManual;
 
 async function guardarManual() {
@@ -1105,11 +1116,11 @@ async function guardarManual() {
   let lat = coordsClick?coordsClick.lat:null, lng = coordsClick?coordsClick.lng:null;
   if(!lat) {
     // Intentar geocodificar y mostrar mini-mapa para confirmar
-    await new Promise(resolve => {
-      geoConPin(lugar, GEO.cLat, GEO.cLng, pos=>{ lat=pos.lat; lng=pos.lng; resolve(); });
+    await new Promise(function(resolve){
+      geoConPin(lugar, GEO.cLat, GEO.cLng, function(pos){ lat=pos.lat; lng=pos.lng; resolve(); });
       // Si el usuario cierra sin confirmar, usar centro de Irapuato
       const orig = pinCallback;
-      pinCallback = pos=>{ lat=pos.lat; lng=pos.lng; if(orig)orig(pos); resolve(); };
+      pinCallback = function(pos){ lat=pos.lat; lng=pos.lng; if(orig)orig(pos); resolve(); };
     });
     if(!lat){lat=GEO.cLat;lng=GEO.cLng;}
   }
@@ -1120,7 +1131,7 @@ window.guardarManual=guardarManual;
 
 function selF(el, ctx) {
   const parent = el.closest('.fgrid');
-  parent.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('sel'));
+  parent.querySelectorAll('.fbtn').forEach(function(b){ return b.classList.remove('sel'; }));
   el.classList.add('sel');
   if(ctx==='u') fuenteURL=el.getAttribute('data-f');
   else fuenteIA=el.getAttribute('data-f');
@@ -1142,7 +1153,7 @@ function toast(msg, tipo, dur) {
   dur = dur||3000;
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = tipo==='err' ? 'err show' : 'show';
-  clearTimeout(t._tmr); t._tmr = setTimeout(()=>t.classList.remove('show'), dur);
+  clearTimeout(t._tmr); t._tmr = setTimeout(function(){ return t.classList.remove('show'; }), dur);
 }
 
 // ── MINI-MAPA PIN ─────────────────────────────────────────────────
@@ -1151,7 +1162,7 @@ function abrirPin(lat, lng, label, cb) {
   pinCallback=cb; pinPos={lat,lng};
   document.getElementById('pin-place-lbl').textContent = '📍 ' + (label||'Irapuato');
   document.getElementById('pin-modal').classList.add('on');
-  setTimeout(()=>{
+  setTimeout(function(){
     if(!pinMap) {
       pinMap = L.map('pin-map',{center:[lat,lng],zoom:16,zoomControl:true,attributionControl:false});
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(pinMap);
@@ -1159,8 +1170,8 @@ function abrirPin(lat, lng, label, cb) {
     if(pinMarker) pinMap.removeLayer(pinMarker);
     const svg='<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36" style="filter:drop-shadow(0 0 6px #00ccff)"><path d="M14 0C6 0 0 6 0 14C0 22 14 36 14 36S28 22 28 14C28 6 22 0 14 0Z" fill="#00ccff" opacity=".9"/><circle cx="14" cy="14" r="6" fill="white" opacity=".9"/></svg>';
     pinMarker = L.marker([lat,lng],{icon:L.divIcon({html:svg,className:'',iconSize:[28,36],iconAnchor:[14,36]}),draggable:true}).addTo(pinMap);
-    pinMarker.on('dragend',e=>{ pinPos={lat:e.target.getLatLng().lat,lng:e.target.getLatLng().lng}; });
-    pinMap.on('click',e=>{ pinPos={lat:e.latlng.lat,lng:e.latlng.lng}; pinMarker.setLatLng(e.latlng); });
+    pinMarker.on('dragend',function(e){ pinPos={lat:e.target.getLatLng().lat,lng:e.target.getLatLng().lng}; });
+    pinMap.on('click',function(e){ pinPos={lat:e.latlng.lat,lng:e.latlng.lng}; pinMarker.setLatLng(e.latlng); });
     pinMap.invalidateSize();
   },200);
 }
@@ -1203,7 +1214,7 @@ function checkR() {
   const mob = window.innerWidth < 700;
   document.getElementById('sidebar').style.display = vista!=='campo'&&!mob?'flex':'none';
 }
-window.addEventListener('resize', ()=>{ checkR(); map.invalidateSize(); });
+window.addEventListener('resize', function(){ checkR(); map.invalidateSize(); });
 checkR();
 
 </script>
