@@ -720,14 +720,7 @@ var cardCounter = 0;       // ID único para cada tarjeta
 // ═══════════════════════════════════════════════════════════════
 // INIT FIREBASE
 // ═══════════════════════════════════════════════════════════════
-try {
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-  escucharBD();
-} catch(e) {
-  console.log('Firebase error:', e.message);
-  // No crashear — continuar sin Firebase
-}
+
 
 function escucharBD() {
   if (!db) return;
@@ -1614,6 +1607,14 @@ function escucharMake() {
     });
   }, function(e) { console.log('Make listener:', e.message); });
 }
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  escucharBD();
+} catch(e) {
+  console.log('Firebase error:', e.message);
+}
+
 escucharMake();
 
 // Indicador de que JS cargó correctamente
