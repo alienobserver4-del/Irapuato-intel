@@ -800,7 +800,7 @@ function toast(msg, tipo) {
 // GEMINI
 // ═══════════════════════════════════════════════════════════════
 function llamarGemini(prompt, callback) {
-  var modelos = ['gemini-1.5-flash-8b', 'gemini-1.5-flash', 'gemini-1.0-pro'];
+  var modelos = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b'];
   var intentar = function(idx) {
     if (idx >= modelos.length) {
       callback(null, 'Gemini no disponible');
@@ -812,7 +812,7 @@ function llamarGemini(prompt, callback) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 600 },
+        generationConfig: { temperature: 0.05, maxOutputTokens: 800 },
         safetySettings: [
           { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_NONE' },
           { category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_NONE' },
@@ -868,8 +868,22 @@ function clasificarLocal(txt) {
 }
 
 function buildPrompt(texto) {
-  var frag = texto.slice(0, 1000);
-  return 'Eres un analista de noticias de Irapuato, Guanajuato, Mexico. Analiza el texto y responde SOLO con JSON valido sin texto extra ni markdown.\n\nREGLAS CRITICAS:\n- calle1: CUALQUIER via mencionada: calles, avenidas, carreteras (ej: "carretera Irapuato-Leon"), perifericos, bulevares, caminos, corredor industrial. Si dice "carretera a Leon" pon "Carretera Irapuato-Leon". Si dice "Periferico" pon "Periferico". NO dejes vacio si hay una referencia vial.\n- calle2: segunda via o referencia como "altura del ITESI", "frente al OXXO", "a la altura de"\n- colonia: colonia, barrio, fraccionamiento o zona. Si no hay colonia pero hay referencia como "zona industrial", "centro", "ITESI" usa esa.\n- comunidad: rancho, comunidad, ejido, localidad rural\n- tiempo_dia: EXTRAE del texto. Si dice "de la manana", "en la manana" => "manana". Si dice "9:15", "8am", "10 de la manana" => "manana". Si dice "tarde", "3pm", "15 horas" => "tarde". Si dice "noche", "10pm" => "noche". Si dice "madrugada", "3am" => "madrugada". Solo "desconocido" si NO hay ninguna referencia horaria.\n- tipo: accidente incluye volcaduras, choques, atropellos\n\nFormato JSON:\n{"titulo":"max 80 chars, limpio sin emojis","tipo":"seguridad|accidente|evento|rumor|desaparecido|gobierno|salud|transporte","calle1":"via principal mencionada o vacia","calle2":"segunda via o referencia de ubicacion o vacia","colonia":"colonia o zona o vacia","comunidad":"comunidad rural o vacia","nombres":"nombres de personas implicadas separados por coma o vacio","resumen":"2 oraciones describiendo que ocurrio, donde y cuando","fecha_evento":"DD/MM/YYYY segun la nota o vacia","tiempo_dia":"manana|tarde|noche|madrugada|desconocido","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}\n\nTexto a analizar: ' + frag;
+  var frag = texto.slice(0, 1200);
+  var p = 'Eres extractor de datos de noticias de Irapuato, Guanajuato, Mexico. ';
+  p += 'Responde UNICAMENTE con el objeto JSON, sin explicaciones, sin markdown, sin texto antes o despues.\n\n';
+  p += 'EJEMPLOS DE EXTRACCION CORRECTA:\n';
+  p += 'Texto: "Una camioneta volco en la carretera Irapuato-Leon a la altura del ITESI. La manana de este viernes..."\n';
+  p += 'JSON: {"titulo":"Camioneta vuelca en carretera Irapuato-Leon altura ITESI","tipo":"accidente","calle1":"Carretera Irapuato-Leon","calle2":"A la altura del ITESI","colonia":"","comunidad":"","nombres":"","resumen":"Una camioneta volco en la carretera Irapuato-Leon frente al ITESI. El hecho ocurrio en la manana del viernes.","fecha_evento":"","tiempo_dia":"manana","lat":20.68,"lng":-101.41,"confianza":"alta"}\n\n';
+  p += 'Texto: "Reportan balacera en calle Obregon esquina con Hidalgo, colonia Centro, anoche cerca de las 11pm"\n';
+  p += 'JSON: {"titulo":"Balacera en Obregon y Hidalgo colonia Centro","tipo":"seguridad","calle1":"Calle Obregon","calle2":"Hidalgo","colonia":"Centro","comunidad":"","nombres":"","resumen":"Se reporto una balacera en la esquina de Obregon e Hidalgo en la colonia Centro. Ocurrio en la noche cerca de las 11pm.","fecha_evento":"","tiempo_dia":"noche","lat":20.6795,"lng":-101.354,"confianza":"media"}\n\n';
+  p += 'REGLAS:\n';
+  p += '- calle1: toda referencia vial: calles, avenidas, carreteras, perifericos, bulevares, caminos. NUNCA dejar vacio si hay mencion vial.\n';
+  p += '- calle2: segunda via, esquina, cruce, o landmark ("altura del ITESI", "frente al OXXO")\n';
+  p += '- tiempo_dia: "manana" si dice manana/am/6-12h. "tarde" si dice tarde/pm/12-19h. "noche" si dice noche/19-24h. "madrugada" si dice madrugada/0-6h. Solo "desconocido" si CERO referencia horaria.\n';
+  p += '- tipo: accidente=volcaduras/choques/caidas. seguridad=violencia/robos/balaceras. gobierno=obras/autoridades.\n';
+  p += '- confianza: alta si es prensa oficial, media si es pagina de noticias, baja si es red social/ciudadano.\n\n';
+  p += 'Texto a analizar:\n' + frag + '\n\nJSON:';
+  return p;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1131,7 +1145,7 @@ function crearTarjetaRSS(item) {
   h += '<div class="nc-campo"><div class="nc-label">CALLE 1</div>';
   h += '<input class="nc-input" id="' + id + '-cal1" value="" placeholder="Primera calle mencionada..." onblur="autoColonia(\'' + id + '\')"></div>';
   h += '<div class="nc-campo"><div class="nc-label">CALLE 2</div>';
-  h += '<input class="nc-input" id="' + id + '-cal2" value="" placeholder="Segunda calle (esquina/cruce)..."></div>';
+  h += '<input class="nc-input" id="' + id + '-cal2" value="" placeholder="Segunda calle (esquina/cruce)..." onblur="autoColoniaCalle2(\'' + id + '\')"></div>';
   h += '<div class="nc-campo"><div class="nc-label">COLONIA</div>';
   h += '<input class="nc-input" id="' + id + '-col" value="" placeholder="Se auto-completa por calles..."></div>';
   h += '<div class="nc-campo"><div class="nc-label">COMUNIDAD</div>';
@@ -1164,20 +1178,135 @@ function crearTarjetaRSS(item) {
 function analizarDesdeCard(id) {
   var card = document.getElementById(id);
   if (!card) return;
-  analizarConIA(id, card.dataset.texto||'', card.dataset.fuente||'', card.dataset.link||'');
+  var link = card.dataset.link || '';
+  var texto = card.dataset.texto || '';
+  var fuente = card.dataset.fuente || '';
+  // Si hay URL, intentar obtener el texto completo del articulo
+  if (link && link.indexOf('http') === 0) {
+    var proc = document.getElementById(id + '-proc');
+    if (proc) proc.className = 'nc-procesando visible';
+    fetchContenidoArticulo(link, function(textoCompleto) {
+      var textoFinal = textoCompleto || texto;
+      // Actualizar el texto guardado en la card para tener contexto completo
+      if (textoCompleto) {
+        card.dataset.texto = textoCompleto;
+        toast('Articulo completo cargado (' + textoCompleto.length + ' chars)', 'ok');
+      }
+      analizarConIA(id, textoFinal, fuente, link);
+    });
+  } else {
+    analizarConIA(id, texto, fuente, link);
+  }
 }
 window.analizarDesdeCard = analizarDesdeCard;
 
+// Descarga y extrae el texto limpio de un articulo periodistico
+function fetchContenidoArticulo(url, callback) {
+  var proxies = [
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+    'https://corsproxy.io/?' + encodeURIComponent(url)
+  ];
+  function intentar(idx) {
+    if (idx >= proxies.length) { callback(null); return; }
+    fetch(proxies[idx])
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    })
+    .then(function(html) {
+      var texto = extraerTextoArticulo(html);
+      if (texto && texto.length > 100) {
+        callback(texto);
+      } else {
+        intentar(idx + 1);
+      }
+    })
+    .catch(function() { intentar(idx + 1); });
+  }
+  intentar(0);
+}
+
+// Extrae el texto principal de un HTML periodistico
+function extraerTextoArticulo(html) {
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, 'text/html');
+  // Eliminar scripts, estilos, nav, footer, aside, anuncios
+  var basura = doc.querySelectorAll('script,style,nav,footer,aside,header,iframe,noscript,[class*="ad"],[class*="menu"],[class*="sidebar"],[class*="comment"],[id*="ad"],[id*="menu"],[id*="sidebar"]');
+  for (var i = 0; i < basura.length; i++) {
+    if (basura[i].parentNode) basura[i].parentNode.removeChild(basura[i]);
+  }
+  // Intentar selectores tipicos de articulos periodisticos
+  var selectores = [
+    'article', '[class*="article-body"]', '[class*="nota-body"]',
+    '[class*="entry-content"]', '[class*="post-content"]',
+    '[class*="story-body"]', '[class*="content-body"]',
+    'main', '.content', '#content', '.nota', '.article'
+  ];
+  var mejor = '';
+  for (var s = 0; s < selectores.length; s++) {
+    var el = doc.querySelector(selectores[s]);
+    if (el) {
+      var txt = el.innerText || el.textContent || '';
+      txt = txt.replace(/\s+/g, ' ').trim();
+      if (txt.length > mejor.length) mejor = txt;
+    }
+  }
+  // Si no encontro nada especifico, usar el body completo limpio
+  if (mejor.length < 100) {
+    mejor = (doc.body ? (doc.body.innerText || doc.body.textContent || '') : '').replace(/\s+/g, ' ').trim();
+  }
+  return mejor.slice(0, 2000);
+}
+
 // Auto-completar colonia al salir del campo calle
+// Si se ingresa calle2, busca la interseccion de ambas (mas preciso)
 function autoColonia(id) {
-  var cal1 = document.getElementById(id + '-cal1');
+  var cal1El = document.getElementById(id + '-cal1');
+  var cal2El = document.getElementById(id + '-cal2');
   var colEl = document.getElementById(id + '-col');
-  if (!cal1 || !colEl || !cal1.value.trim() || colEl.value.trim()) return;
-  buscarColoniaOSM(cal1.value.trim(), function(col) {
-    if (col && colEl) { colEl.value = col; colEl.style.borderColor = '#00ff88'; }
+  if (!cal1El || !colEl || !cal1El.value.trim()) return;
+  var cal1 = cal1El.value.trim();
+  var cal2 = cal2El ? cal2El.value.trim() : '';
+  // Si hay calle2, buscar la interseccion para mayor precision
+  var query = cal2 ? (cal1 + ' esquina ' + cal2) : cal1;
+  colEl.style.borderColor = '#00ccff';
+  buscarColoniaOSM(query, function(col) {
+    if (col && colEl) {
+      colEl.value = col;
+      colEl.style.borderColor = '#00ff88';
+    } else if (cal2) {
+      // Si fallo con interseccion, intentar solo con calle1
+      buscarColoniaOSM(cal1, function(col2) {
+        if (col2 && colEl) { colEl.value = col2; colEl.style.borderColor = '#ffcc00'; }
+        else if (colEl) colEl.style.borderColor = '';
+      });
+    } else if (colEl) { colEl.style.borderColor = ''; }
   });
 }
 window.autoColonia = autoColonia;
+
+// Recalcular colonia cuando se llena calle2 (mas preciso que solo calle1)
+function autoColoniaCalle2(id) {
+  var cal1El = document.getElementById(id + '-cal1');
+  var cal2El = document.getElementById(id + '-cal2');
+  var colEl = document.getElementById(id + '-col');
+  if (!cal1El || !cal2El || !colEl) return;
+  var cal1 = cal1El.value.trim();
+  var cal2 = cal2El.value.trim();
+  // Solo recalcular si hay ambas calles
+  if (!cal1 || !cal2) return;
+  colEl.style.borderColor = '#00ccff';
+  buscarColoniaOSM(cal1 + ' esquina ' + cal2, function(col) {
+    if (col && colEl) {
+      colEl.value = col;
+      colEl.style.borderColor = '#00ff88';
+      toast('Colonia actualizada con interseccion', 'ok');
+    } else {
+      colEl.style.borderColor = '';
+    }
+  });
+}
+window.autoColoniaCalle2 = autoColoniaCalle2;
 
 // Buscar colonia en OpenStreetMap Nominatim
 function buscarColoniaOSM(calle, callback) {
@@ -1795,7 +1924,7 @@ function analizarFB() {
           '<select class="nc-select" id="' + id + '-tipo2">' + tipoOpts2 + '</select>' +
         '</div>' +
         '<div class="nc-campo"><div class="nc-label">CALLE 1</div><input class="nc-input" id="' + id + '-cal1" value="' + (r.calle1||'').replace(/"/g,'') + '" placeholder="Primera calle..." onblur="autoColonia(\'' + id + '\')"></div>' +
-        '<div class="nc-campo"><div class="nc-label">CALLE 2</div><input class="nc-input" id="' + id + '-cal2" value="' + (r.calle2||'').replace(/"/g,'') + '" placeholder="Segunda calle / esquina..."></div>' +
+        '<div class="nc-campo"><div class="nc-label">CALLE 2</div><input class="nc-input" id="' + id + '-cal2" value="' + (r.calle2||'').replace(/"/g,'') + '" placeholder="Segunda calle / esquina..." onblur="autoColoniaCalle2(\'' + id + '\')"></div>' +
         '<div class="nc-campo"><div class="nc-label">COLONIA</div><input class="nc-input" id="' + id + '-col" value="' + (r.colonia||'').replace(/"/g,'') + '" placeholder="Se auto-completa por calles..."></div>' +
         '<div class="nc-campo"><div class="nc-label">COMUNIDAD</div><input class="nc-input" id="' + id + '-com" value="' + (r.comunidad||'').replace(/"/g,'') + '"></div>' +
         '<div class="nc-campo"><div class="nc-label">NOMBRES</div><input class="nc-input" id="' + id + '-nom" value="' + (r.nombres||'').replace(/"/g,'') + '" placeholder="Nombres implicados..."></div>' +
