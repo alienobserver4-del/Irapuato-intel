@@ -868,8 +868,8 @@ function clasificarLocal(txt) {
 }
 
 function buildPrompt(texto) {
-  var frag = texto.slice(0, 800);
-  return 'Analiza esta nota de Irapuato, Guanajuato. Responde SOLO JSON valido sin texto extra ni markdown:\n{"titulo":"max 80 chars","tipo":"seguridad|accidente|evento|rumor|desaparecido|gobierno|salud|transporte","calle1":"primera calle o avenida mencionada, vacia si no hay","calle2":"segunda calle o avenida mencionada, vacia si no hay","colonia":"colonia o barrio mencionado, vacio si no hay","comunidad":"comunidad o rancheria mencionada, vacia si no hay","nombres":"nombres propios de personas implicadas separados por coma, vacio si no hay","resumen":"que ocurrio en 2 oraciones max","fecha_evento":"fecha aproximada del suceso mencionada en la nota, formato DD/MM/YYYY, vacia si no hay","tiempo_dia":"manana|tarde|noche|madrugada|desconocido segun hora mencionada en la nota","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}\nTipos: seguridad=violencia/delitos, accidente=choques/caidas, evento=actos civicos/fiestas, rumor=sin verificar, desaparecido=persona buscada, gobierno=obras/programas/autoridades, salud=enfermedades/hospitales, transporte=vialidad/transporte publico. Tiempo: manana=6-12h, tarde=12-19h, noche=19-24h, madrugada=0-6h. Nota: ' + frag;
+  var frag = texto.slice(0, 1000);
+  return 'Eres un analista de noticias de Irapuato, Guanajuato, Mexico. Analiza el texto y responde SOLO con JSON valido sin texto extra ni markdown.\n\nREGLAS CRITICAS:\n- calle1: CUALQUIER via mencionada: calles, avenidas, carreteras (ej: "carretera Irapuato-Leon"), perifericos, bulevares, caminos, corredor industrial. Si dice "carretera a Leon" pon "Carretera Irapuato-Leon". Si dice "Periferico" pon "Periferico". NO dejes vacio si hay una referencia vial.\n- calle2: segunda via o referencia como "altura del ITESI", "frente al OXXO", "a la altura de"\n- colonia: colonia, barrio, fraccionamiento o zona. Si no hay colonia pero hay referencia como "zona industrial", "centro", "ITESI" usa esa.\n- comunidad: rancho, comunidad, ejido, localidad rural\n- tiempo_dia: EXTRAE del texto. Si dice "de la manana", "en la manana" => "manana". Si dice "9:15", "8am", "10 de la manana" => "manana". Si dice "tarde", "3pm", "15 horas" => "tarde". Si dice "noche", "10pm" => "noche". Si dice "madrugada", "3am" => "madrugada". Solo "desconocido" si NO hay ninguna referencia horaria.\n- tipo: accidente incluye volcaduras, choques, atropellos\n\nFormato JSON:\n{"titulo":"max 80 chars, limpio sin emojis","tipo":"seguridad|accidente|evento|rumor|desaparecido|gobierno|salud|transporte","calle1":"via principal mencionada o vacia","calle2":"segunda via o referencia de ubicacion o vacia","colonia":"colonia o zona o vacia","comunidad":"comunidad rural o vacia","nombres":"nombres de personas implicadas separados por coma o vacio","resumen":"2 oraciones describiendo que ocurrio, donde y cuando","fecha_evento":"DD/MM/YYYY segun la nota o vacia","tiempo_dia":"manana|tarde|noche|madrugada|desconocido","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}\n\nTexto a analizar: ' + frag;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1149,7 +1149,7 @@ function crearTarjetaRSS(item) {
   h += '<option value="madrugada">Madrugada (0-6h)</option>';
   h += '</select></div>';
   h += '<div class="nc-campo"><div class="nc-label">RESUMEN</div>';
-  h += '<input class="nc-input" id="' + id + '-sum" value="' + descSeg + '"></div>';
+  h += '<textarea class="nc-input" id="' + id + '-sum" style="min-height:60px;resize:vertical;">' + descSeg + '</textarea></div>';
   h += '</div>';
   h += '<div class="nc-acciones">';
   h += '<button class="btn-ia" onclick="analizarDesdeCard(\'' + id + '\')">ANALIZAR</button>';
@@ -1181,16 +1181,40 @@ window.autoColonia = autoColonia;
 
 // Buscar colonia en OpenStreetMap Nominatim
 function buscarColoniaOSM(calle, callback) {
+  // Bounding box del municipio completo de Irapuato (incluye rancherias y comunidades rurales)
+  // SW: 20.45,-101.60  NE: 20.85,-101.10
+  var bbox = '20.45,-101.60,20.85,-101.10';
   var query = calle + ', Irapuato, Guanajuato, Mexico';
-  var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) + '&format=json&addressdetails=1&limit=1&countrycodes=mx';
-  fetch(url, { headers: { 'Accept-Language': 'es' } })
+  var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) +
+    '&format=json&addressdetails=1&limit=3&countrycodes=mx&viewbox=-101.60,20.85,-101.10,20.45&bounded=1';
+  fetch(url, { headers: { 'Accept-Language': 'es', 'User-Agent': 'IrapuatoIntel/1.0' } })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data && data[0] && data[0].address) {
       var addr = data[0].address;
-      var colonia = addr.suburb || addr.neighbourhood || addr.quarter || addr.city_district || '';
-      callback(colonia);
-    } else { callback(''); }
+      // Prioridad: colonia > barrio > localidad rural > municipio de referencia
+      var colonia = addr.suburb || addr.neighbourhood || addr.quarter || addr.city_district ||
+                    addr.village || addr.hamlet || addr.locality || '';
+      // Si la referencia es rural, agregar municipio para mayor contexto
+      if (!addr.suburb && !addr.neighbourhood && (addr.village || addr.hamlet)) {
+        colonia = (addr.village || addr.hamlet || '') + (addr.municipality ? ', ' + addr.municipality : '');
+      }
+      callback(colonia.trim());
+    } else {
+      // Segundo intento sin bounded para carreteras interurbanas
+      var url2 = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) +
+        '&format=json&addressdetails=1&limit=1&countrycodes=mx';
+      fetch(url2, { headers: { 'Accept-Language': 'es', 'User-Agent': 'IrapuatoIntel/1.0' } })
+      .then(function(r2) { return r2.json(); })
+      .then(function(data2) {
+        if (data2 && data2[0] && data2[0].address) {
+          var a2 = data2[0].address;
+          var col2 = a2.suburb || a2.neighbourhood || a2.village || a2.hamlet || a2.city_district || '';
+          callback(col2.trim());
+        } else { callback(''); }
+      })
+      .catch(function() { callback(''); });
+    }
   })
   .catch(function() { callback(''); });
 }
@@ -1455,7 +1479,7 @@ function analizarManual() {
           '</select>' +
         '</div>' +
         '<div class="nc-campo"><div class="nc-label">LUGAR</div><input class="nc-input" id="' + id + '-lug" value="' + (r.lugar||'Irapuato').replace(/"/g,'') + '"></div>' +
-        '<div class="nc-campo"><div class="nc-label">RESUMEN</div><input class="nc-input" id="' + id + '-sum" value="' + (r.resumen||'').slice(0,150).replace(/"/g,'') + '"></div>' +
+        '<div class="nc-campo"><div class="nc-label">RESUMEN</div><textarea class="nc-input" id="' + id + '-sum" style="min-height:60px;resize:vertical;">' + (r.resumen||'').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea></div>' +
       '</div>' +
       '<div class="nc-acciones">' +
         '<button class="btn-aprobar" onclick="aprobarCard(\'' + id + '\',\'' + fuenteManual + '\',\'' + url + '\')">✓ APROBAR Y GUARDAR</button>' +
@@ -1516,18 +1540,20 @@ function renderBD() {
     if (n.nombres) extraInfo += '<span style="color:#ffa500;font-size:7px;">Nombres: ' + n.nombres + '</span>';
 
     div.innerHTML =
-    div.innerHTML =
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">' +
         '<button style="padding:8px;font-family:var(--title);font-size:8px;font-weight:700;background:rgba(0,200,255,.1);color:#00c8ff;border:1px solid #00c8ff;border-radius:3px;cursor:pointer;" onclick="editarBD(\'' + n.id + '\')">EDITAR</button>' +
         '<button style="padding:8px;font-family:var(--title);font-size:8px;font-weight:700;background:rgba(255,50,50,.1);color:#ff5050;border:1px solid #ff5050;border-radius:3px;cursor:pointer;" onclick="eliminarBD(\'' + n.id + '\')">ELIMINAR</button>' +
+      '</div>' +
       '<span class="bd-tipo ' + (n.tipo||'rumor') + '">' + (n.tipo||'rumor').toUpperCase() + '</span>' +
-      (n.tipo2 ? '<span class="bd-tipo ' + n.tipo2 + '" style="margin-left:4px;opacity:.7;">' + n.tipo2.toUpperCase() + '</span>' : '') +
-      (n.tiempo_dia && n.tiempo_dia !== 'desconocido' ? '<span class="bd-tiempo ' + n.tiempo_dia + '">' + n.tiempo_dia.toUpperCase() + '</span>' : '') +
-      '<div class="bd-card-tit" onclick="verDetallesBD(\'' + n.id + '\')" style="cursor:pointer;text-decoration:underline;text-decoration-color:#00c8ff44;">' + (n.titulo||'Sin titulo') + '</div>' +
-      '<div class="bd-card-meta">' +
+      (n.tipo2 ? ' <span class="bd-tipo ' + n.tipo2 + '" style="margin-left:4px;opacity:.7;">' + n.tipo2.toUpperCase() + '</span>' : '') +
+      (n.tiempo_dia && n.tiempo_dia !== 'desconocido' ? ' <span class="bd-tiempo ' + n.tiempo_dia + '">' + n.tiempo_dia.toUpperCase() + '</span>' : '') +
+      '<div class="bd-card-tit" onclick="verDetallesBD(\'' + n.id + '\')" style="cursor:pointer;text-decoration:underline;text-decoration-color:#00c8ff44;margin-top:4px;">' + (n.titulo||'Sin titulo') + '</div>' +
+      (n.resumen ? '<div style="font-size:8px;color:#5a8aaa;line-height:1.5;margin-top:4px;padding-top:4px;border-top:1px solid #0d2040;">' + n.resumen + '</div>' : '') +
+      '<div class="bd-card-meta" style="margin-top:4px;">' +
         '<span class="nc-fuente">' + (n.fuente||'') + '</span>' +
-        (n.calle ? '<span class="nc-lugar">Calle: ' + n.calle + (n.calle2 ? ' / ' + n.calle2 : '') + '</span>' : '') +
+        (n.calle ? '<span class="nc-lugar">&#128205; ' + n.calle + (n.calle2 ? ' / ' + n.calle2 : '') + '</span>' : '') +
         (n.colonia ? '<span class="nc-lugar">Col: ' + n.colonia + '</span>' : '') +
+        (n.comunidad ? '<span class="nc-lugar">Com: ' + n.comunidad + '</span>' : '') +
         (n.nombres ? '<span style="color:#ffa500;font-size:7px;">Implicados: ' + n.nombres + '</span>' : '') +
         '<span style="color:var(--muted);font-size:7px;">Captura: ' + fecha + (n.fecha_evento ? ' | Evento: ' + n.fecha_evento : '') + '</span>' +
       '</div>' +
@@ -1549,6 +1575,7 @@ function renderBD() {
         '<input id="bde-com-' + n.id + '" class="nc-input" value="' + (n.comunidad||'').replace(/"/g,'') + '" placeholder="Comunidad" style="margin-bottom:4px;">' +
         '<input id="bde-nom-' + n.id + '" class="nc-input" value="' + (n.nombres||'').replace(/"/g,'') + '" placeholder="Nombres implicados" style="margin-bottom:6px;">' +
         '<input id="bde-fev-' + n.id + '" class="nc-input" value="' + (n.fecha_evento||'') + '" placeholder="Fecha evento DD/MM/YYYY" style="margin-bottom:4px;">' +
+        '<textarea id="bde-res-' + n.id + '" class="nc-input" placeholder="Resumen" style="min-height:60px;resize:vertical;margin-bottom:4px;">' + (n.resumen||'').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea>' +
         '<select id="bde-tdia-' + n.id + '" class="nc-select" style="margin-bottom:6px;">' +
           '<option value="desconocido"' + (n.tiempo_dia==='desconocido'||!n.tiempo_dia?' selected':'') + '>Momento: Desconocido</option>' +
           '<option value="manana"' + (n.tiempo_dia==='manana'?' selected':'') + '>Manana (6-12h)</option>' +
@@ -1614,7 +1641,6 @@ window.editarBD = editarBD;
 function guardarEditBD(id) {
   if (!db) return;
   var tit = document.getElementById('bde-tit-' + id);
-  var lug = document.getElementById('bde-lug-' + id);
   var cal = document.getElementById('bde-cal-' + id);
   var col = document.getElementById('bde-col-' + id);
   var com = document.getElementById('bde-com-' + id);
@@ -1623,6 +1649,7 @@ function guardarEditBD(id) {
   var cal2El2 = document.getElementById('bde-cal2-' + id);
   var fevEl2 = document.getElementById('bde-fev-' + id);
   var tdiaEl2 = document.getElementById('bde-tdia-' + id);
+  var resEl2 = document.getElementById('bde-res-' + id);
   var updates = {
     tipo: tipoEl2 ? tipoEl2.value : 'rumor',
     titulo: tit ? tit.value : '',
@@ -1632,7 +1659,8 @@ function guardarEditBD(id) {
     comunidad: com ? com.value : '',
     nombres: nom ? nom.value : '',
     fecha_evento: fevEl2 ? fevEl2.value : '',
-    tiempo_dia: tdiaEl2 ? tdiaEl2.value : 'desconocido'
+    tiempo_dia: tdiaEl2 ? tdiaEl2.value : 'desconocido',
+    resumen: resEl2 ? resEl2.value : ''
   };
   db.collection('noticias-fase1').doc(id).update(updates)
   .then(function() {
@@ -1646,6 +1674,9 @@ function guardarEditBD(id) {
         noticias[i].colonia = updates.colonia;
         noticias[i].comunidad = updates.comunidad;
         noticias[i].nombres = updates.nombres;
+        noticias[i].resumen = updates.resumen;
+        noticias[i].tiempo_dia = updates.tiempo_dia;
+        noticias[i].fecha_evento = updates.fecha_evento;
         break;
       }
     }
@@ -1778,7 +1809,7 @@ function analizarFB() {
             '<option value="madrugada"' + (r.tiempo_dia==='madrugada'?' selected':'') + '>Madrugada (0-6h)</option>' +
           '</select>' +
         '</div>' +
-        '<div class="nc-campo"><div class="nc-label">RESUMEN</div><input class="nc-input" id="' + id + '-sum" value="' + (r.resumen||'').slice(0,200).replace(/"/g,'') + '"></div>' +
+        '<div class="nc-campo"><div class="nc-label">RESUMEN</div><textarea class="nc-input" id="' + id + '-sum" style="min-height:60px;resize:vertical;">' + (r.resumen||'').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea></div>' +
       '</div>' +
       '<div class="nc-acciones">' +
         '<button class="btn-aprobar" onclick="aprobarFB(\'' + id + '\',\'' + fuenteFB + '\', this)">APROBAR</button>' +
