@@ -561,7 +561,6 @@ header {
 
 <script>
 // Esperar a que el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
 // ═══ INICIO DE APP ═══
 // ═══════════════════════════════════════════════════════════════
 // CONFIGURACIÓN
@@ -1000,10 +999,10 @@ function crearTarjetaRSS(item) {
   h += '<input class="nc-input" id="' + id + '-sum" value="' + descSeg + '"></div>';
   h += '</div>';
   h += '<div class="nc-acciones">';
-  h += '<button class="btn-ia" onclick="analizarDesdeCard('' + id + '')">ANALIZAR</button>';
-  h += '<button class="btn-editar" onclick="toggleEdit('' + id + '')">EDITAR</button>';
-  h += '<button class="btn-aprobar" id="' + id + '-btn-apr" onclick="aprobarCard('' + id + '','' + fuenteSeg + '','' + linkSeg + '')">APROBAR</button>';
-  h += '<button class="btn-descartar" onclick="descartarCard('' + id + '')">X</button>';
+  h += '<button class="btn-ia" onclick="analizarDesdeCard(\'' + id + '\')">ANALIZAR</button>';
+  h += '<button class="btn-editar" onclick="toggleEdit(\'' + id + '\')">EDITAR</button>';
+  h += '<button class="btn-aprobar" id="' + id + '-btn-apr" onclick="aprobarCard(\'' + id + '\',\'' + fuenteSeg + '\',\'' + linkSeg + '\')">APROBAR</button>';
+  h += '<button class="btn-descartar" onclick="descartarCard(\'' + id + '\')">X</button>';
   h += '</div>';
   card.innerHTML = h;
   return card;
@@ -1413,7 +1412,7 @@ escucharMake();
 document.getElementById('rss-estado').textContent = 'Sistema listo. Elige una fuente.';
 document.getElementById('rss-estado').className = 'rss-estado ok';
 
-}); // fin DOMContentLoaded
+
 </script>
 
 </body>
