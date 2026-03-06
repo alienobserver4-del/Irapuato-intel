@@ -781,7 +781,7 @@ function toast(msg, tipo) {
 // GEMINI
 // ═══════════════════════════════════════════════════════════════
 function llamarGemini(prompt, callback) {
-  var modelos = ['gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-1.5-flash-latest'];
+  var modelos = ['gemini-1.5-flash-8b', 'gemini-1.5-flash', 'gemini-1.0-pro'];
   var intentar = function(idx) {
     if (idx >= modelos.length) {
       callback(null, 'Gemini no disponible');
@@ -802,8 +802,12 @@ function llamarGemini(prompt, callback) {
         ]
       })
     })
-    .then(function(res) { return res.json(); })
+    .then(function(res) {
+      if (!res.ok) { intentar(idx + 1); return Promise.reject('status ' + res.status); }
+      return res.json();
+    })
     .then(function(data) {
+      if (!data) return;
       var cand = data && data.candidates && data.candidates[0];
       if (!cand) { intentar(idx + 1); return; }
       var txt = cand.content && cand.content.parts && cand.content.parts[0] && cand.content.parts[0].text;
@@ -1094,7 +1098,7 @@ function crearTarjetaRSS(item) {
   h += '<option value="transporte">Transporte/Vialidad</option>';
   h += '</select></div>';
   h += '<div class="nc-campo"><div class="nc-label">CALLE 1</div>';
-  h += '<input class="nc-input" id="' + id + '-cal1" value="" placeholder="Primera calle mencionada..."></div>';
+  h += '<input class="nc-input" id="' + id + '-cal1" value="" placeholder="Primera calle mencionada..." onblur="autoColonia(\'' + id + '\')"></div>';
   h += '<div class="nc-campo"><div class="nc-label">CALLE 2</div>';
   h += '<input class="nc-input" id="' + id + '-cal2" value="" placeholder="Segunda calle (esquina/cruce)..."></div>';
   h += '<div class="nc-campo"><div class="nc-label">COLONIA</div>';
@@ -1122,6 +1126,17 @@ function analizarDesdeCard(id) {
   analizarConIA(id, card.dataset.texto||'', card.dataset.fuente||'', card.dataset.link||'');
 }
 window.analizarDesdeCard = analizarDesdeCard;
+
+// Auto-completar colonia al salir del campo calle
+function autoColonia(id) {
+  var cal1 = document.getElementById(id + '-cal1');
+  var colEl = document.getElementById(id + '-col');
+  if (!cal1 || !colEl || !cal1.value.trim() || colEl.value.trim()) return;
+  buscarColoniaOSM(cal1.value.trim(), function(col) {
+    if (col && colEl) { colEl.value = col; colEl.style.borderColor = '#00ff88'; }
+  });
+}
+window.autoColonia = autoColonia;
 
 // Buscar colonia en OpenStreetMap Nominatim
 function buscarColoniaOSM(calle, callback) {
