@@ -840,7 +840,7 @@ function clasificarLocal(txt) {
   if (tipo==='rumor') { for (var i = 0; i < sal.length; i++) { if (t.indexOf(sal[i]) >= 0) { tipo = 'salud'; break; } } }
   if (tipo==='rumor') { for (var i = 0; i < trans.length; i++) { if (t.indexOf(trans[i]) >= 0) { tipo = 'transporte'; break; } } }
     var partes = txt.split('.');
-  var titulo = (partes[0] || txt).trim().slice(0, 80);[0].trim().slice(0, 80) || txt.slice(0, 80);
+  var titulo = (partes[0] || txt).trim().slice(0, 80);
   return { titulo: titulo, tipo: tipo, calle1: '', calle2: '', colonia: '', comunidad: '', nombres: '', resumen: txt.slice(0, 300), lat: 20.6795, lng: -101.3540, confianza: 'baja' };
 }
 
