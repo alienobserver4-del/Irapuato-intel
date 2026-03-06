@@ -136,6 +136,10 @@ header {
 .nc-tipo.accidente { background:rgba(255,136,0,.2); color:var(--orange); }
 .nc-tipo.evento { background:rgba(0,204,255,.2); color:#00ccff; }
 .nc-tipo.rumor { background:rgba(58,90,122,.2); color:#5a8aaa; }
+.nc-tipo.desaparecido { background:rgba(255,165,0,.15); color:#ffa500; border:1px solid rgba(255,165,0,.4); animation: pulso 2s infinite; }
+@keyframes pulso { 0%,100%{opacity:1} 50%{opacity:.6} }
+.nc-fecha { font-size:7px; color:var(--muted); padding:2px 10px 4px; font-family:var(--mono); }
+.nc-nombres { font-size:8px; color:#ffa500; padding:2px 10px; }
 
 .nc-titulo { font-size:11px; line-height:1.4; color:var(--text); flex:1; }
 .nc-meta { display:flex; gap:8px; padding:0 10px 6px; font-size:7px; color:var(--muted); flex-wrap:wrap; }
@@ -485,22 +489,92 @@ header {
     <div style="font-family:'Orbitron',monospace;font-size:7px;color:#2a4a6a;letter-spacing:1px;margin-bottom:4px;">// PÁGINAS MONITOREADAS</div>
     <div style="display:flex;flex-direction:column;gap:6px;">
       <a href="https://www.facebook.com/entintanegra" target="_blank"
-         style="display:flex;align-items:center;gap:10px;padding:10px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
-        <span style="font-size:20px;">🖤</span>
-        <div>
+         style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
           <div style="font-family:'Orbitron',monospace;font-size:8px;color:#1877f2;">Tinta Negra</div>
           <div style="font-size:7px;color:#2a4a6a;">Periodismo local Irapuato</div>
         </div>
-        <span style="margin-left:auto;color:#2a4a6a;font-size:10px;">↗</span>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
       </a>
       <a href="https://www.facebook.com/gerardopublicidad" target="_blank"
-         style="display:flex;align-items:center;gap:10px;padding:10px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
-        <span style="font-size:20px;">📰</span>
-        <div>
-          <div style="font-family:'Orbitron',monospace;font-size:8px;color:#1877f2;">Gerardo Hernández</div>
-          <div style="font-size:7px;color:#2a4a6a;">Diario Irapuato — rumores y chisme verificable</div>
+         style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:8px;color:#1877f2;">Gerardo Hernandez</div>
+          <div style="font-size:7px;color:#2a4a6a;">Diario Irapuato - rumores</div>
         </div>
-        <span style="margin-left:auto;color:#2a4a6a;font-size:10px;">↗</span>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/1H6kbEWJUk/" target="_blank"
+         style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:8px;color:#1877f2;">TV Consecuencias</div>
+          <div style="font-size:7px;color:#2a4a6a;">Gerardo Hernandez canal</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/17uqenDHWj/" target="_blank"
+         style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:8px;color:#1877f2;">El Pena</div>
+          <div style="font-size:7px;color:#2a4a6a;">Noticias locales</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/1C8pKKg2sa/" target="_blank"
+         style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:8px;color:#1877f2;">Irapuato Despierta</div>
+          <div style="font-size:7px;color:#2a4a6a;">Noticias ciudadanas</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/1DJsrhMTzN/" target="_blank"
+         style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:8px;color:#1877f2;">Noticias al Momento</div>
+          <div style="font-size:7px;color:#2a4a6a;">Irapuato en tiempo real</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/1L6QABV2ET/" target="_blank"
+         style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:8px;color:#1877f2;">Opinion Bajio</div>
+          <div style="font-size:7px;color:#2a4a6a;">Analisis regional</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/18MYcsA77F/" target="_blank"
+         style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:8px;color:#1877f2;">Noticias Irapuato</div>
+          <div style="font-size:7px;color:#2a4a6a;">Cobertura local</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/1Do2RxjVWd/" target="_blank"
+         style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:8px;color:#1877f2;">Contacto Noticias</div>
+          <div style="font-size:7px;color:#2a4a6a;">Noticias Irapuato</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/14X4foy2MFP/" target="_blank"
+         style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:8px;color:#1877f2;">Hermoso Irapuato</div>
+          <div style="font-size:7px;color:#2a4a6a;">GTO noticias</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/1Dv9tXQH7D/" target="_blank"
+         style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:8px;color:#1877f2;">Irapuato Alerta</div>
+          <div style="font-size:7px;color:#2a4a6a;">Alertas de seguridad</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
       </a>
     </div>
 
@@ -508,10 +582,18 @@ header {
     <div>
       <div style="font-family:'Orbitron',monospace;font-size:7px;color:#2a4a6a;letter-spacing:1px;margin-bottom:6px;">// FUENTE</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;" id="fb-fuentes">
-        <div class="fuente-opt sel" onclick="selFuenteFB(this,'Tinta Negra FB')">🖤 Tinta Negra</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'Gerardo Hernández')">📰 Gerardo H.</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'Facebook Ciudadano')">👤 Ciudadano</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'Municipio Irapuato FB')">🏛 Municipio</div>
+        <div class="fuente-opt sel" onclick="selFuenteFB(this,'Tinta Negra FB')">Tinta Negra</div>
+        <div class="fuente-opt" onclick="selFuenteFB(this,'Gerardo Hernandez')">Gerardo H.</div>
+        <div class="fuente-opt" onclick="selFuenteFB(this,'TV Consecuencias')">TV Consec.</div>
+        <div class="fuente-opt" onclick="selFuenteFB(this,'El Pena')">El Pena</div>
+        <div class="fuente-opt" onclick="selFuenteFB(this,'Irapuato Despierta')">Ira Despierta</div>
+        <div class="fuente-opt" onclick="selFuenteFB(this,'Noticias al Momento')">Al Momento</div>
+        <div class="fuente-opt" onclick="selFuenteFB(this,'Opinion Bajio')">Opinion Bajio</div>
+        <div class="fuente-opt" onclick="selFuenteFB(this,'Noticias Irapuato')">Noticias Ira</div>
+        <div class="fuente-opt" onclick="selFuenteFB(this,'Contacto Noticias')">Contacto</div>
+        <div class="fuente-opt" onclick="selFuenteFB(this,'Hermoso Irapuato')">Hermoso Ira</div>
+        <div class="fuente-opt" onclick="selFuenteFB(this,'Irapuato Alerta')">Ira Alerta</div>
+        <div class="fuente-opt" onclick="selFuenteFB(this,'Ciudadano')">Ciudadano</div>
       </div>
     </div>
 
@@ -756,8 +838,8 @@ function clasificarLocal(txt) {
 }
 
 function buildPrompt(texto) {
-  var frag = texto.slice(0, 600);
-  return 'Analiza esta nota periodistica de Irapuato, Guanajuato. Responde SOLO JSON valido sin texto extra:\n{"titulo":"string maximo 80 chars","tipo":"seguridad|accidente|evento|rumor","lugar":"calle o lugar especifico","colonia":"nombre de colonia o barrio","resumen":"que ocurrio en 2 oraciones","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}\nNota: ' + frag;
+  var frag = texto.slice(0, 800);
+  return 'Analiza esta nota de Irapuato, Guanajuato. Responde SOLO JSON valido sin texto extra ni markdown:\n{"titulo":"max 80 chars","tipo":"seguridad|accidente|evento|rumor|desaparecido","lugar":"lugar especifico","calle":"calle o avenida si se menciona","colonia":"colonia o barrio si se menciona","comunidad":"comunidad o rancheria si se menciona","nombres":"nombres de personas implicadas separados por coma","resumen":"que ocurrio en 2 oraciones","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}\nSi hay desaparecidos usa tipo desaparecido. Nota: ' + frag;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -979,11 +1061,15 @@ function crearTarjetaRSS(item) {
   h += '<div><div class="nc-titulo">' + (item.titulo||'') + '</div>';
   if (item.link) { h += '<a href="' + linkSeg + '" target="_blank" class="nc-link">ver noticia</a>'; }
   h += '</div></div>';
+  var ahora = new Date();
+  var fechaStr = ahora.getDate() + '/' + (ahora.getMonth()+1) + '/' + ahora.getFullYear() + ' ' + ahora.getHours() + ':' + (ahora.getMinutes()<10?'0':'') + ahora.getMinutes();
+  h += '<div class="nc-fecha">Capturado: ' + fechaStr + (item.fecha ? ' | Publicado: ' + item.fecha : '') + '</div>';
   h += '<div class="nc-meta">';
   h += '<span class="nc-fuente">' + (item.fuente||'') + '</span>';
   h += '<span id="' + id + '-lugar" class="nc-lugar"></span>';
   h += '<span id="' + id + '-conf"></span>';
   h += '</div>';
+  h += '<div class="nc-nombres" id="' + id + '-nombres" style="display:none"></div>';
   h += '<div class="nc-resumen" id="' + id + '-res">' + (item.desc||'') + '</div>';
   h += '<div class="nc-procesando" id="' + id + '-proc"><div class="mini-spin"></div> Analizando...</div>';
   h += '<div class="nc-edit" id="' + id + '-edit">';
@@ -995,9 +1081,18 @@ function crearTarjetaRSS(item) {
   h += '<option value="accidente">Accidente</option>';
   h += '<option value="evento">Evento</option>';
   h += '<option value="rumor" selected>Rumor</option>';
+  h += '<option value="desaparecido">Desaparecido</option>';
   h += '</select></div>';
   h += '<div class="nc-campo"><div class="nc-label">LUGAR</div>';
   h += '<input class="nc-input" id="' + id + '-lug" value="Irapuato"></div>';
+  h += '<div class="nc-campo"><div class="nc-label">CALLE</div>';
+  h += '<input class="nc-input" id="' + id + '-cal" value=""></div>';
+  h += '<div class="nc-campo"><div class="nc-label">COLONIA</div>';
+  h += '<input class="nc-input" id="' + id + '-col" value=""></div>';
+  h += '<div class="nc-campo"><div class="nc-label">COMUNIDAD</div>';
+  h += '<input class="nc-input" id="' + id + '-com" value=""></div>';
+  h += '<div class="nc-campo"><div class="nc-label">NOMBRES</div>';
+  h += '<input class="nc-input" id="' + id + '-nom" value="" placeholder="Nombres implicados..."></div>';
   h += '<div class="nc-campo"><div class="nc-label">RESUMEN</div>';
   h += '<input class="nc-input" id="' + id + '-sum" value="' + descSeg + '"></div>';
   h += '</div>';
@@ -1056,6 +1151,17 @@ function analizarConIA(id, texto, fuente, link) {
     if (lugEl && r.lugar) lugEl.value = r.lugar;
     var sumEl = document.getElementById(id + '-sum');
     if (sumEl && r.resumen) sumEl.value = r.resumen.slice(0,200);
+    var calEl = document.getElementById(id + '-cal');
+    if (calEl) calEl.value = r.calle || '';
+    var colEl = document.getElementById(id + '-col');
+    if (colEl) colEl.value = r.colonia || '';
+    var comEl = document.getElementById(id + '-com');
+    if (comEl) comEl.value = r.comunidad || '';
+    var nomEl = document.getElementById(id + '-nom');
+    if (nomEl) nomEl.value = r.nombres || '';
+    // Mostrar nombres si los hay
+    var nomDiv = document.getElementById(id + '-nombres');
+    if (nomDiv && r.nombres) { nomDiv.style.display = 'block'; nomDiv.textContent = 'Implicados: ' + r.nombres; }
 
     // Guardar datos en el card para el aprobar
     var card = document.getElementById(id);
@@ -1066,7 +1172,7 @@ function analizarConIA(id, texto, fuente, link) {
       card.dataset.confianza = r.confianza || 'baja';
     }
 
-    // Mostrar edición automáticamente
+    // Mostrar edicion automaticamente
     var editEl = document.getElementById(id + '-edit');
     if (editEl) editEl.className = 'nc-edit visible';
 
@@ -1088,40 +1194,73 @@ function aprobarCard(id, fuente, link) {
   var titulo = (document.getElementById(id + '-tit') ? document.getElementById(id + '-tit').value : '') || card.querySelector('.nc-titulo').textContent;
   var tipo = document.getElementById(id + '-tipo') ? document.getElementById(id + '-tipo').value : 'rumor';
   var lugar = document.getElementById(id + '-lug') ? document.getElementById(id + '-lug').value : 'Irapuato';
+  var calle = document.getElementById(id + '-cal') ? document.getElementById(id + '-cal').value : '';
+  var colonia = document.getElementById(id + '-col') ? document.getElementById(id + '-col').value : (card.dataset.colonia || '');
+  var comunidad = document.getElementById(id + '-com') ? document.getElementById(id + '-com').value : '';
+  var nombres = document.getElementById(id + '-nom') ? document.getElementById(id + '-nom').value : '';
   var resumen = document.getElementById(id + '-sum') ? document.getElementById(id + '-sum').value : '';
+
+  var ahora = new Date();
+  var fechaCaptura = ahora.getDate() + '/' + (ahora.getMonth()+1) + '/' + ahora.getFullYear() + ' ' + ahora.getHours() + ':' + (ahora.getMinutes()<10?'0':'') + ahora.getMinutes();
 
   var noticia = {
     titulo: titulo.trim(),
     tipo: tipo,
     lugar: lugar.trim(),
-    colonia: card.dataset.colonia || '',
+    calle: calle.trim(),
+    colonia: colonia.trim(),
+    comunidad: comunidad.trim(),
+    nombres: nombres.trim(),
     resumen: resumen.trim(),
     fuente: fuente || fuenteManual,
     url: link || '',
     lat: parseFloat(card.dataset.lat) || 20.6795,
     lng: parseFloat(card.dataset.lng) || -101.3540,
     confianza: card.dataset.confianza || 'baja',
+    fechaCaptura: fechaCaptura,
     viaIA: true,
     fechaGuardado: firebase.firestore.FieldValue.serverTimestamp()
   };
 
   if (db) {
+    // Guardar en base geográfica si hay datos de ubicación
+    if (noticia.calle || noticia.colonia) {
+      var geoKey = ((noticia.calle || '') + '-' + (noticia.colonia || '')).toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 80);
+      db.collection('geo-irapuato').doc(geoKey).set({
+        calle: noticia.calle,
+        colonia: noticia.colonia,
+        comunidad: noticia.comunidad,
+        lat: noticia.lat,
+        lng: noticia.lng,
+        veces: firebase.firestore.FieldValue.increment(1),
+        ultimaVez: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
     db.collection('noticias-fase1').add(noticia)
     .then(function() {
-      toast('✓ Noticia guardada en base de datos', 'ok');
+      toast('Noticia guardada', 'ok');
+      // Enviar a Make.com si webhook configurado
+      if (makeWebhookURL) {
+        var payload = JSON.parse(JSON.stringify(noticia));
+        delete payload.fechaGuardado;
+        fetch(makeWebhookURL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(function() {});
+      }
       descartarCard(id);
     })
     .catch(function(e) {
       toast('Error al guardar: ' + e.message, 'err');
     });
   } else {
-    // Guardar localmente si no hay Firebase
     noticia.id = 'local-' + Date.now();
     noticia.fechaGuardado = { toDate: function(){ return new Date(); } };
     noticias.unshift(noticia);
     renderBD();
     actualizarBadge();
-    toast('✓ Guardado localmente (sin Firebase)', 'warn');
+    toast('Guardado localmente (sin Firebase)', 'warn');
     descartarCard(id);
   }
 }
@@ -1238,31 +1377,97 @@ function renderBD() {
   document.getElementById('stat-eve').textContent = noticias.filter(function(n){ return n.tipo==='evento'; }).length;
 
   if (mostrar.length === 0) {
-    lista.innerHTML = '<div class="vacio"><div class="vacio-ico">🗄</div>Sin noticias ' + (filtroBD !== 'todos' ? 'de tipo ' + filtroBD : 'aprobadas') + ' aún.</div>';
+    lista.innerHTML = '<div class="vacio"><div class="vacio-ico">base</div>Sin noticias ' + (filtroBD !== 'todos' ? 'de tipo ' + filtroBD : 'aprobadas') + ' aun.</div>';
     return;
   }
 
   lista.innerHTML = '';
   for (var i = 0; i < mostrar.length; i++) {
     var n = mostrar[i];
-    var fecha = '';
-    if (n.fechaGuardado && n.fechaGuardado.toDate) {
-      fecha = n.fechaGuardado.toDate().toLocaleDateString('es-MX', {day:'2-digit',month:'short'});
+    var fecha = n.fechaCaptura || '';
+    if (!fecha && n.fechaGuardado && n.fechaGuardado.toDate) {
+      fecha = n.fechaGuardado.toDate().toLocaleDateString('es-MX', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     }
     var div = document.createElement('div');
     div.className = 'bd-card';
+    div.id = 'bd-' + n.id;
+
+    var extraInfo = '';
+    if (n.calle) extraInfo += '<span class="nc-lugar">Calle: ' + n.calle + '</span>';
+    if (n.colonia) extraInfo += '<span class="nc-lugar">Col: ' + n.colonia + '</span>';
+    if (n.comunidad) extraInfo += '<span class="nc-lugar">Com: ' + n.comunidad + '</span>';
+    if (n.nombres) extraInfo += '<span style="color:#ffa500;font-size:7px;">Nombres: ' + n.nombres + '</span>';
+
     div.innerHTML =
-      '<button class="bd-del" onclick="eliminarBD(\'' + n.id + '\')" title="Eliminar">✕</button>' +
+      '<div style="display:flex;gap:4px;margin-bottom:4px;">' +
+        '<button class="bd-del" onclick="editarBD('' + n.id + '')" title="Editar" style="background:rgba(0,200,255,.1);color:#00c8ff;border-color:#00c8ff;">EDITAR</button>' +
+        '<button class="bd-del" onclick="eliminarBD('' + n.id + '')" title="Eliminar">X</button>' +
+      '</div>' +
       '<span class="bd-tipo ' + (n.tipo||'rumor') + '">' + (n.tipo||'rumor').toUpperCase() + '</span>' +
-      '<div class="bd-card-tit">' + (n.titulo||'Sin título') + '</div>' +
+      '<div class="bd-card-tit">' + (n.titulo||'Sin titulo') + '</div>' +
       '<div class="bd-card-meta">' +
         '<span class="nc-fuente">' + (n.fuente||'') + '</span>' +
-        '<span class="nc-lugar">📍 ' + (n.lugar||'') + '</span>' +
-        '<span>' + fecha + '</span>' +
+        '<span class="nc-lugar">Lugar: ' + (n.lugar||'') + '</span>' +
+        extraInfo +
+        '<span style="color:var(--muted);font-size:7px;">Capturado: ' + fecha + '</span>' +
+      '</div>' +
+      '<div id="bd-edit-' + n.id + '" style="display:none;margin-top:8px;border-top:1px solid #0d2040;padding-top:8px;">' +
+        '<input id="bde-tit-' + n.id + '" class="nc-input" value="' + (n.titulo||'').replace(/"/g,'') + '" style="margin-bottom:4px;">' +
+        '<input id="bde-lug-' + n.id + '" class="nc-input" value="' + (n.lugar||'').replace(/"/g,'') + '" placeholder="Lugar" style="margin-bottom:4px;">' +
+        '<input id="bde-cal-' + n.id + '" class="nc-input" value="' + (n.calle||'').replace(/"/g,'') + '" placeholder="Calle" style="margin-bottom:4px;">' +
+        '<input id="bde-col-' + n.id + '" class="nc-input" value="' + (n.colonia||'').replace(/"/g,'') + '" placeholder="Colonia" style="margin-bottom:4px;">' +
+        '<input id="bde-com-' + n.id + '" class="nc-input" value="' + (n.comunidad||'').replace(/"/g,'') + '" placeholder="Comunidad" style="margin-bottom:4px;">' +
+        '<input id="bde-nom-' + n.id + '" class="nc-input" value="' + (n.nombres||'').replace(/"/g,'') + '" placeholder="Nombres implicados" style="margin-bottom:6px;">' +
+        '<button onclick="guardarEditBD('' + n.id + '')" style="width:100%;padding:8px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88;font-family:var(--title);font-size:8px;cursor:pointer;">GUARDAR CAMBIOS</button>' +
       '</div>';
     lista.appendChild(div);
   }
 }
+
+function editarBD(id) {
+  var panel = document.getElementById('bd-edit-' + id);
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+window.editarBD = editarBD;
+
+function guardarEditBD(id) {
+  if (!db) return;
+  var tit = document.getElementById('bde-tit-' + id);
+  var lug = document.getElementById('bde-lug-' + id);
+  var cal = document.getElementById('bde-cal-' + id);
+  var col = document.getElementById('bde-col-' + id);
+  var com = document.getElementById('bde-com-' + id);
+  var nom = document.getElementById('bde-nom-' + id);
+  var updates = {
+    titulo: tit ? tit.value : '',
+    lugar: lug ? lug.value : '',
+    calle: cal ? cal.value : '',
+    colonia: col ? col.value : '',
+    comunidad: com ? com.value : '',
+    nombres: nom ? nom.value : ''
+  };
+  db.collection('noticias-fase1').doc(id).update(updates)
+  .then(function() {
+    toast('Cambios guardados', 'ok');
+    // Actualizar en memoria
+    for (var i = 0; i < noticias.length; i++) {
+      if (noticias[i].id === id) {
+        noticias[i].titulo = updates.titulo;
+        noticias[i].lugar = updates.lugar;
+        noticias[i].calle = updates.calle;
+        noticias[i].colonia = updates.colonia;
+        noticias[i].comunidad = updates.comunidad;
+        noticias[i].nombres = updates.nombres;
+        break;
+      }
+    }
+    renderBD();
+  })
+  .catch(function(e) { toast('Error: ' + e.message, 'err'); });
+}
+window.guardarEditBD = guardarEditBD;
+
 
 function eliminarBD(id) {
   if (!confirm('¿Eliminar esta noticia de la base de datos?')) return;
