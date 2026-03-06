@@ -355,7 +355,7 @@ header {
       <div class="diamond"></div>
       <span class="logo-txt">IRA INTEL</span>
     </div>
-    <span class="logo-sub">// CAPTURA DE NOTICIAS v1.1</span>
+    <span class="logo-sub">// CAPTURA DE NOTICIAS v1.0</span>
   </header>
 
   <!-- TABS -->
@@ -839,8 +839,7 @@ function clasificarLocal(txt) {
   if (tipo==='rumor') { for (var i = 0; i < gob.length; i++) { if (t.indexOf(gob[i]) >= 0) { tipo = 'gobierno'; break; } } }
   if (tipo==='rumor') { for (var i = 0; i < sal.length; i++) { if (t.indexOf(sal[i]) >= 0) { tipo = 'salud'; break; } } }
   if (tipo==='rumor') { for (var i = 0; i < trans.length; i++) { if (t.indexOf(trans[i]) >= 0) { tipo = 'transporte'; break; } } }
-  var titulo = txt.split(/[.
-]/)[0].trim().slice(0, 80) || txt.slice(0, 80);
+    var titulo = txt.split(/[.]/)[0].trim().slice(0, 80) || txt.slice(0, 80);[0].trim().slice(0, 80) || txt.slice(0, 80);
   return { titulo: titulo, tipo: tipo, calle1: '', calle2: '', colonia: '', comunidad: '', nombres: '', resumen: txt.slice(0, 300), lat: 20.6795, lng: -101.3540, confianza: 'baja' };
 }
 
