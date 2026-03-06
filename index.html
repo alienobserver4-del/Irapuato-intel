@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>IRAPUATO INTEL — Fase 1</title>
+<title>IRAPUATO INTEL — Fase 1 v3</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 
 <style>
@@ -1362,8 +1365,8 @@ function analizarFB() {
         '<div class="nc-campo"><div class="nc-label">RESUMEN</div><input class="nc-input" id="' + id + '-sum" value="' + (r.resumen||'').slice(0,150).replace(/"/g,'') + '"></div>' +
       '</div>' +
       '<div class="nc-acciones">' +
-        '<button class="btn-aprobar" onclick="aprobarCard('' + id + '','' + fuenteFB + '','' + url + '');cerrarFB();">✓ APROBAR</button>' +
-        '<button class="btn-descartar" onclick="descartarCard('' + id + '')">✕ DESCARTAR</button>' +
+        '<button class="btn-aprobar" onclick="aprobarCard(\'' + id + '\',\'' + fuenteFB + '\',\'' + url + '\');cerrarFB();">APROBAR</button>' +
+        '<button class="btn-descartar" onclick="descartarCard(\'' + id + '\')">DESCARTAR</button>' +
       '</div>';
 
     resultado.innerHTML = '';
