@@ -958,48 +958,64 @@ function renderTarjetasRSS(arr, fuente) {
 
 function crearTarjetaRSS(item) {
   var id = 'card-' + (++cardCounter);
-  var texto = item.titulo + '. ' + item.desc;
-
+  var texto = (item.titulo + '. ' + (item.desc||'')).slice(0, 300);
   var card = document.createElement('div');
   card.className = 'noticia-card';
   card.id = id;
-  card.innerHTML =
-    '<div class="nc-header">' +
-      '<span class="nc-tipo rumor" id="' + id + '-tipo-badge">RUMOR</span>' +
-      '<div>' +
-        '<div class="nc-titulo">' + item.titulo + '</div>' +
-        (item.link ? '<a href="' + item.link + '" target="_blank" class="nc-link">↗ ver noticia completa</a>' : '') +
-      '</div>' +
-    '</div>' +
-    '<div class="nc-meta">' +
-      '<span class="nc-fuente">' + item.fuente + '</span>' +
-      '<span id="' + id + '-lugar" class="nc-lugar"></span>' +
-      '<span id="' + id + '-conf"></span>' +
-    '</div>' +
-    '<div class="nc-resumen" id="' + id + '-res">' + item.desc + '</div>' +
-    '<div class="nc-procesando" id="' + id + '-proc"><div class="mini-spin"></div> Analizando con IA...</div>' +
-    '<div class="nc-edit" id="' + id + '-edit">' +
-      '<div class="nc-campo"><div class="nc-label">TÍTULO</div><input class="nc-input" id="' + id + '-tit" value="' + item.titulo.replace(/"/g,'') + '"></div>' +
-      '<div class="nc-campo"><div class="nc-label">TIPO</div>' +
-        '<select class="nc-select" id="' + id + '-tipo">' +
-          '<option value="seguridad">Seguridad</option>' +
-          '<option value="accidente">Accidente</option>' +
-          '<option value="evento">Evento</option>' +
-          '<option value="rumor" selected>Rumor</option>' +
-        '</select>' +
-      '</div>' +
-      '<div class="nc-campo"><div class="nc-label">LUGAR</div><input class="nc-input" id="' + id + '-lug" value="Irapuato"></div>' +
-      '<div class="nc-campo"><div class="nc-label">RESUMEN</div><input class="nc-input" id="' + id + '-sum" value="' + item.desc.slice(0,100).replace(/"/g,'') + '"></div>' +
-    '</div>' +
-    '<div class="nc-acciones">' +
-      '<button class="btn-ia" onclick="analizarConIA(\'' + id + '\',\'' + texto.replace(/'/g,'').slice(0,300) + '\',\'' + item.fuente + '\',\'' + item.link + '\')">🤖 ANALIZAR</button>' +
-      '<button class="btn-editar" onclick="toggleEdit(\'' + id + '\')">✏</button>' +
-      '<button class="btn-aprobar" id="' + id + '-btn-apr" onclick="aprobarCard(\'' + id + '\',\'' + item.fuente + '\',\'' + item.link + '\')">✓ APROBAR</button>' +
-      '<button class="btn-descartar" onclick="descartarCard(\'' + id + '\')">✕</button>' +
-    '</div>';
+  card.dataset.texto = texto;
+  card.dataset.fuente = item.fuente || '';
+  card.dataset.link = item.link || '';
 
+  var tituloSeg = (item.titulo||'').replace(/['"]/g, '');
+  var descSeg = (item.desc||'').slice(0,100).replace(/['"]/g, '');
+  var linkSeg = (item.link||'').replace(/['"]/g, '');
+  var fuenteSeg = (item.fuente||'').replace(/['"]/g, '');
+
+  var h = '';
+  h += '<div class="nc-header">';
+  h += '<span class="nc-tipo rumor" id="' + id + '-tipo-badge">RUMOR</span>';
+  h += '<div><div class="nc-titulo">' + (item.titulo||'') + '</div>';
+  if (item.link) { h += '<a href="' + linkSeg + '" target="_blank" class="nc-link">ver noticia</a>'; }
+  h += '</div></div>';
+  h += '<div class="nc-meta">';
+  h += '<span class="nc-fuente">' + (item.fuente||'') + '</span>';
+  h += '<span id="' + id + '-lugar" class="nc-lugar"></span>';
+  h += '<span id="' + id + '-conf"></span>';
+  h += '</div>';
+  h += '<div class="nc-resumen" id="' + id + '-res">' + (item.desc||'') + '</div>';
+  h += '<div class="nc-procesando" id="' + id + '-proc"><div class="mini-spin"></div> Analizando...</div>';
+  h += '<div class="nc-edit" id="' + id + '-edit">';
+  h += '<div class="nc-campo"><div class="nc-label">TITULO</div>';
+  h += '<input class="nc-input" id="' + id + '-tit" value="' + tituloSeg + '"></div>';
+  h += '<div class="nc-campo"><div class="nc-label">TIPO</div>';
+  h += '<select class="nc-select" id="' + id + '-tipo">';
+  h += '<option value="seguridad">Seguridad</option>';
+  h += '<option value="accidente">Accidente</option>';
+  h += '<option value="evento">Evento</option>';
+  h += '<option value="rumor" selected>Rumor</option>';
+  h += '</select></div>';
+  h += '<div class="nc-campo"><div class="nc-label">LUGAR</div>';
+  h += '<input class="nc-input" id="' + id + '-lug" value="Irapuato"></div>';
+  h += '<div class="nc-campo"><div class="nc-label">RESUMEN</div>';
+  h += '<input class="nc-input" id="' + id + '-sum" value="' + descSeg + '"></div>';
+  h += '</div>';
+  h += '<div class="nc-acciones">';
+  h += '<button class="btn-ia" onclick="analizarDesdeCard('' + id + '')">ANALIZAR</button>';
+  h += '<button class="btn-editar" onclick="toggleEdit('' + id + '')">EDITAR</button>';
+  h += '<button class="btn-aprobar" id="' + id + '-btn-apr" onclick="aprobarCard('' + id + '','' + fuenteSeg + '','' + linkSeg + '')">APROBAR</button>';
+  h += '<button class="btn-descartar" onclick="descartarCard('' + id + '')">X</button>';
+  h += '</div>';
+  card.innerHTML = h;
   return card;
 }
+
+function analizarDesdeCard(id) {
+  var card = document.getElementById(id);
+  if (!card) return;
+  analizarConIA(id, card.dataset.texto||'', card.dataset.fuente||'', card.dataset.link||'');
+}
+window.analizarDesdeCard = analizarDesdeCard;
+
 
 function analizarConIA(id, texto, fuente, link) {
   var proc = document.getElementById(id + '-proc');
