@@ -837,6 +837,13 @@ function clasificarLocal(txt) {
   if (tipo==='rumor') { for (var i = 0; i < acc.length; i++) { if (t.indexOf(acc[i]) >= 0) { tipo = 'accidente'; break; } } }
   if (tipo==='rumor') { for (var i = 0; i < eve.length; i++) { if (t.indexOf(eve[i]) >= 0) { tipo = 'evento'; break; } } }
   if (tipo==='rumor') { for (var i = 0; i < gob.length; i++) { if (t.indexOf(gob[i]) >= 0) { tipo = 'gobierno'; break; } } }
+  if (tipo==='rumor') { for (var i = 0; i < sal.length; i++) { if (t.indexOf(sal[i]) >= 0) { tipo = 'salud'; break; } } }
+  if (tipo==='rumor') { for (var i = 0; i < trans.length; i++) { if (t.indexOf(trans[i]) >= 0) { tipo = 'transporte'; break; } } }
+  var titulo = txt.split(/[.
+]/)[0].trim().slice(0, 80) || txt.slice(0, 80);
+  return { titulo: titulo, tipo: tipo, calle1: '', calle2: '', colonia: '', comunidad: '', nombres: '', resumen: txt.slice(0, 300), lat: 20.6795, lng: -101.3540, confianza: 'baja' };
+}
+
 function buildPrompt(texto) {
   var frag = texto.slice(0, 800);
   return 'Analiza esta nota de Irapuato, Guanajuato. Responde SOLO JSON valido sin texto extra ni markdown:\n{"titulo":"max 80 chars","tipo":"seguridad|accidente|evento|rumor|desaparecido|gobierno|salud|transporte","calle1":"primera calle o avenida mencionada, vacia si no hay","calle2":"segunda calle o avenida mencionada, vacia si no hay","colonia":"colonia o barrio mencionado, vacio si no hay","comunidad":"comunidad o rancheria mencionada, vacia si no hay","nombres":"nombres propios de personas implicadas separados por coma, vacio si no hay","resumen":"que ocurrio en 2 oraciones max","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}\nTipos: seguridad=violencia/delitos, accidente=choques/caidas, evento=actos civicos/fiestas, rumor=sin verificar, desaparecido=persona buscada, gobierno=obras/programas/autoridades, salud=enfermedades/hospitales, transporte=vialidad/transporte publico. Si hay desaparecidos usa desaparecido. Nota: ' + frag;
