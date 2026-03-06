@@ -759,7 +759,7 @@ header {
 
 <!-- Leaflet Maps -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <!-- Firebase v8 -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -899,7 +899,7 @@ function toast(msg, tipo) {
 // GEMINI
 // ═══════════════════════════════════════════════════════════════
 function llamarGemini(prompt, callback) {
-  var modelos = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-8b'];
+  var modelos = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-8b'];
   var intentar = function(idx) {
     if (idx >= modelos.length) {
       callback(null, 'Gemini no disponible');
