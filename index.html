@@ -1400,8 +1400,8 @@ function renderBD() {
 
     div.innerHTML =
       '<div style="display:flex;gap:4px;margin-bottom:4px;">' +
-        '<button class="bd-del" onclick="editarBD('' + n.id + '')" title="Editar" style="background:rgba(0,200,255,.1);color:#00c8ff;border-color:#00c8ff;">EDITAR</button>' +
-        '<button class="bd-del" onclick="eliminarBD('' + n.id + '')" title="Eliminar">X</button>' +
+        '<button class="bd-del" onclick="editarBD(\'' + n.id + '\')">EDITAR</button>' +
+        '<button class="bd-del" onclick="eliminarBD(\'' + n.id + '\')">X</button>' +
       '</div>' +
       '<span class="bd-tipo ' + (n.tipo||'rumor') + '">' + (n.tipo||'rumor').toUpperCase() + '</span>' +
       '<div class="bd-card-tit">' + (n.titulo||'Sin titulo') + '</div>' +
@@ -1418,7 +1418,7 @@ function renderBD() {
         '<input id="bde-col-' + n.id + '" class="nc-input" value="' + (n.colonia||'').replace(/"/g,'') + '" placeholder="Colonia" style="margin-bottom:4px;">' +
         '<input id="bde-com-' + n.id + '" class="nc-input" value="' + (n.comunidad||'').replace(/"/g,'') + '" placeholder="Comunidad" style="margin-bottom:4px;">' +
         '<input id="bde-nom-' + n.id + '" class="nc-input" value="' + (n.nombres||'').replace(/"/g,'') + '" placeholder="Nombres implicados" style="margin-bottom:6px;">' +
-        '<button onclick="guardarEditBD('' + n.id + '')" style="width:100%;padding:8px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88;font-family:var(--title);font-size:8px;cursor:pointer;">GUARDAR CAMBIOS</button>' +
+        '<button onclick="guardarEditBD(\'' + n.id + '\')" style="width:100%;padding:8px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88;font-family:var(--title);font-size:8px;cursor:pointer;">GUARDAR CAMBIOS</button>' +
       '</div>';
     lista.appendChild(div);
   }
