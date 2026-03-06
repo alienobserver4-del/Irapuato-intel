@@ -1113,6 +1113,18 @@ function crearTarjetaRSS(item) {
   h += '<option value="salud">Salud</option>';
   h += '<option value="transporte">Transporte/Vialidad</option>';
   h += '</select></div>';
+  h += '<div class="nc-campo"><div class="nc-label">TIPO SECUNDARIO (opcional)</div>';
+  h += '<select class="nc-select" id="' + id + '-tipo2">';
+  h += '<option value="">-- Ninguno --</option>';
+  h += '<option value="seguridad">Seguridad</option>';
+  h += '<option value="accidente">Accidente</option>';
+  h += '<option value="evento">Evento</option>';
+  h += '<option value="rumor">Rumor</option>';
+  h += '<option value="desaparecido">Desaparecido</option>';
+  h += '<option value="gobierno">Gobierno</option>';
+  h += '<option value="salud">Salud</option>';
+  h += '<option value="transporte">Transporte/Vialidad</option>';
+  h += '</select></div>';
   h += '<div class="nc-campo"><div class="nc-label">CALLE 1</div>';
   h += '<input class="nc-input" id="' + id + '-cal1" value="" placeholder="Primera calle mencionada..." onblur="autoColonia(\'' + id + '\')"></div>';
   h += '<div class="nc-campo"><div class="nc-label">CALLE 2</div>';
@@ -1273,6 +1285,8 @@ function aprobarCard(id, fuente, link) {
   if (!card) return;
   var titulo = (document.getElementById(id + '-tit') ? document.getElementById(id + '-tit').value : '') || card.querySelector('.nc-titulo').textContent;
   var tipo = document.getElementById(id + '-tipo') ? document.getElementById(id + '-tipo').value : 'rumor';
+  var card2 = document.getElementById(id);
+  var tipo2 = (card2 && card2.dataset.tipo2) ? card2.dataset.tipo2 : (document.getElementById(id + '-tipo2') ? document.getElementById(id + '-tipo2').value : '');
   var lugar = document.getElementById(id + '-lug') ? document.getElementById(id + '-lug').value : 'Irapuato';
   var calle = document.getElementById(id + '-cal1') ? document.getElementById(id + '-cal1').value : (document.getElementById(id + '-cal') ? document.getElementById(id + '-cal').value : '');
   var calle2 = document.getElementById(id + '-cal2') ? document.getElementById(id + '-cal2').value : '';
@@ -1289,6 +1303,7 @@ function aprobarCard(id, fuente, link) {
   var noticia = {
     titulo: titulo.trim(),
     tipo: tipo,
+    tipo2: tipo2 || '',
     lugar: lugar.trim(),
     calle: calle.trim(),
     calle2: calle2.trim(),
@@ -1303,6 +1318,7 @@ function aprobarCard(id, fuente, link) {
     lat: parseFloat(card.dataset.lat) || 20.6795,
     lng: parseFloat(card.dataset.lng) || -101.3540,
     confianza: card.dataset.confianza || 'baja',
+    score_veracidad: (fuente === 'El Sol - Policiaca' || fuente === 'El Sol - Local' || fuente === 'AM Irapuato' || fuente === 'Periódico Correo' || fuente === 'Tinta Negra — Irapuato') ? 0.9 : (fuente === 'Ciudadano' ? 0.5 : 0.7),
     fechaCaptura: fechaCaptura,
     viaIA: true,
     fechaGuardado: firebase.firestore.FieldValue.serverTimestamp()
@@ -1351,6 +1367,17 @@ function aprobarCard(id, fuente, link) {
   }
 }
 window.aprobarCard = aprobarCard;
+
+function aprobarFB(id, fuente, url) {
+  // Leer todos los campos del card FB incluyendo tipo2
+  var tipo2El = document.getElementById(id + '-tipo2');
+  var tipo2 = tipo2El ? tipo2El.value : '';
+  // Guardar tipo2 en dataset para que aprobarCard lo recoja
+  var card = document.getElementById(id);
+  if (card && tipo2) card.dataset.tipo2 = tipo2;
+  aprobarCard(id, fuente, url);
+}
+window.aprobarFB = aprobarFB;
 
 function descartarCard(id) {
   var card = document.getElementById(id);
@@ -1492,6 +1519,7 @@ function renderBD() {
         '<button style="padding:8px;font-family:var(--title);font-size:8px;font-weight:700;background:rgba(0,200,255,.1);color:#00c8ff;border:1px solid #00c8ff;border-radius:3px;cursor:pointer;" onclick="editarBD(\'' + n.id + '\')">EDITAR</button>' +
         '<button style="padding:8px;font-family:var(--title);font-size:8px;font-weight:700;background:rgba(255,50,50,.1);color:#ff5050;border:1px solid #ff5050;border-radius:3px;cursor:pointer;" onclick="eliminarBD(\'' + n.id + '\')">ELIMINAR</button>' +
       '<span class="bd-tipo ' + (n.tipo||'rumor') + '">' + (n.tipo||'rumor').toUpperCase() + '</span>' +
+      (n.tipo2 ? '<span class="bd-tipo ' + n.tipo2 + '" style="margin-left:4px;opacity:.7;">' + n.tipo2.toUpperCase() + '</span>' : '') +
       (n.tiempo_dia && n.tiempo_dia !== 'desconocido' ? '<span class="bd-tiempo ' + n.tiempo_dia + '">' + n.tiempo_dia.toUpperCase() + '</span>' : '') +
       '<div class="bd-card-tit" onclick="verDetallesBD(\'' + n.id + '\')" style="cursor:pointer;text-decoration:underline;text-decoration-color:#00c8ff44;">' + (n.titulo||'Sin titulo') + '</div>' +
       '<div class="bd-card-meta">' +
@@ -1543,7 +1571,7 @@ function verDetallesBD(id) {
   }
 
   var html = '<div class="bd-modal-titulo">' + tiempoHtml + ' ' + (n.titulo||'Sin titulo') + '</div>';
-  html += '<div class="bd-mf"><div class="bd-ml">TIPO</div><div class="bd-mv"><span class="bd-tipo ' + (n.tipo||'rumor') + '">' + (n.tipo||'').toUpperCase() + '</span></div></div>';
+  html += '<div class="bd-mf"><div class="bd-ml">TIPO</div><div class="bd-mv"><span class="bd-tipo ' + (n.tipo||'rumor') + '">' + (n.tipo||'').toUpperCase() + '</span>' + (n.tipo2 ? '<span class="bd-tipo ' + n.tipo2 + '" style="margin-left:6px;opacity:.8;">' + n.tipo2.toUpperCase() + '</span>' : '') + '</div></div>';
   html += '<div class="bd-mf"><div class="bd-ml">RESUMEN</div><div class="bd-mv">' + (n.resumen || '<span class="vacio">Sin resumen</span>') + '</div></div>';
 
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;">';
@@ -1569,7 +1597,7 @@ function verDetallesBD(id) {
 window.verDetallesBD = verDetallesBD;
 
 function cerrarModalBD(e) {
-  if (e && e.target !== document.getElementById('bd-modal')) return;
+  if (e && e.target && e.target.id !== 'bd-modal') return;
   document.getElementById('bd-modal').className = 'bd-modal-overlay';
 }
 window.cerrarModalBD = cerrarModalBD;
@@ -1682,15 +1710,15 @@ window.selFuenteFB = selFuenteFB;
 
 function analizarFB() {
   var texto = document.getElementById('fb-texto').value.trim();
-  if (!texto) { toast('Pega el texto de la publicación primero', 'err'); return; }
+  if (!texto) { toast('Pega el texto de la publicacion primero', 'err'); return; }
   var url = document.getElementById('fb-url').value.trim();
   var resultado = document.getElementById('fb-resultado');
-  resultado.innerHTML = '<div style="color:#00f5ff;font-size:8px;padding:10px 0;">⏳ Analizando con IA...</div>';
+  resultado.innerHTML = '<div style="color:#00f5ff;font-size:8px;padding:10px 0;">Analizando con IA...</div>';
 
   llamarGemini(buildPrompt(texto), function(r, err) {
     if (!r) {
       r = clasificarLocal(texto);
-      toast('IA no disponible — clasificación local', 'warn');
+      toast('IA no disponible — clasificacion local', 'warn');
     }
     var id = 'fb-' + (++cardCounter);
     var card = document.createElement('div');
@@ -1700,40 +1728,64 @@ function analizarFB() {
     card.dataset.lng = r.lng || -101.3540;
     card.dataset.colonia = r.colonia || '';
     card.dataset.confianza = r.confianza || 'baja';
+    card.dataset.texto = texto;
     card.style.marginTop = '10px';
+
+    var tipoOpts = '';
+    var tipos = ['seguridad','accidente','evento','rumor','desaparecido','gobierno','salud','transporte'];
+    var labels = ['Seguridad','Accidente','Evento','Rumor','Desaparecido','Gobierno','Salud','Transporte/Vialidad'];
+    for (var ti = 0; ti < tipos.length; ti++) {
+      tipoOpts += '<option value="' + tipos[ti] + '"' + (r.tipo===tipos[ti]?' selected':'') + '>' + labels[ti] + '</option>';
+    }
+
+    var tipoOpts2 = '<option value="">-- Ninguno --</option>';
+    for (var ti2 = 0; ti2 < tipos.length; ti2++) {
+      tipoOpts2 += '<option value="' + tipos[ti2] + '">' + labels[ti2] + '</option>';
+    }
 
     card.innerHTML =
       '<div class="nc-header">' +
-        '<span class="nc-tipo ' + (r.tipo||'rumor') + '">' + (r.tipo||'rumor').toUpperCase() + '</span>' +
+        '<span class="nc-tipo ' + (r.tipo||'rumor') + '" id="' + id + '-tipo-badge">' + (r.tipo||'rumor').toUpperCase() + '</span>' +
         '<div class="nc-titulo">' + (r.titulo||texto.slice(0,80)) + '</div>' +
       '</div>' +
       '<div class="nc-meta">' +
         '<span class="nc-fuente">' + fuenteFB + '</span>' +
-        '<span class="nc-lugar">📍 ' + (r.lugar||'') + '</span>' +
         '<span class="nc-conf-' + (r.confianza||'baja') + '">▲ ' + (r.confianza||'baja').toUpperCase() + '</span>' +
       '</div>' +
       '<div class="nc-resumen">' + (r.resumen||texto.slice(0,300)) + '</div>' +
       '<div class="nc-edit visible">' +
-        '<div class="nc-campo"><div class="nc-label">TÍTULO</div><input class="nc-input" id="' + id + '-tit" value="' + (r.titulo||'').replace(/"/g,'') + '"></div>' +
-        '<div class="nc-campo"><div class="nc-label">TIPO</div>' +
-          '<select class="nc-select" id="' + id + '-tipo">' +
-            '<option value="seguridad"' + (r.tipo==='seguridad'?' selected':'') + '>Seguridad</option>' +
-            '<option value="accidente"' + (r.tipo==='accidente'?' selected':'') + '>Accidente</option>' +
-            '<option value="evento"' + (r.tipo==='evento'?' selected':'') + '>Evento</option>' +
-            '<option value="rumor"' + (!r.tipo||r.tipo==='rumor'?' selected':'') + '>Rumor</option>' +
+        '<div class="nc-campo"><div class="nc-label">TITULO</div><input class="nc-input" id="' + id + '-tit" value="' + (r.titulo||'').replace(/"/g,'') + '"></div>' +
+        '<div class="nc-campo"><div class="nc-label">TIPO PRINCIPAL</div>' +
+          '<select class="nc-select" id="' + id + '-tipo">' + tipoOpts + '</select>' +
+        '</div>' +
+        '<div class="nc-campo"><div class="nc-label">TIPO SECUNDARIO (opcional)</div>' +
+          '<select class="nc-select" id="' + id + '-tipo2">' + tipoOpts2 + '</select>' +
+        '</div>' +
+        '<div class="nc-campo"><div class="nc-label">CALLE 1</div><input class="nc-input" id="' + id + '-cal1" value="' + (r.calle1||'').replace(/"/g,'') + '" placeholder="Primera calle..." onblur="autoColonia(\'' + id + '\')"></div>' +
+        '<div class="nc-campo"><div class="nc-label">CALLE 2</div><input class="nc-input" id="' + id + '-cal2" value="' + (r.calle2||'').replace(/"/g,'') + '" placeholder="Segunda calle / esquina..."></div>' +
+        '<div class="nc-campo"><div class="nc-label">COLONIA</div><input class="nc-input" id="' + id + '-col" value="' + (r.colonia||'').replace(/"/g,'') + '" placeholder="Se auto-completa por calles..."></div>' +
+        '<div class="nc-campo"><div class="nc-label">COMUNIDAD</div><input class="nc-input" id="' + id + '-com" value="' + (r.comunidad||'').replace(/"/g,'') + '"></div>' +
+        '<div class="nc-campo"><div class="nc-label">NOMBRES</div><input class="nc-input" id="' + id + '-nom" value="' + (r.nombres||'').replace(/"/g,'') + '" placeholder="Nombres implicados..."></div>' +
+        '<div class="nc-campo"><div class="nc-label">FECHA DEL EVENTO</div><input class="nc-input" id="' + id + '-fev" value="' + (r.fecha_evento||'').replace(/"/g,'') + '" placeholder="DD/MM/YYYY..."></div>' +
+        '<div class="nc-campo"><div class="nc-label">MOMENTO DEL DIA</div>' +
+          '<select class="nc-select" id="' + id + '-tdia">' +
+            '<option value="desconocido"' + (!r.tiempo_dia||r.tiempo_dia==='desconocido'?' selected':'') + '>Desconocido</option>' +
+            '<option value="manana"' + (r.tiempo_dia==='manana'?' selected':'') + '>Manana (6-12h)</option>' +
+            '<option value="tarde"' + (r.tiempo_dia==='tarde'?' selected':'') + '>Tarde (12-19h)</option>' +
+            '<option value="noche"' + (r.tiempo_dia==='noche'?' selected':'') + '>Noche (19-24h)</option>' +
+            '<option value="madrugada"' + (r.tiempo_dia==='madrugada'?' selected':'') + '>Madrugada (0-6h)</option>' +
           '</select>' +
         '</div>' +
-        '<div class="nc-campo"><div class="nc-label">LUGAR</div><input class="nc-input" id="' + id + '-lug" value="' + (r.lugar||'Irapuato').replace(/"/g,'') + '"></div>' +
-        '<div class="nc-campo"><div class="nc-label">RESUMEN</div><input class="nc-input" id="' + id + '-sum" value="' + (r.resumen||'').slice(0,150).replace(/"/g,'') + '"></div>' +
+        '<div class="nc-campo"><div class="nc-label">RESUMEN</div><input class="nc-input" id="' + id + '-sum" value="' + (r.resumen||'').slice(0,200).replace(/"/g,'') + '"></div>' +
       '</div>' +
       '<div class="nc-acciones">' +
-        '<button class="btn-aprobar" onclick="aprobarCard(\'' + id + '\',\'' + fuenteFB + '\',\'' + url + '\');cerrarFB();">APROBAR</button>' +
+        '<button class="btn-aprobar" onclick="aprobarFB(\'' + id + '\',\'' + fuenteFB + '\',\'' + url.replace(/'/g,\'\').replace(/"/g,\'\') + '\')">APROBAR</button>' +
         '<button class="btn-descartar" onclick="descartarCard(\'' + id + '\')">DESCARTAR</button>' +
       '</div>';
 
     resultado.innerHTML = '';
     resultado.appendChild(card);
-    toast('✓ Análisis completo — revisa y aprueba', 'ok');
+    toast('Analisis completo — revisa y aprueba', 'ok');
   });
 }
 window.analizarFB = analizarFB;
