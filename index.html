@@ -137,6 +137,9 @@ header {
 .nc-tipo.evento { background:rgba(0,204,255,.2); color:#00ccff; }
 .nc-tipo.rumor { background:rgba(58,90,122,.2); color:#5a8aaa; }
 .nc-tipo.desaparecido { background:rgba(255,165,0,.15); color:#ffa500; border:1px solid rgba(255,165,0,.4); animation: pulso 2s infinite; }
+.nc-tipo.gobierno { background:rgba(0,150,255,.12); color:#0096ff; }
+.nc-tipo.salud { background:rgba(0,200,100,.12); color:#00c864; }
+.nc-tipo.transporte { background:rgba(180,100,255,.12); color:#b464ff; }
 @keyframes pulso { 0%,100%{opacity:1} 50%{opacity:.6} }
 .nc-fecha { font-size:7px; color:var(--muted); padding:2px 10px 4px; font-family:var(--mono); }
 .nc-nombres { font-size:8px; color:#ffa500; padding:2px 10px; }
@@ -451,6 +454,10 @@ header {
         <button class="filtro-btn" onclick="filtrarBD('accidente',this)">ACCIDENTE</button>
         <button class="filtro-btn" onclick="filtrarBD('evento',this)">EVENTO</button>
         <button class="filtro-btn" onclick="filtrarBD('rumor',this)">RUMOR</button>
+        <button class="filtro-btn" onclick="filtrarBD('desaparecido',this)">DESAPARECIDO</button>
+        <button class="filtro-btn" onclick="filtrarBD('gobierno',this)">GOBIERNO</button>
+        <button class="filtro-btn" onclick="filtrarBD('salud',this)">SALUD</button>
+        <button class="filtro-btn" onclick="filtrarBD('transporte',this)">TRANSPORTE</button>
       </div>
 
       <div id="lista-bd">
@@ -818,21 +825,21 @@ function llamarGemini(prompt, callback) {
 function clasificarLocal(txt) {
   var t = txt.toLowerCase();
   var tipo = 'rumor';
-  var seg = ['bala','disparo','herido','fallecio','homicid','asesinat','ejecut','asalto','robo','secuestr','narcot','cartel','detenido','captura','asesin','muerto','cadaver','armado','balacera','navaja','cuchillo'];
+  var seg = ['bala','disparo','herido','fallecio','homicid','asesinat','ejecut','asalto','robo','secuestr','narcot','cartel','detenido','captura','asesin','muerto','cadaver','armado','balacera'];
   var acc = ['accidente','choque','volcadura','atropell','colision','incendio','explosion','derrumbe'];
   var eve = ['festival','feria','concierto','evento','ceremonia','inauguracion','aniversario','celebracion'];
-  for (var i = 0; i < seg.length; i++) { if (t.indexOf(seg[i]) >= 0) { tipo = 'seguridad'; break; } }
-  if (tipo === 'rumor') { for (var i = 0; i < acc.length; i++) { if (t.indexOf(acc[i]) >= 0) { tipo = 'accidente'; break; } } }
-  if (tipo === 'rumor') { for (var i = 0; i < eve.length; i++) { if (t.indexOf(eve[i]) >= 0) { tipo = 'evento'; break; } } }
-  var lugarMatch = txt.match(/(?:en |calle |colonia |barrio )([A-Za-z][^.,\n]{3,35})/i);
-  var lugar = lugarMatch ? lugarMatch[0].trim() : 'Irapuato';
-  var titulo = txt.split(/[.\n]/)[0].trim().slice(0, 80) || txt.slice(0, 80);
-  return { titulo: titulo, tipo: tipo, lugar: lugar, colonia: '', resumen: txt.slice(0, 300), lat: 20.6795, lng: -101.3540, confianza: 'baja' };
-}
-
+  var desp = ['desaparecido','desaparecida','se busca','extraviado','extraviada','paradero'];
+  var gob = ['municipio','alcalde','presidente municipal','obra publica','programa','ayuntamiento','secretaria de'];
+  var sal = ['hospital','clinica','imss','issste','salud','enfermedad','brote','vacuna'];
+  var trans = ['transporte publico','camion urbano','vialidad','cierre vial','bache','pavimento','semaforo'];
+  for (var i = 0; i < desp.length; i++) { if (t.indexOf(desp[i]) >= 0) { tipo = 'desaparecido'; break; } }
+  if (tipo==='rumor') { for (var i = 0; i < seg.length; i++) { if (t.indexOf(seg[i]) >= 0) { tipo = 'seguridad'; break; } } }
+  if (tipo==='rumor') { for (var i = 0; i < acc.length; i++) { if (t.indexOf(acc[i]) >= 0) { tipo = 'accidente'; break; } } }
+  if (tipo==='rumor') { for (var i = 0; i < eve.length; i++) { if (t.indexOf(eve[i]) >= 0) { tipo = 'evento'; break; } } }
+  if (tipo==='rumor') { for (var i = 0; i < gob.length; i++) { if (t.indexOf(gob[i]) >= 0) { tipo = 'gobierno'; break; } } }
 function buildPrompt(texto) {
   var frag = texto.slice(0, 800);
-  return 'Analiza esta nota de Irapuato, Guanajuato. Responde SOLO JSON valido sin texto extra ni markdown:\n{"titulo":"max 80 chars","tipo":"seguridad|accidente|evento|rumor|desaparecido","lugar":"lugar especifico","calle":"calle o avenida si se menciona","colonia":"colonia o barrio si se menciona","comunidad":"comunidad o rancheria si se menciona","nombres":"nombres de personas implicadas separados por coma","resumen":"que ocurrio en 2 oraciones","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}\nSi hay desaparecidos usa tipo desaparecido. Nota: ' + frag;
+  return 'Analiza esta nota de Irapuato, Guanajuato. Responde SOLO JSON valido sin texto extra ni markdown:\n{"titulo":"max 80 chars","tipo":"seguridad|accidente|evento|rumor|desaparecido|gobierno|salud|transporte","calle1":"primera calle o avenida mencionada, vacia si no hay","calle2":"segunda calle o avenida mencionada, vacia si no hay","colonia":"colonia o barrio mencionado, vacio si no hay","comunidad":"comunidad o rancheria mencionada, vacia si no hay","nombres":"nombres propios de personas implicadas separados por coma, vacio si no hay","resumen":"que ocurrio en 2 oraciones max","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}\nTipos: seguridad=violencia/delitos, accidente=choques/caidas, evento=actos civicos/fiestas, rumor=sin verificar, desaparecido=persona buscada, gobierno=obras/programas/autoridades, salud=enfermedades/hospitales, transporte=vialidad/transporte publico. Si hay desaparecidos usa desaparecido. Nota: ' + frag;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1075,13 +1082,16 @@ function crearTarjetaRSS(item) {
   h += '<option value="evento">Evento</option>';
   h += '<option value="rumor" selected>Rumor</option>';
   h += '<option value="desaparecido">Desaparecido</option>';
+  h += '<option value="gobierno">Gobierno</option>';
+  h += '<option value="salud">Salud</option>';
+  h += '<option value="transporte">Transporte/Vialidad</option>';
   h += '</select></div>';
-  h += '<div class="nc-campo"><div class="nc-label">LUGAR</div>';
-  h += '<input class="nc-input" id="' + id + '-lug" value="Irapuato"></div>';
-  h += '<div class="nc-campo"><div class="nc-label">CALLE</div>';
-  h += '<input class="nc-input" id="' + id + '-cal" value=""></div>';
+  h += '<div class="nc-campo"><div class="nc-label">CALLE 1</div>';
+  h += '<input class="nc-input" id="' + id + '-cal1" value="" placeholder="Primera calle mencionada..."></div>';
+  h += '<div class="nc-campo"><div class="nc-label">CALLE 2</div>';
+  h += '<input class="nc-input" id="' + id + '-cal2" value="" placeholder="Segunda calle (esquina/cruce)..."></div>';
   h += '<div class="nc-campo"><div class="nc-label">COLONIA</div>';
-  h += '<input class="nc-input" id="' + id + '-col" value=""></div>';
+  h += '<input class="nc-input" id="' + id + '-col" value="" placeholder="Se auto-completa por calles..."></div>';
   h += '<div class="nc-campo"><div class="nc-label">COMUNIDAD</div>';
   h += '<input class="nc-input" id="' + id + '-com" value=""></div>';
   h += '<div class="nc-campo"><div class="nc-label">NOMBRES</div>';
@@ -1105,6 +1115,22 @@ function analizarDesdeCard(id) {
   analizarConIA(id, card.dataset.texto||'', card.dataset.fuente||'', card.dataset.link||'');
 }
 window.analizarDesdeCard = analizarDesdeCard;
+
+// Buscar colonia en OpenStreetMap Nominatim
+function buscarColoniaOSM(calle, callback) {
+  var query = calle + ', Irapuato, Guanajuato, Mexico';
+  var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) + '&format=json&addressdetails=1&limit=1&countrycodes=mx';
+  fetch(url, { headers: { 'Accept-Language': 'es' } })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data && data[0] && data[0].address) {
+      var addr = data[0].address;
+      var colonia = addr.suburb || addr.neighbourhood || addr.quarter || addr.city_district || '';
+      callback(colonia);
+    } else { callback(''); }
+  })
+  .catch(function() { callback(''); });
+}
 
 
 function analizarConIA(id, texto, fuente, link) {
@@ -1144,10 +1170,19 @@ function analizarConIA(id, texto, fuente, link) {
     if (lugEl && r.lugar) lugEl.value = r.lugar;
     var sumEl = document.getElementById(id + '-sum');
     if (sumEl && r.resumen) sumEl.value = r.resumen.slice(0,200);
-    var calEl = document.getElementById(id + '-cal');
-    if (calEl) calEl.value = r.calle || '';
+    var cal1El = document.getElementById(id + '-cal1');
+    if (cal1El) cal1El.value = r.calle1 || r.calle || '';
+    var cal2El = document.getElementById(id + '-cal2');
+    if (cal2El) cal2El.value = r.calle2 || '';
     var colEl = document.getElementById(id + '-col');
     if (colEl) colEl.value = r.colonia || '';
+    // Si hay calle pero no colonia, buscar en OSM
+    if ((r.calle1 || r.calle) && !r.colonia) {
+      var calBuscar = r.calle1 || r.calle;
+      buscarColoniaOSM(calBuscar, function(coloniaOSM) {
+        if (coloniaOSM && colEl) colEl.value = coloniaOSM;
+      });
+    }
     var comEl = document.getElementById(id + '-com');
     if (comEl) comEl.value = r.comunidad || '';
     var nomEl = document.getElementById(id + '-nom');
@@ -1187,7 +1222,8 @@ function aprobarCard(id, fuente, link) {
   var titulo = (document.getElementById(id + '-tit') ? document.getElementById(id + '-tit').value : '') || card.querySelector('.nc-titulo').textContent;
   var tipo = document.getElementById(id + '-tipo') ? document.getElementById(id + '-tipo').value : 'rumor';
   var lugar = document.getElementById(id + '-lug') ? document.getElementById(id + '-lug').value : 'Irapuato';
-  var calle = document.getElementById(id + '-cal') ? document.getElementById(id + '-cal').value : '';
+  var calle = document.getElementById(id + '-cal1') ? document.getElementById(id + '-cal1').value : (document.getElementById(id + '-cal') ? document.getElementById(id + '-cal').value : '');
+  var calle2 = document.getElementById(id + '-cal2') ? document.getElementById(id + '-cal2').value : '';
   var colonia = document.getElementById(id + '-col') ? document.getElementById(id + '-col').value : (card.dataset.colonia || '');
   var comunidad = document.getElementById(id + '-com') ? document.getElementById(id + '-com').value : '';
   var nombres = document.getElementById(id + '-nom') ? document.getElementById(id + '-nom').value : '';
@@ -1201,6 +1237,7 @@ function aprobarCard(id, fuente, link) {
     tipo: tipo,
     lugar: lugar.trim(),
     calle: calle.trim(),
+    calle2: calle2.trim(),
     colonia: colonia.trim(),
     comunidad: comunidad.trim(),
     nombres: nombres.trim(),
@@ -1368,6 +1405,8 @@ function renderBD() {
   document.getElementById('stat-seg').textContent = noticias.filter(function(n){ return n.tipo==='seguridad'; }).length;
   document.getElementById('stat-acc').textContent = noticias.filter(function(n){ return n.tipo==='accidente'; }).length;
   document.getElementById('stat-eve').textContent = noticias.filter(function(n){ return n.tipo==='evento'; }).length;
+  var statDesp = document.getElementById('stat-desp');
+  if (statDesp) statDesp.textContent = noticias.filter(function(n){ return n.tipo==='desaparecido'; }).length;
 
   if (mostrar.length === 0) {
     lista.innerHTML = '<div class="vacio"><div class="vacio-ico">base</div>Sin noticias ' + (filtroBD !== 'todos' ? 'de tipo ' + filtroBD : 'aprobadas') + ' aun.</div>';
@@ -1392,10 +1431,10 @@ function renderBD() {
     if (n.nombres) extraInfo += '<span style="color:#ffa500;font-size:7px;">Nombres: ' + n.nombres + '</span>';
 
     div.innerHTML =
-      '<div style="display:flex;gap:4px;margin-bottom:4px;">' +
-        '<button class="bd-del" onclick="editarBD(\'' + n.id + '\')">EDITAR</button>' +
-        '<button class="bd-del" onclick="eliminarBD(\'' + n.id + '\')">X</button>' +
-      '</div>' +
+    div.innerHTML =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">' +
+        '<button style="padding:8px;font-family:var(--title);font-size:8px;font-weight:700;background:rgba(0,200,255,.1);color:#00c8ff;border:1px solid #00c8ff;border-radius:3px;cursor:pointer;" onclick="editarBD(\'' + n.id + '\')">EDITAR</button>' +
+        '<button style="padding:8px;font-family:var(--title);font-size:8px;font-weight:700;background:rgba(255,50,50,.1);color:#ff5050;border:1px solid #ff5050;border-radius:3px;cursor:pointer;" onclick="eliminarBD(\'' + n.id + '\')">ELIMINAR</button>' +
       '<span class="bd-tipo ' + (n.tipo||'rumor') + '">' + (n.tipo||'rumor').toUpperCase() + '</span>' +
       '<div class="bd-card-tit">' + (n.titulo||'Sin titulo') + '</div>' +
       '<div class="bd-card-meta">' +
@@ -1405,9 +1444,19 @@ function renderBD() {
         '<span style="color:var(--muted);font-size:7px;">Capturado: ' + fecha + '</span>' +
       '</div>' +
       '<div id="bd-edit-' + n.id + '" style="display:none;margin-top:8px;border-top:1px solid #0d2040;padding-top:8px;">' +
-        '<input id="bde-tit-' + n.id + '" class="nc-input" value="' + (n.titulo||'').replace(/"/g,'') + '" style="margin-bottom:4px;">' +
-        '<input id="bde-lug-' + n.id + '" class="nc-input" value="' + (n.lugar||'').replace(/"/g,'') + '" placeholder="Lugar" style="margin-bottom:4px;">' +
-        '<input id="bde-cal-' + n.id + '" class="nc-input" value="' + (n.calle||'').replace(/"/g,'') + '" placeholder="Calle" style="margin-bottom:4px;">' +
+        '<select id="bde-tipo-' + n.id + '" class="nc-select" style="margin-bottom:4px;">' +
+          '<option value="seguridad"' + (n.tipo==='seguridad'?' selected':'') + '>Seguridad</option>' +
+          '<option value="accidente"' + (n.tipo==='accidente'?' selected':'') + '>Accidente</option>' +
+          '<option value="evento"' + (n.tipo==='evento'?' selected':'') + '>Evento</option>' +
+          '<option value="rumor"' + (n.tipo==='rumor'?' selected':'') + '>Rumor</option>' +
+          '<option value="desaparecido"' + (n.tipo==='desaparecido'?' selected':'') + '>Desaparecido</option>' +
+          '<option value="gobierno"' + (n.tipo==='gobierno'?' selected':'') + '>Gobierno</option>' +
+          '<option value="salud"' + (n.tipo==='salud'?' selected':'') + '>Salud</option>' +
+          '<option value="transporte"' + (n.tipo==='transporte'?' selected':'') + '>Transporte/Vialidad</option>' +
+        '</select>' +
+        '<input id="bde-tit-' + n.id + '" class="nc-input" value="' + (n.titulo||'').replace(/"/g,'') + '" placeholder="Titulo" style="margin-bottom:4px;">' +
+        '<input id="bde-cal-' + n.id + '" class="nc-input" value="' + (n.calle||'').replace(/"/g,'') + '" placeholder="Calle 1" style="margin-bottom:4px;">' +
+        '<input id="bde-cal2-' + n.id + '" class="nc-input" value="' + (n.calle2||'').replace(/"/g,'') + '" placeholder="Calle 2 (esquina/cruce)" style="margin-bottom:4px;">' +
         '<input id="bde-col-' + n.id + '" class="nc-input" value="' + (n.colonia||'').replace(/"/g,'') + '" placeholder="Colonia" style="margin-bottom:4px;">' +
         '<input id="bde-com-' + n.id + '" class="nc-input" value="' + (n.comunidad||'').replace(/"/g,'') + '" placeholder="Comunidad" style="margin-bottom:4px;">' +
         '<input id="bde-nom-' + n.id + '" class="nc-input" value="' + (n.nombres||'').replace(/"/g,'') + '" placeholder="Nombres implicados" style="margin-bottom:6px;">' +
@@ -1432,10 +1481,13 @@ function guardarEditBD(id) {
   var col = document.getElementById('bde-col-' + id);
   var com = document.getElementById('bde-com-' + id);
   var nom = document.getElementById('bde-nom-' + id);
+  var tipoEl2 = document.getElementById('bde-tipo-' + id);
+  var cal2El2 = document.getElementById('bde-cal2-' + id);
   var updates = {
+    tipo: tipoEl2 ? tipoEl2.value : 'rumor',
     titulo: tit ? tit.value : '',
-    lugar: lug ? lug.value : '',
     calle: cal ? cal.value : '',
+    calle2: cal2El2 ? cal2El2.value : '',
     colonia: col ? col.value : '',
     comunidad: com ? com.value : '',
     nombres: nom ? nom.value : ''
@@ -1443,12 +1495,12 @@ function guardarEditBD(id) {
   db.collection('noticias-fase1').doc(id).update(updates)
   .then(function() {
     toast('Cambios guardados', 'ok');
-    // Actualizar en memoria
     for (var i = 0; i < noticias.length; i++) {
       if (noticias[i].id === id) {
+        noticias[i].tipo = updates.tipo;
         noticias[i].titulo = updates.titulo;
-        noticias[i].lugar = updates.lugar;
         noticias[i].calle = updates.calle;
+        noticias[i].calle2 = updates.calle2;
         noticias[i].colonia = updates.colonia;
         noticias[i].comunidad = updates.comunidad;
         noticias[i].nombres = updates.nombres;
