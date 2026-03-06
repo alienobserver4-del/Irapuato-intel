@@ -67,13 +67,15 @@ header {
 }
 #tabs::-webkit-scrollbar { display:none; }
 .tab {
-  flex:1; min-width:80px;
-  padding:10px 6px;
-  font-family:var(--title); font-size:7px; font-weight:700; letter-spacing:1px;
+  flex:1; min-width:0;
+  padding:9px 4px;
+  font-family:var(--title); font-size:6.5px; font-weight:700; letter-spacing:.5px;
   color:var(--muted); background:transparent; border:none; cursor:pointer;
   border-bottom:2px solid transparent;
   transition:all .2s;
   white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 .tab.active { color:var(--cyan); border-bottom-color:var(--cyan); background:rgba(0,245,255,.04); }
 .tab.active.seg { color:var(--red); border-bottom-color:var(--red); background:rgba(255,34,85,.04); }
@@ -438,7 +440,7 @@ header {
   <div id="tabs">
     <button class="tab rss active" onclick="verTab('rss')">📡 NOTICIAS AUTO</button>
     <button class="tab manual" onclick="verTab('manual')">✍ ENTRADA MANUAL</button>
-    <button class="tab bd" onclick="verTab('bd')">🗄 BASE DE DATOS <span id="badge-bd" class="badge" style="display:none">0</span></button>
+    <button class="tab bd" onclick="verTab('bd')">🗄 BD <span id="badge-bd" class="badge" style="display:none">0</span></button>
     <button class="tab mapa" onclick="verTab('mapa')">🗺 MAPA</button>
   </div>
 
@@ -759,7 +761,14 @@ header {
 
 <!-- Leaflet Maps -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>
+// leaflet.heat v0.2.0 - embebido inline para evitar errores de CDN
+// Fuente: https://github.com/Leaflet/Leaflet.heat (licencia BSD-2)
+(function(factory){if(typeof define==='function'&&define.amd){define(['leaflet'],factory);}else if(typeof module!=='undefined'){module.exports=factory(require('leaflet'));}else{if(typeof window.L==='undefined'){throw new Error('Leaflet must be loaded first');}factory(window.L);}}(function(L){var HeatLayer=(L.Layer?L.Layer:L.Class).extend({initialize:function(latlngs,options){this._latlngs=latlngs;L.setOptions(this,options);},setLatLngs:function(latlngs){this._latlngs=latlngs;return this.redraw();},addLatLng:function(latlng){this._latlngs.push(latlng);return this.redraw();},setOptions:function(options){L.setOptions(this,options);if(this._heat){this._updateOptions();}return this.redraw();},redraw:function(){if(this._heat&&!this._frame&&this._map&&!this._map._animating){this._frame=L.Util.requestAnimFrame(this._redraw,this);}return this;},onAdd:function(map){this._map=map;if(!this._canvas){this._initCanvas();}if(this.options.pane){this.getPane().appendChild(this._canvas);}else{map._panes.overlayPane.appendChild(this._canvas);}map.on('moveend',this._reset,this);if(map.options.zoomAnimation&&L.Browser.any3d){map.on('zoomanim',this._animateZoom,this);}this._reset();},onRemove:function(map){if(this.options.pane){this.getPane().removeChild(this._canvas);}else{map.getPanes().overlayPane.removeChild(this._canvas);}map.off('moveend',this._reset,this);if(map.options.zoomAnimation){map.off('zoomanim',this._animateZoom,this);}},addTo:function(map){map.addLayer(this);return this;},_initCanvas:function(){var canvas=this._canvas=L.DomUtil.create('canvas','leaflet-heatmap-layer leaflet-layer');var animated=this._map.options.zoomAnimation&&L.Browser.any3d;L.DomUtil.addClass(canvas,'leaflet-zoom-'+(animated?'animated':'hide'));var size=this._map.getSize();canvas.width=size.x;canvas.height=size.y;var bg=canvas.style;bg.position='absolute';bg.left=0;bg.top=0;bg.zIndex=200;this._heat=simpleheat(canvas);this._updateOptions();},_updateOptions:function(){this._heat.radius(this.options.radius||this._heat.defaultRadius,this.options.blur);if(this.options.gradient){this._heat.gradient(this.options.gradient);}if(this.options.minOpacity){this._heat.minOpacity(this.options.minOpacity);}},_reset:function(){var topLeft=this._map.containerPointToLayerPoint([0,0]);L.DomUtil.setPosition(this._canvas,topLeft);var size=this._map.getSize();if(this._heat._width!==size.x){this._canvas.width=this._heat._width=size.x;}if(this._heat._height!==size.y){this._canvas.height=this._heat._height=size.y;}this._redraw();},_redraw:function(){this._frame=null;if(!this._map){return;}var data=[],r=this._heat._r,size=this._map.getSize(),bounds=new L.Bounds(L.point([-r,-r]),size.add([r,r])),max=this.options.max===undefined?1:this.options.max,maxZoom=this.options.maxZoom===undefined?this._map.getMaxZoom():this.options.maxZoom,v=1/Math.pow(2,Math.max(0,Math.min(maxZoom-this._map.getZoom(),12))),cellSize=r/2,panePos=this._map._getMapPanePos(),offsetX=panePos.x%cellSize,offsetY=panePos.y%cellSize,i,len,latlng,point,cell,x,y,j,len2,k;var grid=[],cells=[];for(i=0,len=this._latlngs.length;i<len;i++){latlng=this._latlngs[i];point=this._map.latLngToContainerPoint(latlng);x=Math.floor((point.x-offsetX)/cellSize)+2;y=Math.floor((point.y-offsetY)/cellSize)+2;var alt=latlng.alt!==undefined?latlng.alt:latlng[2]!==undefined?+latlng[2]:1;k=alt*v;grid[y]=grid[y]||[];cell=grid[y][x];if(!cell){grid[y][x]=[point.x,point.y,k];cells.push(cell=grid[y][x]);}else{cell[0]=(cell[0]*cell[2]+point.x*k)/(cell[2]+k);cell[1]=(cell[1]*cell[2]+point.y*k)/(cell[2]+k);cell[2]+=k;}}for(i=0,len=cells.length;i<len;i++){cell=cells[i];if(bounds.contains(L.point(cell[0],cell[1]))){data.push([Math.round(cell[0]),Math.round(cell[1]),Math.min(cell[2],max)]);}}this._heat.clear();if(data.length){this._heat.data(data).draw(this.options.minOpacity);}this._frame=null;},_animateZoom:function(e){var scale=this._map.getZoomScale(e.zoom),offset=this._map._getCenterOffset(e.center)._multiplyBy(-scale).subtract(this._map._getMapPanePos());if(L.DomUtil.setTransform){L.DomUtil.setTransform(this._canvas,offset,scale);}else{this._canvas.style[L.DomUtil.TRANSFORM]=L.DomUtil.getTranslateString(offset)+' scale('+scale+')';}}}); L.heatLayer=function(latlngs,options){return new HeatLayer(latlngs,options);};return HeatLayer;}));
+
+// simpleheat - dependencia interna de leaflet.heat
+function simpleheat(canvas){if(!(this instanceof simpleheat)){return new simpleheat(canvas);}this._canvas=canvas=typeof canvas==='string'?document.getElementById(canvas):canvas;this._ctx=canvas.getContext('2d');this._width=canvas.width;this._height=canvas.height;this._max=1;this._data=[];}simpleheat.prototype={defaultRadius:25,defaultGradient:{0.4:'blue',0.6:'cyan',0.7:'lime',0.8:'yellow',1:'red'},data:function(data){this._data=data;return this;},max:function(max){this._max=max;return this;},add:function(point){this._data.push(point);return this;},clear:function(){this._data=[];return this;},radius:function(r,blur){blur=blur===undefined?15:blur;var circle=this._circle=this._createCanvas(),ctx=circle.getContext('2d'),r2=this._r=r+blur;circle.width=circle.height=r2*2;ctx.shadowOffsetX=ctx.shadowOffsetY=r2*2;ctx.shadowBlur=blur;ctx.shadowColor='black';ctx.beginPath();ctx.arc(-r2,0,r,0,Math.PI*2,true);ctx.closePath();ctx.fill();return this;},resize:function(){this._width=this._canvas.width;this._height=this._canvas.height;},gradient:function(grad){var canvas=this._createCanvas(),ctx=canvas.getContext('2d'),gradient=ctx.createLinearGradient(0,0,0,256);canvas.width=1;canvas.height=256;for(var i in grad){gradient.addColorStop(+i,grad[i]);}ctx.fillStyle=gradient;ctx.fillRect(0,0,1,256);this._grad=ctx.getImageData(0,0,1,256).data;return this;},minOpacity:function(minOpacity){this._minOpacity=minOpacity;return this;},draw:function(minOpacity){if(!this._circle){this.radius(this.defaultRadius);}if(!this._grad){this.gradient(this.defaultGradient);}var ctx=this._ctx;ctx.clearRect(0,0,this._width,this._height);for(var i=0,len=this._data.length,p;i<len;i++){p=this._data[i];ctx.globalAlpha=Math.min(Math.max(p[2]/this._max,minOpacity===undefined?0.05:minOpacity),1);ctx.drawImage(this._circle,p[0]-this._r,p[1]-this._r);}var colored=ctx.getImageData(0,0,this._width,this._height);this._colorize(colored.data,this._grad);ctx.putImageData(colored,0,0);return this;},_colorize:function(pixels,gradient){for(var i=3,len=pixels.length,j;i<len;i+=4){j=pixels[i]*4;if(j){pixels[i-3]=gradient[j];pixels[i-2]=gradient[j+1];pixels[i-1]=gradient[j+2];}}},_createCanvas:function(){if(typeof document!=='undefined'){return document.createElement('canvas');}else{var c=new Canvas(1,1);return c;}}};
+</script>
 <!-- Firebase v8 -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -876,7 +885,20 @@ function verTab(cual) {
   if (secEl) secEl.classList.add('activa');
   // Iniciar mapa al entrar a esa pestaña
   if (cual === 'mapa') {
-    setTimeout(iniciarMapa, 80);
+    // Esperar a que el browser calcule el layout antes de iniciar Leaflet
+    setTimeout(function() {
+      if (!mapaIniciado) {
+        iniciarMapa();
+      } else if (mapaObj) {
+        // Ya iniciado: forzar recalculo de tamaño (resuelve mapa negro)
+        mapaObj.invalidateSize(true);
+        renderMapa();
+      }
+    }, 150);
+    // Segundo invalidate por si acaso (algunos browsers necesitan dos pasadas)
+    setTimeout(function() {
+      if (mapaObj) { mapaObj.invalidateSize(true); }
+    }, 500);
   }
 }
 window.verTab = verTab;
@@ -967,7 +989,7 @@ function clasificarLocal(txt) {
 }
 
 function buildPrompt(texto) {
-  var frag = texto.slice(0, 1400);
+  var frag = texto.slice(0, 3000);
   var p = 'Eres extractor de datos estructurados de noticias locales de Irapuato, Guanajuato, Mexico.\n';
   p += 'Responde UNICAMENTE con el objeto JSON valido. Sin texto antes, sin texto despues, sin markdown.\n\n';
   p += 'EJEMPLOS (aprende el patron):\n\n';
@@ -1294,7 +1316,8 @@ function analizarDesdeCard(id) {
       // Actualizar el texto guardado en la card para tener contexto completo
       if (textoCompleto) {
         card.dataset.texto = textoCompleto;
-        toast('Articulo completo cargado (' + textoCompleto.length + ' chars)', 'ok');
+        var palabras = textoCompleto.split(' ').length;
+        toast('Articulo completo: ~' + palabras + ' palabras', 'ok');
       }
       analizarConIA(id, textoFinal, fuente, link);
     });
@@ -1335,10 +1358,10 @@ function extraerTextoArticulo(html) {
   var parser = new DOMParser();
   var doc = parser.parseFromString(html, 'text/html');
 
-  // Eliminar TODA la basura estructural y de compartir
+  // ── PASO 1: Quitar basura estructural ──
   var selectoresBasura = [
     'script','style','nav','footer','aside','header','iframe','noscript',
-    'figure','picture','video','audio','form','button',
+    'figure','picture','video','audio','form',
     '[class*="share"]','[class*="social"]','[class*="related"]',
     '[class*="recommend"]','[class*="popular"]','[class*="trending"]',
     '[class*="newsletter"]','[class*="suscri"]','[class*="subscri"]',
@@ -1347,10 +1370,11 @@ function extraerTextoArticulo(html) {
     '[class*="menu"]','[class*="sidebar"]','[class*="widget"]',
     '[class*="comment"]','[class*="tag"]','[class*="categoria"]',
     '[class*="breadcrumb"]','[class*="pagination"]','[class*="paginacion"]',
-    '[id*="share"]','[id*="social"]','[id*="ad"]','[id*="menu"]',
+    '[id*="share"]','[id*="social"]','[id*="menu"]',
     '[id*="sidebar"]','[id*="comment"]','[id*="newsletter"]',
     '.compartir','.redes','.tags','.etiquetas','.relacionadas',
-    '.mas-noticias','.otras-noticias','.footer','.header'
+    '.mas-noticias','.otras-noticias','.notas-relacionadas',
+    '.nota-relacionada','.te-puede-interesar','.lee-tambien'
   ];
   for (var b = 0; b < selectoresBasura.length; b++) {
     try {
@@ -1361,17 +1385,28 @@ function extraerTextoArticulo(html) {
     } catch(ex) {}
   }
 
-  // Selectores de contenido principal — orden de prioridad
+  // ── PASO 2: Selectores específicos por periódico + genéricos ──
+  // OEM/El Sol de Irapuato, AM, Correo, Tinta Negra, genéricos
   var selectoresContenido = [
-    'article .content','article .body','article .texto',
-    'article','[class*="article-body"]','[class*="nota-body"]',
+    // El Sol de Irapuato / OEM
+    '.note-paragraph','.note-body','.nota-cuerpo','.nota-interior',
+    '.article-body-content','.story-content',
+    // AM.com.mx
+    '.news-content','.nota-content','.contenido-articulo',
+    // Periodico Correo / Tinta Negra / WordPress
+    '.entry-content','.post-content','.td-post-content',
+    '.single-content','.article-content',
+    // Genéricos
+    'article .content','article .body','article .texto','article .cuerpo',
+    '[class*="article-body"]','[class*="nota-body"]',
     '[class*="article-content"]','[class*="nota-content"]',
-    '[class*="entry-content"]','[class*="post-content"]',
     '[class*="story-body"]','[class*="content-body"]',
     '[class*="cuerpo-nota"]','[class*="texto-nota"]',
+    '[class*="cuerpo"]','[class*="contenido"]',
     '.nota-detalle','.contenido-nota','.article-text',
-    'main article','main .content','main',
-    '#article-body','#nota-body','#content-body'
+    'article','main article','main .content',
+    '#article-body','#nota-body','#content-body','#cuerpo',
+    'main'
   ];
 
   var mejor = '';
@@ -1379,30 +1414,41 @@ function extraerTextoArticulo(html) {
     try {
       var el = doc.querySelector(selectoresContenido[s]);
       if (el) {
-        var txt = el.innerText || el.textContent || '';
-        txt = limpiarTexto(txt);
-        if (txt.length > mejor.length && txt.length > 80) { mejor = txt; }
+        // Extraer párrafos del elemento para evitar capturar títulos relacionados
+        var pElems = el.querySelectorAll('p');
+        var txts = [];
+        if (pElems.length >= 2) {
+          for (var pi = 0; pi < pElems.length; pi++) {
+            var tp = limpiarTexto(pElems[pi].textContent || '');
+            if (tp.length > 40) txts.push(tp);
+          }
+        }
+        var txt = txts.length >= 2 ? txts.join(' ') : limpiarTexto(el.textContent || '');
+        if (txt.length > mejor.length && txt.length > 100) { mejor = txt; }
       }
     } catch(ex) {}
   }
 
-  // Fallback: buscar el <p> mas largo como heuristica
-  if (mejor.length < 150) {
-    var parrafos = doc.querySelectorAll('p');
+  // ── PASO 3: Fallback heurístico — todos los <p> del documento ──
+  if (mejor.length < 200) {
+    var todosP = doc.querySelectorAll('p');
     var bloques = [];
-    for (var p = 0; p < parrafos.length; p++) {
-      var tp = limpiarTexto(parrafos[p].textContent || '');
-      if (tp.length > 60) bloques.push(tp);
+    for (var p = 0; p < todosP.length; p++) {
+      var tp2 = limpiarTexto(todosP[p].textContent || '');
+      // Solo párrafos sustanciales (más de 60 chars, no títulos cortos)
+      if (tp2.length > 60 && tp2.length < 1500) bloques.push(tp2);
     }
-    if (bloques.length > 0) mejor = bloques.join(' ');
+    // Tomar los primeros 15 párrafos como máximo
+    if (bloques.length > 0) mejor = bloques.slice(0, 15).join(' ');
   }
 
-  // Ultimo recurso: body completo
+  // ── PASO 4: Último recurso body ──
   if (mejor.length < 100) {
-    mejor = limpiarTexto(doc.body ? (doc.body.innerText || doc.body.textContent || '') : '');
+    mejor = limpiarTexto(doc.body ? (doc.body.textContent || '') : '');
   }
 
-  return mejor.slice(0, 2500);
+  // Devolver hasta 4000 chars (suficiente para Gemini, nota completa)
+  return mejor.slice(0, 4000);
 }
 
 function limpiarTexto(txt) {
@@ -2231,19 +2277,35 @@ var HEAT_PESO = {
 };
 
 function iniciarMapa() {
-  if (mapaIniciado) { renderMapa(); return; }
+  if (mapaIniciado) {
+    if (mapaObj) { mapaObj.invalidateSize(true); }
+    renderMapa();
+    return;
+  }
   if (typeof L === 'undefined') { setTimeout(iniciarMapa, 500); return; }
+  // Verificar que el contenedor tiene altura antes de inicializar
+  var contenedor = document.getElementById('mapa-leaflet');
+  if (!contenedor || contenedor.offsetHeight === 0) {
+    setTimeout(iniciarMapa, 200);
+    return;
+  }
   mapaIniciado = true;
   mapaObj = L.map('mapa-leaflet', {
     center: [20.6795, -101.3540],
     zoom: 12,
-    zoomControl: true
+    zoomControl: true,
+    preferCanvas: true
   });
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap &copy; CARTO',
-    maxZoom: 19
+    maxZoom: 19,
+    subdomains: 'abcd'
   }).addTo(mapaObj);
-  renderMapa();
+  // Invalidar tamaño tras renderizar para corregir mapa negro en Android
+  setTimeout(function() {
+    mapaObj.invalidateSize(true);
+    renderMapa();
+  }, 100);
 }
 window.iniciarMapa = iniciarMapa;
 
