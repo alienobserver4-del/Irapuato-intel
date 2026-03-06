@@ -1368,11 +1368,10 @@ function aprobarCard(id, fuente, link) {
 }
 window.aprobarCard = aprobarCard;
 
-function aprobarFB(id, fuente, url) {
-  // Leer todos los campos del card FB incluyendo tipo2
+function aprobarFB(id, fuente, btnEl) {
+  var url = document.getElementById('fb-url') ? document.getElementById('fb-url').value.trim() : '';
   var tipo2El = document.getElementById(id + '-tipo2');
   var tipo2 = tipo2El ? tipo2El.value : '';
-  // Guardar tipo2 en dataset para que aprobarCard lo recoja
   var card = document.getElementById(id);
   if (card && tipo2) card.dataset.tipo2 = tipo2;
   aprobarCard(id, fuente, url);
@@ -1779,7 +1778,7 @@ function analizarFB() {
         '<div class="nc-campo"><div class="nc-label">RESUMEN</div><input class="nc-input" id="' + id + '-sum" value="' + (r.resumen||'').slice(0,200).replace(/"/g,'') + '"></div>' +
       '</div>' +
       '<div class="nc-acciones">' +
-        '<button class="btn-aprobar" onclick="aprobarFB(\'' + id + '\',\'' + fuenteFB + '\',\'' + url.replace(/'/g,\'\').replace(/"/g,\'\') + '\')">APROBAR</button>' +
+        '<button class="btn-aprobar" onclick="aprobarFB(\'' + id + '\',\'' + fuenteFB + '\', this)">APROBAR</button>' +
         '<button class="btn-descartar" onclick="descartarCard(\'' + id + '\')">DESCARTAR</button>' +
       '</div>';
 
