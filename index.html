@@ -560,6 +560,9 @@ header {
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <script>
+// Esperar a que el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+// ═══ INICIO DE APP ═══
 // ═══════════════════════════════════════════════════════════════
 // CONFIGURACIÓN
 // ═══════════════════════════════════════════════════════════════
@@ -638,7 +641,8 @@ try {
   db = firebase.firestore();
   escucharBD();
 } catch(e) {
-  toast('Firebase no disponible — modo offline', 'warn');
+  console.log('Firebase error:', e.message);
+  // No crashear — continuar sin Firebase
 }
 
 function escucharBD() {
@@ -1267,7 +1271,8 @@ function actualizarBadge() {
 // MODAL FACEBOOK
 // ═══════════════════════════════════════════════════════════════
 var fuenteFB = 'Tinta Negra FB';
-var makeWebhookURL = localStorage ? localStorage.getItem('make_webhook') || '' : '';
+var makeWebhookURL = '';
+try { makeWebhookURL = localStorage.getItem('make_webhook') || ''; } catch(e) {}
 
 function abrirFacebook() {
   var modal = document.getElementById('fb-modal');
@@ -1387,6 +1392,12 @@ function escucharMake() {
   }, function(e) { console.log('Make listener:', e.message); });
 }
 escucharMake();
+
+// Indicador de que JS cargó correctamente
+document.getElementById('rss-estado').textContent = 'Sistema listo. Elige una fuente.';
+document.getElementById('rss-estado').className = 'rss-estado ok';
+
+}); // fin DOMContentLoaded
 </script>
 
 </body>
