@@ -11,6 +11,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
 :root {
@@ -79,6 +80,7 @@ header {
 .tab.active.rss { color:var(--green); border-bottom-color:var(--green); background:rgba(0,255,136,.04); }
 .tab.active.manual { color:var(--magenta); border-bottom-color:var(--magenta); background:rgba(255,0,170,.04); }
 .tab.active.bd { color:var(--yellow); border-bottom-color:var(--yellow); background:rgba(255,204,0,.04); }
+.tab.active.mapa { color:var(--green); border-bottom-color:var(--green); background:rgba(0,255,136,.04); }
 
 /* ── PANEL PRINCIPAL ── */
 #panel { flex:1; overflow-y:auto; overflow-x:hidden; }
@@ -362,6 +364,61 @@ header {
 
 /* ── LINK EXTERNO ── */
 .nc-link { font-size:7px; color:var(--cyan); text-decoration:none; display:inline-block; margin-top:2px; }
+
+/* ── MAPA ── */
+#mapa-container { width:100%; height:calc(100dvh - 110px); position:relative; }
+#mapa-leaflet { width:100%; height:100%; }
+.mapa-filtros {
+  position:absolute; top:8px; left:50%; transform:translateX(-50%);
+  z-index:1000; display:flex; gap:4px; flex-wrap:wrap; justify-content:center;
+  max-width:95vw;
+}
+.mapa-filtro-btn {
+  padding:5px 9px; font-family:var(--title); font-size:6px; letter-spacing:1px;
+  border-radius:3px; cursor:pointer; border:1px solid; background:rgba(3,5,10,.88);
+  white-space:nowrap;
+}
+.mapa-filtro-btn.seg  { color:var(--red);    border-color:var(--red); }
+.mapa-filtro-btn.acc  { color:var(--orange); border-color:var(--orange); }
+.mapa-filtro-btn.eve  { color:#00ccff;       border-color:#00ccff; }
+.mapa-filtro-btn.gob  { color:#0096ff;       border-color:#0096ff; }
+.mapa-filtro-btn.rum  { color:var(--muted);  border-color:var(--muted); }
+.mapa-filtro-btn.todos { color:var(--cyan);  border-color:var(--cyan); }
+.mapa-filtro-btn.activo { opacity:1; }
+.mapa-filtro-btn.inactivo { opacity:.35; }
+.mapa-info-bar {
+  position:absolute; bottom:0; left:0; right:0; z-index:1000;
+  background:rgba(3,5,10,.9); border-top:1px solid var(--border);
+  padding:6px 12px; font-size:7px; color:var(--muted);
+  font-family:var(--title); letter-spacing:1px;
+  display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+}
+.mapa-stat { display:flex; align-items:center; gap:4px; }
+.mapa-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+/* Popup del mapa */
+.leaflet-popup-content-wrapper {
+  background:#060d18 !important; border:1px solid #00f5ff44 !important;
+  border-radius:4px !important; color:#c0e8ff !important;
+  font-family:'Share Tech Mono',monospace !important;
+  box-shadow:0 0 20px rgba(0,245,255,.1) !important;
+}
+.leaflet-popup-content { margin:8px 10px !important; font-size:9px !important; line-height:1.5 !important; }
+.leaflet-popup-tip { background:#060d18 !important; }
+.leaflet-popup-close-button { color:#5a8aaa !important; font-size:14px !important; }
+.mapa-popup-tipo { font-family:'Orbitron',monospace; font-size:7px; padding:2px 5px; border-radius:2px; display:inline-block; margin-bottom:4px; }
+.mapa-popup-tit { font-size:10px; color:#c0e8ff; margin-bottom:4px; line-height:1.3; }
+.mapa-popup-meta { font-size:7px; color:#5a8aaa; line-height:1.8; }
+.mapa-popup-res { font-size:8px; color:#7a9ab8; margin-top:4px; border-top:1px solid #0d2040; padding-top:4px; }
+/* Botón heatmap */
+.mapa-heat-btn {
+  padding:5px 9px; font-family:var(--title); font-size:6px; letter-spacing:1px;
+  border-radius:3px; cursor:pointer; border:1px solid #ff6600;
+  background:rgba(3,5,10,.88); color:#ff6600; white-space:nowrap;
+}
+.mapa-heat-btn.activo { background:rgba(255,102,0,.2); color:#ffaa44; border-color:#ffaa44; }
+/* Mini mapa en modal BD */
+#bd-mini-mapa { width:100%; height:160px; border-radius:4px; border:1px solid #0d2040; margin-top:8px; }
+.bd-modal-box { background:#060f1e; border:1px solid #00c8ff55; border-radius:6px; padding:20px; max-width:520px; width:92%; margin:30px auto; position:relative; }
 </style>
 </head>
 
@@ -382,6 +439,7 @@ header {
     <button class="tab rss active" onclick="verTab('rss')">📡 NOTICIAS AUTO</button>
     <button class="tab manual" onclick="verTab('manual')">✍ ENTRADA MANUAL</button>
     <button class="tab bd" onclick="verTab('bd')">🗄 BASE DE DATOS <span id="badge-bd" class="badge" style="display:none">0</span></button>
+    <button class="tab mapa" onclick="verTab('mapa')">🗺 MAPA</button>
   </div>
 
   <!-- PANEL -->
@@ -490,6 +548,14 @@ header {
 
   </div><!-- /panel -->
 </div><!-- /app -->
+
+<!-- MODAL DETALLE BD -->
+<div id="bd-modal" class="bd-modal-overlay" onclick="cerrarModalBD(event)">
+  <div class="bd-modal-box">
+    <button class="bd-modal-close" onclick="cerrarModalBDBtn()">&#10005; CERRAR</button>
+    <div id="bd-modal-contenido"></div>
+  </div>
+</div>
 
 <!-- MODAL FACEBOOK -->
 <div id="fb-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:9000;flex-direction:column;">
@@ -662,10 +728,38 @@ header {
       </button>
     </div>
 
+
+    <!-- ═══════════ MAPA ═══════════ -->
+    <div id="sec-mapa" class="seccion">
+      <div id="mapa-container">
+        <div class="mapa-filtros">
+          <button class="mapa-filtro-btn todos activo" onclick="filtrarMapa('todos',this)">TODOS</button>
+          <button class="mapa-filtro-btn seg activo" onclick="filtrarMapa('seguridad',this)">SEG</button>
+          <button class="mapa-filtro-btn acc activo" onclick="filtrarMapa('accidente',this)">ACC</button>
+          <button class="mapa-filtro-btn eve activo" onclick="filtrarMapa('evento',this)">EVE</button>
+          <button class="mapa-filtro-btn gob activo" onclick="filtrarMapa('gobierno',this)">GOB</button>
+          <button class="mapa-filtro-btn rum activo" onclick="filtrarMapa('rumor',this)">RUMOR</button>
+          <button class="mapa-heat-btn" id="btn-heatmap" onclick="toggleHeatmap(this)">&#x1F525; CALOR</button>
+        </div>
+        <div id="mapa-leaflet"></div>
+        <div class="mapa-info-bar">
+          <div class="mapa-stat"><div class="mapa-dot" style="background:var(--red)"></div><span id="mapa-cnt-seg">0</span> SEG</div>
+          <div class="mapa-stat"><div class="mapa-dot" style="background:var(--orange)"></div><span id="mapa-cnt-acc">0</span> ACC</div>
+          <div class="mapa-stat"><div class="mapa-dot" style="background:#00ccff"></div><span id="mapa-cnt-eve">0</span> EVE</div>
+          <div class="mapa-stat"><div class="mapa-dot" style="background:#0096ff"></div><span id="mapa-cnt-gob">0</span> GOB</div>
+          <div class="mapa-stat"><div class="mapa-dot" style="background:var(--muted)"></div><span id="mapa-cnt-rum">0</span> RUM</div>
+          <span style="margin-left:auto;color:var(--cyan);" id="mapa-cnt-tot">0 noticias</span>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 <div id="toast"></div>
 
+<!-- Leaflet Maps -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <!-- Firebase v8 -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -758,6 +852,7 @@ function escucharBD() {
     });
     renderBD();
     actualizarBadge();
+    if (mapaIniciado) renderMapa();
   }, function(err) {
     console.log('Firebase error:', err.message);
   });
@@ -779,6 +874,10 @@ function verTab(cual) {
   if (tabEl) tabEl.classList.add('active');
   var secEl = document.getElementById('sec-' + cual);
   if (secEl) secEl.classList.add('activa');
+  // Iniciar mapa al entrar a esa pestaña
+  if (cual === 'mapa') {
+    setTimeout(iniciarMapa, 80);
+  }
 }
 window.verTab = verTab;
 
@@ -868,21 +967,26 @@ function clasificarLocal(txt) {
 }
 
 function buildPrompt(texto) {
-  var frag = texto.slice(0, 1200);
-  var p = 'Eres extractor de datos de noticias de Irapuato, Guanajuato, Mexico. ';
-  p += 'Responde UNICAMENTE con el objeto JSON, sin explicaciones, sin markdown, sin texto antes o despues.\n\n';
-  p += 'EJEMPLOS DE EXTRACCION CORRECTA:\n';
-  p += 'Texto: "Una camioneta volco en la carretera Irapuato-Leon a la altura del ITESI. La manana de este viernes..."\n';
-  p += 'JSON: {"titulo":"Camioneta vuelca en carretera Irapuato-Leon altura ITESI","tipo":"accidente","calle1":"Carretera Irapuato-Leon","calle2":"A la altura del ITESI","colonia":"","comunidad":"","nombres":"","resumen":"Una camioneta volco en la carretera Irapuato-Leon frente al ITESI. El hecho ocurrio en la manana del viernes.","fecha_evento":"","tiempo_dia":"manana","lat":20.68,"lng":-101.41,"confianza":"alta"}\n\n';
-  p += 'Texto: "Reportan balacera en calle Obregon esquina con Hidalgo, colonia Centro, anoche cerca de las 11pm"\n';
-  p += 'JSON: {"titulo":"Balacera en Obregon y Hidalgo colonia Centro","tipo":"seguridad","calle1":"Calle Obregon","calle2":"Hidalgo","colonia":"Centro","comunidad":"","nombres":"","resumen":"Se reporto una balacera en la esquina de Obregon e Hidalgo en la colonia Centro. Ocurrio en la noche cerca de las 11pm.","fecha_evento":"","tiempo_dia":"noche","lat":20.6795,"lng":-101.354,"confianza":"media"}\n\n';
-  p += 'REGLAS:\n';
-  p += '- calle1: toda referencia vial: calles, avenidas, carreteras, perifericos, bulevares, caminos. NUNCA dejar vacio si hay mencion vial.\n';
-  p += '- calle2: segunda via, esquina, cruce, o landmark ("altura del ITESI", "frente al OXXO")\n';
-  p += '- tiempo_dia: "manana" si dice manana/am/6-12h. "tarde" si dice tarde/pm/12-19h. "noche" si dice noche/19-24h. "madrugada" si dice madrugada/0-6h. Solo "desconocido" si CERO referencia horaria.\n';
-  p += '- tipo: accidente=volcaduras/choques/caidas. seguridad=violencia/robos/balaceras. gobierno=obras/autoridades.\n';
-  p += '- confianza: alta si es prensa oficial, media si es pagina de noticias, baja si es red social/ciudadano.\n\n';
-  p += 'Texto a analizar:\n' + frag + '\n\nJSON:';
+  var frag = texto.slice(0, 1400);
+  var p = 'Eres extractor de datos estructurados de noticias locales de Irapuato, Guanajuato, Mexico.\n';
+  p += 'Responde UNICAMENTE con el objeto JSON valido. Sin texto antes, sin texto despues, sin markdown.\n\n';
+  p += 'EJEMPLOS (aprende el patron):\n\n';
+  p += 'TEXTO: "Reportan herido tras ataque armado en la colonia El Cantador de Irapuato. El hecho ocurrio la tarde del jueves."\n';
+  p += 'JSON: {"titulo":"Herido tras ataque armado en colonia El Cantador","tipo":"seguridad","calle1":"","calle2":"","colonia":"El Cantador","comunidad":"","nombres":"","resumen":"Un hombre resulto herido en un ataque armado en la colonia El Cantador. El hecho ocurrio en la tarde del jueves.","fecha_evento":"","tiempo_dia":"tarde","lat":20.68,"lng":-101.35,"confianza":"media"}\n\n';
+  p += 'TEXTO: "Una camioneta volco en la carretera Irapuato-Leon a la altura del ITESI. Aproximadamente a las 9:15 de la manana de este viernes."\n';
+  p += 'JSON: {"titulo":"Camioneta vuelca en carretera Irapuato-Leon frente a ITESI","tipo":"accidente","calle1":"Carretera Irapuato-Leon","calle2":"Altura del ITESI","colonia":"","comunidad":"","nombres":"","resumen":"Una camioneta volco en la carretera Irapuato-Leon a la altura del ITESI el viernes por la manana.","fecha_evento":"","tiempo_dia":"manana","lat":20.68,"lng":-101.41,"confianza":"alta"}\n\n';
+  p += 'TEXTO: "Refuerzan formacion policial. El director Andres Clemente Carrillo Marrot destaco los beneficios otorgados en la Academia de Seguridad Publica."\n';
+  p += 'JSON: {"titulo":"Refuerzan formacion policial con becas y prestaciones","tipo":"gobierno","calle1":"","calle2":"","colonia":"","comunidad":"","nombres":"Andres Clemente Carrillo Marrot","resumen":"El director de la Academia de Seguridad, Andres Clemente Carrillo Marrot, destaco mejoras en la formacion policial con becas y salarios.","fecha_evento":"","tiempo_dia":"desconocido","lat":20.6795,"lng":-101.354,"confianza":"alta"}\n\n';
+  p += 'REGLAS CRITICAS:\n';
+  p += '1. colonia: Si el texto dice "colonia X", "col. X", "fraccionamiento X", "barrio X" => pon X en colonia. SIEMPRE.\n';
+  p += '2. nombres: Extrae TODOS los nombres propios de personas mencionadas (funcionarios, victimas, testigos). Separados por coma.\n';
+  p += '3. calle1: Cualquier via: calle, avenida, carretera, periferico, bulevar, camino, corredor. NUNCA vacio si hay referencia vial.\n';
+  p += '4. calle2: Segunda via, esquina, cruce o referencia ("altura del hospital", "frente a la plaza").\n';
+  p += '5. tiempo_dia: manana=6-12h o dice "manana". tarde=12-19h. noche=19-24h. madrugada=0-6h. desconocido=sin hora.\n';
+  p += '6. tipo: seguridad=violencia/robos/disparos. accidente=choques/volcaduras/caidas. gobierno=autoridades/obras/programas.\n';
+  p += '7. comunidad: rancho, ejido, comunidad rural (NO colonias urbanas).\n';
+  p += '8. titulo: maximo 80 caracteres, sin emojis, claro y directo.\n\n';
+  p += 'TEXTO A ANALIZAR:\n' + frag + '\n\nJSON:';
   return p;
 }
 
@@ -1230,32 +1334,93 @@ function fetchContenidoArticulo(url, callback) {
 function extraerTextoArticulo(html) {
   var parser = new DOMParser();
   var doc = parser.parseFromString(html, 'text/html');
-  // Eliminar scripts, estilos, nav, footer, aside, anuncios
-  var basura = doc.querySelectorAll('script,style,nav,footer,aside,header,iframe,noscript,[class*="ad"],[class*="menu"],[class*="sidebar"],[class*="comment"],[id*="ad"],[id*="menu"],[id*="sidebar"]');
-  for (var i = 0; i < basura.length; i++) {
-    if (basura[i].parentNode) basura[i].parentNode.removeChild(basura[i]);
-  }
-  // Intentar selectores tipicos de articulos periodisticos
-  var selectores = [
-    'article', '[class*="article-body"]', '[class*="nota-body"]',
-    '[class*="entry-content"]', '[class*="post-content"]',
-    '[class*="story-body"]', '[class*="content-body"]',
-    'main', '.content', '#content', '.nota', '.article'
+
+  // Eliminar TODA la basura estructural y de compartir
+  var selectoresBasura = [
+    'script','style','nav','footer','aside','header','iframe','noscript',
+    'figure','picture','video','audio','form','button',
+    '[class*="share"]','[class*="social"]','[class*="related"]',
+    '[class*="recommend"]','[class*="popular"]','[class*="trending"]',
+    '[class*="newsletter"]','[class*="suscri"]','[class*="subscri"]',
+    '[class*="publicidad"]','[class*="banner"]','[class*="publi"]',
+    '[class*="ad-"]','[class*="-ad"]','[class*="ads"]',
+    '[class*="menu"]','[class*="sidebar"]','[class*="widget"]',
+    '[class*="comment"]','[class*="tag"]','[class*="categoria"]',
+    '[class*="breadcrumb"]','[class*="pagination"]','[class*="paginacion"]',
+    '[id*="share"]','[id*="social"]','[id*="ad"]','[id*="menu"]',
+    '[id*="sidebar"]','[id*="comment"]','[id*="newsletter"]',
+    '.compartir','.redes','.tags','.etiquetas','.relacionadas',
+    '.mas-noticias','.otras-noticias','.footer','.header'
   ];
+  for (var b = 0; b < selectoresBasura.length; b++) {
+    try {
+      var elems = doc.querySelectorAll(selectoresBasura[b]);
+      for (var e = 0; e < elems.length; e++) {
+        if (elems[e].parentNode) elems[e].parentNode.removeChild(elems[e]);
+      }
+    } catch(ex) {}
+  }
+
+  // Selectores de contenido principal — orden de prioridad
+  var selectoresContenido = [
+    'article .content','article .body','article .texto',
+    'article','[class*="article-body"]','[class*="nota-body"]',
+    '[class*="article-content"]','[class*="nota-content"]',
+    '[class*="entry-content"]','[class*="post-content"]',
+    '[class*="story-body"]','[class*="content-body"]',
+    '[class*="cuerpo-nota"]','[class*="texto-nota"]',
+    '.nota-detalle','.contenido-nota','.article-text',
+    'main article','main .content','main',
+    '#article-body','#nota-body','#content-body'
+  ];
+
   var mejor = '';
-  for (var s = 0; s < selectores.length; s++) {
-    var el = doc.querySelector(selectores[s]);
-    if (el) {
-      var txt = el.innerText || el.textContent || '';
-      txt = txt.replace(/\s+/g, ' ').trim();
-      if (txt.length > mejor.length) mejor = txt;
+  for (var s = 0; s < selectoresContenido.length; s++) {
+    try {
+      var el = doc.querySelector(selectoresContenido[s]);
+      if (el) {
+        var txt = el.innerText || el.textContent || '';
+        txt = limpiarTexto(txt);
+        if (txt.length > mejor.length && txt.length > 80) { mejor = txt; }
+      }
+    } catch(ex) {}
+  }
+
+  // Fallback: buscar el <p> mas largo como heuristica
+  if (mejor.length < 150) {
+    var parrafos = doc.querySelectorAll('p');
+    var bloques = [];
+    for (var p = 0; p < parrafos.length; p++) {
+      var tp = limpiarTexto(parrafos[p].textContent || '');
+      if (tp.length > 60) bloques.push(tp);
     }
+    if (bloques.length > 0) mejor = bloques.join(' ');
   }
-  // Si no encontro nada especifico, usar el body completo limpio
+
+  // Ultimo recurso: body completo
   if (mejor.length < 100) {
-    mejor = (doc.body ? (doc.body.innerText || doc.body.textContent || '') : '').replace(/\s+/g, ' ').trim();
+    mejor = limpiarTexto(doc.body ? (doc.body.innerText || doc.body.textContent || '') : '');
   }
-  return mejor.slice(0, 2000);
+
+  return mejor.slice(0, 2500);
+}
+
+function limpiarTexto(txt) {
+  return txt
+    // Quitar patrones tipicos de basura periodistica
+    .replace(/Facebook\s*X?\s*WhatsApp\s*Telegram\s*E-?Mail\s*Copiar\s*link[A-Za-z]*/gi, '')
+    .replace(/Compartir\s*(en\s*)?(Facebook|Twitter|WhatsApp|Telegram|Email|Link)?/gi, '')
+    .replace(/Suscr[íi]bete?\s*(al?\s*newsletter)?/gi, '')
+    .replace(/Lee\s*tambi[eé]n[:\s]*/gi, '')
+    .replace(/Te\s*puede\s*interesar[:\s]*/gi, '')
+    .replace(/Relacionadas?[:\s]*/gi, '')
+    .replace(/Lunes|Martes|Mi[eé]rcoles|Jueves|Viernes|S[aá]bado|Domingo/g, '')
+    .replace(/enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre/gi, function(m){ return m; })
+    .replace(/\d{1,2}\s*de\s*(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\s*de\s*\d{4}/gi, '')
+    .replace(/Local\s*(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)/gi, '')
+    .replace(/[A-Z][a-z]+\s*,\s*\d{1,2}\s*de\s*[a-z]+\s*de\s*\d{4}/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
 // Auto-completar colonia al salir del campo calle
@@ -1749,16 +1914,60 @@ function verDetallesBD(id) {
   if (n.nombres) { html += '<div class="bd-mf"><div class="bd-ml">PERSONAS IMPLICADAS</div><div class="bd-mv" style="color:#ffa500;">' + n.nombres + '</div></div>'; }
   html += '<div class="bd-mf"><div class="bd-ml">FUENTE</div><div class="bd-mv"><a href="' + (n.url||'#') + '" target="_blank" style="color:var(--cyan);">' + (n.fuente||'') + '</a></div></div>';
 
+  // Mini mapa si tiene coordenadas
+  var lat = parseFloat(n.lat) || 20.6795;
+  var lng = parseFloat(n.lng) || -101.3540;
+  var tieneUbicacion = (n.calle || n.colonia || n.comunidad || (lat !== 20.6795 || lng !== -101.3540));
+  if (tieneUbicacion) {
+    html += '<div class="bd-ml" style="margin-top:10px;margin-bottom:4px;">UBICACION</div>';
+    html += '<div id="bd-mini-mapa"></div>';
+    // Botón para ir al mapa principal centrado en esta noticia
+    html += '<button onclick="irAlMapaEn(' + lat + ',' + lng + ')" style="width:100%;margin-top:6px;padding:7px;font-family:var(--title);font-size:7px;letter-spacing:1px;background:rgba(0,245,255,.06);color:var(--cyan);border:1px solid #00f5ff33;border-radius:3px;cursor:pointer;">&#128506; ABRIR EN MAPA COMPLETO</button>';
+  }
+
   document.getElementById('bd-modal-contenido').innerHTML = html;
   document.getElementById('bd-modal').className = 'bd-modal-overlay visible';
+
+  // Iniciar mini mapa si aplica
+  if (tieneUbicacion) {
+    iniciarMiniMapa(lat, lng, n.tipo || 'rumor');
+  }
 }
 window.verDetallesBD = verDetallesBD;
+
+// Ir al mapa principal centrado en una coordenada específica
+function irAlMapaEn(lat, lng) {
+  document.getElementById('bd-modal').className = 'bd-modal-overlay';
+  verTab('mapa');
+  setTimeout(function() {
+    if (mapaObj) {
+      mapaObj.setView([lat, lng], 16);
+      mapaObj.invalidateSize();
+    }
+  }, 200);
+}
+window.irAlMapaEn = irAlMapaEn;
 
 function cerrarModalBD(e) {
   if (e && e.target && e.target.id !== 'bd-modal') return;
   document.getElementById('bd-modal').className = 'bd-modal-overlay';
+  // Destruir mini mapa para liberar memoria
+  if (miniMapaObj) {
+    try { miniMapaObj.remove(); } catch(ex) {}
+    miniMapaObj = null;
+  }
 }
 window.cerrarModalBD = cerrarModalBD;
+
+// También cerrar con botón X
+function cerrarModalBDBtn() {
+  document.getElementById('bd-modal').className = 'bd-modal-overlay';
+  if (miniMapaObj) {
+    try { miniMapaObj.remove(); } catch(ex) {}
+    miniMapaObj = null;
+  }
+}
+window.cerrarModalBDBtn = cerrarModalBDBtn;
 
 function editarBD(id) {
   var panel = document.getElementById('bd-edit-' + id);
@@ -1991,6 +2200,227 @@ try {
   escucharBD();
 } catch(e) {
   console.log('Firebase error:', e.message);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAPA LEAFLET — con heatmap, click detalle y mini-mapa en BD
+// ═══════════════════════════════════════════════════════════════
+var mapaIniciado = false;
+var mapaObj = null;
+var mapaMarkers = [];
+var mapaHeatLayer = null;
+var mapaHeatActivo = false;
+var miniMapaObj = null;
+var mapaFiltrosActivos = { seguridad:true, accidente:true, evento:true, gobierno:true, rumor:true, desaparecido:true, salud:true, transporte:true };
+
+var COLORES_TIPO = {
+  seguridad:   '#ff2255',
+  accidente:   '#ff8800',
+  evento:      '#00ccff',
+  gobierno:    '#0096ff',
+  salud:       '#00c864',
+  transporte:  '#b464ff',
+  desaparecido:'#ffa500',
+  rumor:       '#3a5a7a'
+};
+
+// Intensidad de cada tipo en el heatmap (seguridad pesa mas)
+var HEAT_PESO = {
+  seguridad:1.0, desaparecido:0.9, accidente:0.7,
+  transporte:0.5, salud:0.5, rumor:0.4, gobierno:0.3, evento:0.2
+};
+
+function iniciarMapa() {
+  if (mapaIniciado) { renderMapa(); return; }
+  if (typeof L === 'undefined') { setTimeout(iniciarMapa, 500); return; }
+  mapaIniciado = true;
+  mapaObj = L.map('mapa-leaflet', {
+    center: [20.6795, -101.3540],
+    zoom: 12,
+    zoomControl: true
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    maxZoom: 19
+  }).addTo(mapaObj);
+  renderMapa();
+}
+window.iniciarMapa = iniciarMapa;
+
+function crearIconoMapa(tipo) {
+  var color = COLORES_TIPO[tipo] || '#3a5a7a';
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="28" viewBox="0 0 22 28">' +
+    '<path d="M11 0C4.9 0 0 4.9 0 11c0 7.7 11 17 11 17s11-9.3 11-17C22 4.9 17.1 0 11 0z" fill="' + color + '" opacity="0.9"/>' +
+    '<circle cx="11" cy="11" r="5" fill="rgba(0,0,0,0.5)"/>' +
+    '</svg>';
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: [22, 28],
+    iconAnchor: [11, 28],
+    popupAnchor: [0, -28]
+  });
+}
+
+function coordsValidas(lat, lng) {
+  return lat > 20.3 && lat < 21.0 && lng > -101.8 && lng < -101.0;
+}
+
+function renderMapa() {
+  if (!mapaObj) return;
+  // Limpiar markers y heatmap anteriores
+  for (var i = 0; i < mapaMarkers.length; i++) { mapaObj.removeLayer(mapaMarkers[i]); }
+  mapaMarkers = [];
+  if (mapaHeatLayer) { mapaObj.removeLayer(mapaHeatLayer); mapaHeatLayer = null; }
+
+  var contadores = { seguridad:0, accidente:0, evento:0, gobierno:0, rum:0 };
+  var total = 0;
+  var heatPoints = [];
+
+  for (var j = 0; j < noticias.length; j++) {
+    var n = noticias[j];
+    var tipo = n.tipo || 'rumor';
+    var lat = parseFloat(n.lat) || 20.6795;
+    var lng = parseFloat(n.lng) || -101.3540;
+    if (!coordsValidas(lat, lng)) { lat = 20.6795; lng = -101.3540; }
+
+    var tipoFiltro = (tipo === 'rumor' || tipo === 'desaparecido' || tipo === 'salud' || tipo === 'transporte') ? 'rumor' : tipo;
+    if (!mapaFiltrosActivos[tipo] && !mapaFiltrosActivos[tipoFiltro]) continue;
+
+    // --- MARKER con popup de detalle completo ---
+    var marker = L.marker([lat, lng], { icon: crearIconoMapa(tipo), noticiaId: n.id });
+    var colorTipo = COLORES_TIPO[tipo] || '#3a5a7a';
+    var nId = n.id;
+
+    var popupHtml =
+      '<div class="mapa-popup-tipo" style="background:' + colorTipo + '22;color:' + colorTipo + ';border:1px solid ' + colorTipo + '44;">' + tipo.toUpperCase() + '</div>' +
+      '<div class="mapa-popup-tit">' + (n.titulo || 'Sin titulo') + '</div>' +
+      '<div class="mapa-popup-meta">' +
+        (n.fuente ? '&#128240; ' + n.fuente + '<br>' : '') +
+        (n.calle ? '&#128205; ' + n.calle + (n.calle2 ? ' / ' + n.calle2 : '') + '<br>' : '') +
+        (n.colonia ? '&#127968; Col: ' + n.colonia + '<br>' : '') +
+        (n.comunidad ? '&#127981; Com: ' + n.comunidad + '<br>' : '') +
+        (n.nombres ? '&#128100; ' + n.nombres + '<br>' : '') +
+        (n.fecha_evento ? '&#128197; ' + n.fecha_evento : '') +
+        (n.tiempo_dia && n.tiempo_dia !== 'desconocido' ? ' &#9200; ' + n.tiempo_dia : '') +
+      '</div>' +
+      (n.resumen ? '<div class="mapa-popup-res">' + n.resumen + '</div>' : '') +
+      '<div style="margin-top:8px;text-align:right;">' +
+        '<button onclick="verDetallesBD(\'' + nId + '\')" style="font-family:\'Orbitron\',monospace;font-size:7px;padding:4px 8px;background:rgba(0,245,255,.1);color:#00f5ff;border:1px solid #00f5ff44;border-radius:2px;cursor:pointer;letter-spacing:1px;">VER DETALLE &#9654;</button>' +
+      '</div>';
+
+    marker.bindPopup(popupHtml, { maxWidth: 270, className: 'mapa-popup-custom' });
+    marker.addTo(mapaObj);
+    mapaMarkers.push(marker);
+
+    // --- Punto para heatmap ---
+    var peso = HEAT_PESO[tipo] || 0.4;
+    heatPoints.push([lat, lng, peso]);
+
+    total++;
+    if (tipo === 'seguridad') contadores.seguridad++;
+    else if (tipo === 'accidente') contadores.accidente++;
+    else if (tipo === 'evento') contadores.evento++;
+    else if (tipo === 'gobierno') contadores.gobierno++;
+    else contadores.rum++;
+  }
+
+  // Crear capa heatmap si hay puntos y está activado
+  if (heatPoints.length > 0 && typeof L.heatLayer !== 'undefined') {
+    mapaHeatLayer = L.heatLayer(heatPoints, {
+      radius: 30,
+      blur: 20,
+      maxZoom: 16,
+      max: 1.0,
+      gradient: { 0.2:'#0000ff', 0.4:'#00ffff', 0.6:'#ffff00', 0.8:'#ff8800', 1.0:'#ff0000' }
+    });
+    if (mapaHeatActivo) mapaHeatLayer.addTo(mapaObj);
+  }
+
+  // Actualizar contadores
+  var el = function(id) { return document.getElementById(id); };
+  if (el('mapa-cnt-seg')) el('mapa-cnt-seg').textContent = contadores.seguridad;
+  if (el('mapa-cnt-acc')) el('mapa-cnt-acc').textContent = contadores.accidente;
+  if (el('mapa-cnt-eve')) el('mapa-cnt-eve').textContent = contadores.evento;
+  if (el('mapa-cnt-gob')) el('mapa-cnt-gob').textContent = contadores.gobierno;
+  if (el('mapa-cnt-rum')) el('mapa-cnt-rum').textContent = contadores.rum;
+  if (el('mapa-cnt-tot')) el('mapa-cnt-tot').textContent = total + ' noticias';
+
+  setTimeout(function() { if (mapaObj) mapaObj.invalidateSize(); }, 100);
+}
+window.renderMapa = renderMapa;
+
+function toggleHeatmap(btnEl) {
+  mapaHeatActivo = !mapaHeatActivo;
+  if (btnEl) {
+    btnEl.className = btnEl.className.replace('activo','').replace('inactivo','').trim();
+    btnEl.className += mapaHeatActivo ? ' activo' : '';
+  }
+  if (mapaHeatActivo) {
+    if (mapaHeatLayer) mapaHeatLayer.addTo(mapaObj);
+  } else {
+    if (mapaHeatLayer) mapaObj.removeLayer(mapaHeatLayer);
+  }
+}
+window.toggleHeatmap = toggleHeatmap;
+
+function filtrarMapa(tipo, btnEl) {
+  if (tipo === 'todos') {
+    var tipos = ['seguridad','accidente','evento','gobierno','rumor','desaparecido','salud','transporte'];
+    for (var t = 0; t < tipos.length; t++) mapaFiltrosActivos[tipos[t]] = true;
+    var btns = document.querySelectorAll('.mapa-filtro-btn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].className = btns[i].className.replace('inactivo','').replace('activo','').trim() + ' activo';
+    }
+  } else {
+    var tiposGrupo = (tipo === 'rumor') ? ['rumor','desaparecido','salud','transporte'] : [tipo];
+    var estaActivo = mapaFiltrosActivos[tipo];
+    for (var tg = 0; tg < tiposGrupo.length; tg++) {
+      mapaFiltrosActivos[tiposGrupo[tg]] = !estaActivo;
+    }
+    if (btnEl) {
+      btnEl.className = btnEl.className.replace('inactivo','').replace('activo','').trim();
+      btnEl.className += !estaActivo ? ' activo' : ' inactivo';
+    }
+  }
+  renderMapa();
+}
+window.filtrarMapa = filtrarMapa;
+
+// ─── MINI MAPA en modal de detalle BD ────────────────────────────────────────
+function iniciarMiniMapa(lat, lng, tipo) {
+  // Destruir instancia anterior si existe
+  if (miniMapaObj) {
+    try { miniMapaObj.remove(); } catch(e) {}
+    miniMapaObj = null;
+  }
+  var el = document.getElementById('bd-mini-mapa');
+  if (!el || typeof L === 'undefined') return;
+  setTimeout(function() {
+    miniMapaObj = L.map('bd-mini-mapa', {
+      center: [lat, lng],
+      zoom: 15,
+      zoomControl: false,
+      attributionControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      touchZoom: false
+    });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19
+    }).addTo(miniMapaObj);
+    // Marker con icono de color
+    var color = COLORES_TIPO[tipo] || '#3a5a7a';
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="32" viewBox="0 0 22 28">' +
+      '<path d="M11 0C4.9 0 0 4.9 0 11c0 7.7 11 17 11 17s11-9.3 11-17C22 4.9 17.1 0 11 0z" fill="' + color + '" opacity="0.95"/>' +
+      '<circle cx="11" cy="11" r="5" fill="rgba(0,0,0,0.5)"/></svg>';
+    var icon = L.divIcon({ html: svg, className: '', iconSize:[26,32], iconAnchor:[13,32] });
+    L.marker([lat, lng], { icon: icon }).addTo(miniMapaObj);
+    // Circulo de zona ~200m
+    L.circle([lat, lng], { radius:200, color:color, fillColor:color, fillOpacity:0.08, weight:1 }).addTo(miniMapaObj);
+    miniMapaObj.invalidateSize();
+  }, 120);
 }
 
 escucharMake();
