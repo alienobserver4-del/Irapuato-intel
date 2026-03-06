@@ -282,8 +282,24 @@ header {
   background:var(--surface); border:1px solid var(--border);
   border-radius:3px; padding:8px 10px;
   display:flex; flex-direction:column; gap:4px;
-  position:relative;
+  position:relative; cursor:pointer;
 }
+.bd-card:hover { border-color:#00c8ff44; }
+.bd-modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,5,15,.88); z-index:300; overflow-y:auto; }
+.bd-modal-overlay.visible { display:block; }
+.bd-modal-box { background:#060f1e; border:1px solid #00c8ff55; border-radius:6px; padding:20px; max-width:480px; width:90%; margin:40px auto; position:relative; }
+.bd-modal-close { position:absolute; top:10px; right:12px; background:none; border:none; color:#5a8aaa; font-size:16px; cursor:pointer; font-family:var(--title); letter-spacing:1px; }
+.bd-modal-titulo { font-family:var(--title); font-size:11px; color:var(--cyan); margin-bottom:12px; line-height:1.4; padding-right:30px; }
+.bd-mf { margin-bottom:8px; }
+.bd-ml { font-size:7px; color:var(--muted); font-family:var(--title); letter-spacing:1px; margin-bottom:2px; }
+.bd-mv { font-size:9px; color:var(--text); line-height:1.5; }
+.bd-mv.vacio { color:#2a4a6a; font-style:italic; }
+.bd-tiempo { display:inline-block; padding:2px 8px; border-radius:2px; font-size:7px; font-family:var(--title); letter-spacing:1px; }
+.bd-tiempo.manana { background:rgba(255,200,0,.15); color:#ffc800; }
+.bd-tiempo.tarde { background:rgba(255,130,0,.15); color:#ff8200; }
+.bd-tiempo.noche { background:rgba(80,0,220,.15); color:#8040ff; }
+.bd-tiempo.madrugada { background:rgba(0,80,255,.15); color:#0050ff; }
+.bd-tiempo.desconocido { background:rgba(90,138,170,.1); color:#5a8aaa; }
 .bd-card-tit { font-size:10px; color:var(--text); line-height:1.3; padding-right:30px; }
 .bd-card-meta { display:flex; gap:8px; font-size:7px; color:var(--muted); flex-wrap:wrap; }
 .bd-tipo { font-family:var(--title); font-size:6px; padding:1px 4px; border-radius:1px; }
@@ -850,7 +866,7 @@ function clasificarLocal(txt) {
 
 function buildPrompt(texto) {
   var frag = texto.slice(0, 800);
-  return 'Analiza esta nota de Irapuato, Guanajuato. Responde SOLO JSON valido sin texto extra ni markdown:\n{"titulo":"max 80 chars","tipo":"seguridad|accidente|evento|rumor|desaparecido|gobierno|salud|transporte","calle1":"primera calle o avenida mencionada, vacia si no hay","calle2":"segunda calle o avenida mencionada, vacia si no hay","colonia":"colonia o barrio mencionado, vacio si no hay","comunidad":"comunidad o rancheria mencionada, vacia si no hay","nombres":"nombres propios de personas implicadas separados por coma, vacio si no hay","resumen":"que ocurrio en 2 oraciones max","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}\nTipos: seguridad=violencia/delitos, accidente=choques/caidas, evento=actos civicos/fiestas, rumor=sin verificar, desaparecido=persona buscada, gobierno=obras/programas/autoridades, salud=enfermedades/hospitales, transporte=vialidad/transporte publico. Si hay desaparecidos usa desaparecido. Nota: ' + frag;
+  return 'Analiza esta nota de Irapuato, Guanajuato. Responde SOLO JSON valido sin texto extra ni markdown:\n{"titulo":"max 80 chars","tipo":"seguridad|accidente|evento|rumor|desaparecido|gobierno|salud|transporte","calle1":"primera calle o avenida mencionada, vacia si no hay","calle2":"segunda calle o avenida mencionada, vacia si no hay","colonia":"colonia o barrio mencionado, vacio si no hay","comunidad":"comunidad o rancheria mencionada, vacia si no hay","nombres":"nombres propios de personas implicadas separados por coma, vacio si no hay","resumen":"que ocurrio en 2 oraciones max","fecha_evento":"fecha aproximada del suceso mencionada en la nota, formato DD/MM/YYYY, vacia si no hay","tiempo_dia":"manana|tarde|noche|madrugada|desconocido segun hora mencionada en la nota","lat":20.68,"lng":-101.35,"confianza":"alta|media|baja"}\nTipos: seguridad=violencia/delitos, accidente=choques/caidas, evento=actos civicos/fiestas, rumor=sin verificar, desaparecido=persona buscada, gobierno=obras/programas/autoridades, salud=enfermedades/hospitales, transporte=vialidad/transporte publico. Tiempo: manana=6-12h, tarde=12-19h, noche=19-24h, madrugada=0-6h. Nota: ' + frag;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1107,6 +1123,16 @@ function crearTarjetaRSS(item) {
   h += '<input class="nc-input" id="' + id + '-com" value=""></div>';
   h += '<div class="nc-campo"><div class="nc-label">NOMBRES</div>';
   h += '<input class="nc-input" id="' + id + '-nom" value="" placeholder="Nombres implicados..."></div>';
+  h += '<div class="nc-campo"><div class="nc-label">FECHA DEL EVENTO</div>';
+  h += '<input class="nc-input" id="' + id + '-fev" value="" placeholder="DD/MM/YYYY segun la noticia..."></div>';
+  h += '<div class="nc-campo"><div class="nc-label">MOMENTO DEL DIA</div>';
+  h += '<select class="nc-select" id="' + id + '-tdia">';
+  h += '<option value="desconocido">Desconocido</option>';
+  h += '<option value="manana">Mañana (6-12h)</option>';
+  h += '<option value="tarde">Tarde (12-19h)</option>';
+  h += '<option value="noche">Noche (19-24h)</option>';
+  h += '<option value="madrugada">Madrugada (0-6h)</option>';
+  h += '</select></div>';
   h += '<div class="nc-campo"><div class="nc-label">RESUMEN</div>';
   h += '<input class="nc-input" id="' + id + '-sum" value="' + descSeg + '"></div>';
   h += '</div>';
@@ -1209,6 +1235,10 @@ function analizarConIA(id, texto, fuente, link) {
     if (comEl) comEl.value = r.comunidad || '';
     var nomEl = document.getElementById(id + '-nom');
     if (nomEl) nomEl.value = r.nombres || '';
+    var fevEl = document.getElementById(id + '-fev');
+    if (fevEl) fevEl.value = r.fecha_evento || '';
+    var tdiaEl = document.getElementById(id + '-tdia');
+    if (tdiaEl && r.tiempo_dia) tdiaEl.value = r.tiempo_dia;
     // Mostrar nombres si los hay
     var nomDiv = document.getElementById(id + '-nombres');
     if (nomDiv && r.nombres) { nomDiv.style.display = 'block'; nomDiv.textContent = 'Implicados: ' + r.nombres; }
@@ -1249,6 +1279,8 @@ function aprobarCard(id, fuente, link) {
   var colonia = document.getElementById(id + '-col') ? document.getElementById(id + '-col').value : (card.dataset.colonia || '');
   var comunidad = document.getElementById(id + '-com') ? document.getElementById(id + '-com').value : '';
   var nombres = document.getElementById(id + '-nom') ? document.getElementById(id + '-nom').value : '';
+  var fechaEvento = document.getElementById(id + '-fev') ? document.getElementById(id + '-fev').value : '';
+  var tiempodia = document.getElementById(id + '-tdia') ? document.getElementById(id + '-tdia').value : 'desconocido';
   var resumen = document.getElementById(id + '-sum') ? document.getElementById(id + '-sum').value : '';
 
   var ahora = new Date();
@@ -1263,6 +1295,8 @@ function aprobarCard(id, fuente, link) {
     colonia: colonia.trim(),
     comunidad: comunidad.trim(),
     nombres: nombres.trim(),
+    fecha_evento: fechaEvento.trim(),
+    tiempo_dia: tiempodia,
     resumen: resumen.trim(),
     fuente: fuente || fuenteManual,
     url: link || '',
@@ -1458,12 +1492,14 @@ function renderBD() {
         '<button style="padding:8px;font-family:var(--title);font-size:8px;font-weight:700;background:rgba(0,200,255,.1);color:#00c8ff;border:1px solid #00c8ff;border-radius:3px;cursor:pointer;" onclick="editarBD(\'' + n.id + '\')">EDITAR</button>' +
         '<button style="padding:8px;font-family:var(--title);font-size:8px;font-weight:700;background:rgba(255,50,50,.1);color:#ff5050;border:1px solid #ff5050;border-radius:3px;cursor:pointer;" onclick="eliminarBD(\'' + n.id + '\')">ELIMINAR</button>' +
       '<span class="bd-tipo ' + (n.tipo||'rumor') + '">' + (n.tipo||'rumor').toUpperCase() + '</span>' +
-      '<div class="bd-card-tit">' + (n.titulo||'Sin titulo') + '</div>' +
+      (n.tiempo_dia && n.tiempo_dia !== 'desconocido' ? '<span class="bd-tiempo ' + n.tiempo_dia + '">' + n.tiempo_dia.toUpperCase() + '</span>' : '') +
+      '<div class="bd-card-tit" onclick="verDetallesBD(\'' + n.id + '\')" style="cursor:pointer;text-decoration:underline;text-decoration-color:#00c8ff44;">' + (n.titulo||'Sin titulo') + '</div>' +
       '<div class="bd-card-meta">' +
         '<span class="nc-fuente">' + (n.fuente||'') + '</span>' +
-        '<span class="nc-lugar">Lugar: ' + (n.lugar||'') + '</span>' +
-        extraInfo +
-        '<span style="color:var(--muted);font-size:7px;">Capturado: ' + fecha + '</span>' +
+        (n.calle ? '<span class="nc-lugar">Calle: ' + n.calle + (n.calle2 ? ' / ' + n.calle2 : '') + '</span>' : '') +
+        (n.colonia ? '<span class="nc-lugar">Col: ' + n.colonia + '</span>' : '') +
+        (n.nombres ? '<span style="color:#ffa500;font-size:7px;">Implicados: ' + n.nombres + '</span>' : '') +
+        '<span style="color:var(--muted);font-size:7px;">Captura: ' + fecha + (n.fecha_evento ? ' | Evento: ' + n.fecha_evento : '') + '</span>' +
       '</div>' +
       '<div id="bd-edit-' + n.id + '" style="display:none;margin-top:8px;border-top:1px solid #0d2040;padding-top:8px;">' +
         '<select id="bde-tipo-' + n.id + '" class="nc-select" style="margin-bottom:4px;">' +
@@ -1482,11 +1518,61 @@ function renderBD() {
         '<input id="bde-col-' + n.id + '" class="nc-input" value="' + (n.colonia||'').replace(/"/g,'') + '" placeholder="Colonia" style="margin-bottom:4px;">' +
         '<input id="bde-com-' + n.id + '" class="nc-input" value="' + (n.comunidad||'').replace(/"/g,'') + '" placeholder="Comunidad" style="margin-bottom:4px;">' +
         '<input id="bde-nom-' + n.id + '" class="nc-input" value="' + (n.nombres||'').replace(/"/g,'') + '" placeholder="Nombres implicados" style="margin-bottom:6px;">' +
+        '<input id="bde-fev-' + n.id + '" class="nc-input" value="' + (n.fecha_evento||'') + '" placeholder="Fecha evento DD/MM/YYYY" style="margin-bottom:4px;">' +
+        '<select id="bde-tdia-' + n.id + '" class="nc-select" style="margin-bottom:6px;">' +
+          '<option value="desconocido"' + (n.tiempo_dia==='desconocido'||!n.tiempo_dia?' selected':'') + '>Momento: Desconocido</option>' +
+          '<option value="manana"' + (n.tiempo_dia==='manana'?' selected':'') + '>Manana (6-12h)</option>' +
+          '<option value="tarde"' + (n.tiempo_dia==='tarde'?' selected':'') + '>Tarde (12-19h)</option>' +
+          '<option value="noche"' + (n.tiempo_dia==='noche'?' selected':'') + '>Noche (19-24h)</option>' +
+          '<option value="madrugada"' + (n.tiempo_dia==='madrugada'?' selected':'') + '>Madrugada (0-6h)</option>' +
+        '</select>' +
         '<button onclick="guardarEditBD(\'' + n.id + '\')" style="width:100%;padding:8px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88;font-family:var(--title);font-size:8px;cursor:pointer;">GUARDAR CAMBIOS</button>' +
       '</div>';
     lista.appendChild(div);
   }
 }
+
+function verDetallesBD(id) {
+  var n = null;
+  for (var i = 0; i < noticias.length; i++) { if (noticias[i].id === id) { n = noticias[i]; break; } }
+  if (!n) return;
+
+  var tiempoHtml = '';
+  if (n.tiempo_dia && n.tiempo_dia !== 'desconocido') {
+    tiempoHtml = '<span class="bd-tiempo ' + n.tiempo_dia + '">' + n.tiempo_dia.toUpperCase() + '</span>';
+  }
+
+  var html = '<div class="bd-modal-titulo">' + tiempoHtml + ' ' + (n.titulo||'Sin titulo') + '</div>';
+  html += '<div class="bd-mf"><div class="bd-ml">TIPO</div><div class="bd-mv"><span class="bd-tipo ' + (n.tipo||'rumor') + '">' + (n.tipo||'').toUpperCase() + '</span></div></div>';
+  html += '<div class="bd-mf"><div class="bd-ml">RESUMEN</div><div class="bd-mv">' + (n.resumen || '<span class="vacio">Sin resumen</span>') + '</div></div>';
+
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;">';
+  html += '<div class="bd-mf"><div class="bd-ml">CALLE 1</div><div class="bd-mv ' + (n.calle?'':'vacio') + '">' + (n.calle||'No registrada') + '</div></div>';
+  html += '<div class="bd-mf"><div class="bd-ml">CALLE 2</div><div class="bd-mv ' + (n.calle2?'':'vacio') + '">' + (n.calle2||'No registrada') + '</div></div>';
+  html += '<div class="bd-mf"><div class="bd-ml">COLONIA</div><div class="bd-mv ' + (n.colonia?'':'vacio') + '">' + (n.colonia||'No registrada') + '</div></div>';
+  html += '<div class="bd-mf"><div class="bd-ml">COMUNIDAD</div><div class="bd-mv ' + (n.comunidad?'':'vacio') + '">' + (n.comunidad||'No registrada') + '</div></div>';
+  html += '</div>';
+
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;">';
+  html += '<div class="bd-mf"><div class="bd-ml">FECHA EVENTO</div><div class="bd-mv ' + (n.fecha_evento?'':'vacio') + '">' + (n.fecha_evento||'No identificada') + '</div></div>';
+  html += '<div class="bd-mf"><div class="bd-ml">MOMENTO</div><div class="bd-mv ' + (n.tiempo_dia?'':'vacio') + '">' + (n.tiempo_dia||'Desconocido') + '</div></div>';
+  html += '<div class="bd-mf"><div class="bd-ml">FECHA CAPTURA</div><div class="bd-mv">' + (n.fechaCaptura||'') + '</div></div>';
+  html += '<div class="bd-mf"><div class="bd-ml">CONFIANZA IA</div><div class="bd-mv">' + (n.confianza||'baja').toUpperCase() + '</div></div>';
+  html += '</div>';
+
+  if (n.nombres) { html += '<div class="bd-mf"><div class="bd-ml">PERSONAS IMPLICADAS</div><div class="bd-mv" style="color:#ffa500;">' + n.nombres + '</div></div>'; }
+  html += '<div class="bd-mf"><div class="bd-ml">FUENTE</div><div class="bd-mv"><a href="' + (n.url||'#') + '" target="_blank" style="color:var(--cyan);">' + (n.fuente||'') + '</a></div></div>';
+
+  document.getElementById('bd-modal-contenido').innerHTML = html;
+  document.getElementById('bd-modal').className = 'bd-modal-overlay visible';
+}
+window.verDetallesBD = verDetallesBD;
+
+function cerrarModalBD(e) {
+  if (e && e.target !== document.getElementById('bd-modal')) return;
+  document.getElementById('bd-modal').className = 'bd-modal-overlay';
+}
+window.cerrarModalBD = cerrarModalBD;
 
 function editarBD(id) {
   var panel = document.getElementById('bd-edit-' + id);
@@ -1505,6 +1591,8 @@ function guardarEditBD(id) {
   var nom = document.getElementById('bde-nom-' + id);
   var tipoEl2 = document.getElementById('bde-tipo-' + id);
   var cal2El2 = document.getElementById('bde-cal2-' + id);
+  var fevEl2 = document.getElementById('bde-fev-' + id);
+  var tdiaEl2 = document.getElementById('bde-tdia-' + id);
   var updates = {
     tipo: tipoEl2 ? tipoEl2.value : 'rumor',
     titulo: tit ? tit.value : '',
@@ -1512,7 +1600,9 @@ function guardarEditBD(id) {
     calle2: cal2El2 ? cal2El2.value : '',
     colonia: col ? col.value : '',
     comunidad: com ? com.value : '',
-    nombres: nom ? nom.value : ''
+    nombres: nom ? nom.value : '',
+    fecha_evento: fevEl2 ? fevEl2.value : '',
+    tiempo_dia: tdiaEl2 ? tdiaEl2.value : 'desconocido'
   };
   db.collection('noticias-fase1').doc(id).update(updates)
   .then(function() {
