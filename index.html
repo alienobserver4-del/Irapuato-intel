@@ -116,6 +116,32 @@ header {
 .gob-btn-mapa { color:var(--green); border-color:var(--green); background:rgba(0,255,136,.06); }
 .gob-btn-web { color:#00ccff; border-color:#00ccff; background:rgba(0,204,255,.06); }
 
+/* ── PANEL EDICIÓN MAPA ── */
+#panel-edicion {
+  position:fixed; top:70px; right:10px; z-index:500;
+  background:#0d1b2a; border:1px solid #ffcc00;
+  border-radius:6px; padding:10px 12px; width:220px;
+  font-family:var(--mono); font-size:8px; display:none;
+  box-shadow:0 4px 20px rgba(0,0,0,.6);
+}
+#panel-edicion.visible { display:block; }
+.edit-titulo { color:#ffcc00; font-family:var(--title); font-size:8px; letter-spacing:1px; margin-bottom:8px; border-bottom:1px solid #ffcc0033; padding-bottom:5px; }
+.edit-campo { margin-bottom:6px; }
+.edit-label { color:var(--muted); font-size:7px; display:block; margin-bottom:2px; letter-spacing:.5px; }
+.edit-input { width:100%; background:#060d18; border:1px solid var(--border); color:var(--text);
+  font-family:var(--mono); font-size:8px; padding:4px 6px; border-radius:3px; box-sizing:border-box; }
+.edit-input:focus { outline:none; border-color:#ffcc00; }
+.edit-btns { display:flex; gap:5px; margin-top:8px; }
+.edit-btn { flex:1; padding:5px; font-family:var(--title); font-size:6px; letter-spacing:1px;
+  border-radius:3px; cursor:pointer; border:1px solid; }
+.edit-btn-ok   { color:var(--green); border-color:var(--green); background:rgba(0,255,136,.08); }
+.edit-btn-del  { color:var(--red);   border-color:var(--red);   background:rgba(255,34,85,.08); }
+.edit-btn-can  { color:var(--muted); border-color:var(--border); background:transparent; }
+.edit-sep { border:none; border-top:1px solid var(--border); margin:8px 0; }
+.edit-agregar-btn { width:100%; padding:5px; font-family:var(--title); font-size:7px; letter-spacing:1px;
+  border-radius:3px; cursor:pointer; border:1px solid #ffcc00; color:#ffcc00;
+  background:rgba(255,204,0,.06); margin-top:4px; }
+
 /* ── PANEL PRINCIPAL ── */
 #panel { flex:1; overflow-y:auto; overflow-x:hidden; }
 #panel::-webkit-scrollbar { width:3px; }
@@ -776,7 +802,13 @@ header {
     </div>
 
     <!-- ═══════════ GOBIERNO ═══════════ -->
-    <div id="sec-intel" class="seccion">
+
+
+  </div>
+</div>
+
+<!-- INTEL: fuera de #panel para tener altura real -->
+    <div id="sec-intel">
       <div id="intel-container" style="width:100%;height:100%;display:flex;flex-direction:column;">
         <div class="mapa-filtros" id="intel-filtros">
           <button class="mapa-filtro-btn todos activo" onclick="filtrarIntel('todos',this)">TODOS</button>
@@ -799,9 +831,6 @@ header {
       </div>
     </div>
 
-  </div>
-</div>
-
 <!-- MAPA: fuera de #panel para que tenga altura real -->
     <div id="sec-mapa">
       <div id="mapa-container">
@@ -815,6 +844,47 @@ header {
           <button class="mapa-heat-btn" id="btn-editar-mapa" onclick="toggleEditarMapa()">✏️ EDITAR</button>
         </div>
         <div id="mapa-leaflet"></div>
+        <!-- Panel edición flotante -->
+        <div id="panel-edicion">
+          <div class="edit-titulo" id="edit-titulo">✏️ EDITAR PUNTO</div>
+          <div class="edit-campo">
+            <span class="edit-label">NOMBRE</span>
+            <input class="edit-input" id="edit-nombre" type="text" placeholder="Nombre del lugar">
+          </div>
+          <div class="edit-campo">
+            <span class="edit-label">TIPO</span>
+            <select class="edit-input" id="edit-tipo">
+              <option value="gobierno">🏛️ Gobierno</option>
+              <option value="hospital">🏥 Hospital / Clínica</option>
+              <option value="escuela">🎓 Escuela</option>
+              <option value="politico">🏅 Político / Servidor público</option>
+              <option value="transporte">🚌 Transporte</option>
+            </select>
+          </div>
+          <div class="edit-campo">
+            <span class="edit-label">TELÉFONO</span>
+            <input class="edit-input" id="edit-tel" type="text" placeholder="462 000 0000">
+          </div>
+          <div class="edit-campo">
+            <span class="edit-label">DIRECCIÓN</span>
+            <input class="edit-input" id="edit-dir" type="text" placeholder="Calle, Col.">
+          </div>
+          <div class="edit-campo">
+            <span class="edit-label">DESCRIPCIÓN</span>
+            <input class="edit-input" id="edit-desc" type="text" placeholder="Qué atiende / info">
+          </div>
+          <div class="edit-campo">
+            <span class="edit-label">LAT, LNG (toca el mapa para autocompletar)</span>
+            <input class="edit-input" id="edit-coords" type="text" placeholder="20.677, -101.347">
+          </div>
+          <div class="edit-btns">
+            <button class="edit-btn edit-btn-ok" onclick="guardarPuntoEdicion()">💾 GUARDAR</button>
+            <button class="edit-btn edit-btn-del" id="edit-btn-del" onclick="borrarPuntoEdicion()" style="display:none">🗑 BORRAR</button>
+            <button class="edit-btn edit-btn-can" onclick="cerrarPanelEdicion()">✕</button>
+          </div>
+          <hr class="edit-sep">
+          <button class="edit-agregar-btn" onclick="nuevoPuntoMapa()">＋ AGREGAR NUEVO PUNTO</button>
+        </div>
         <div class="mapa-info-bar">
           <div class="mapa-stat"><div class="mapa-dot" style="background:#00ccff"></div><span id="mapa-cnt-gob">0</span> GOB</div>
           <div class="mapa-stat"><div class="mapa-dot" style="background:#ff4444"></div><span id="mapa-cnt-hosp">0</span> HOSP</div>
@@ -3113,54 +3183,189 @@ function filtrarMapaFijo(tipo, btn) {
 }
 window.filtrarMapaFijo = filtrarMapaFijo;
 
+var puntoEditandoId = null; // id del punto que se está editando (null = nuevo)
+
 function toggleEditarMapa() {
   if (!editandoMapa) {
     var pass = prompt('Contraseña de edición:');
-    if (pass !== PASS_MAPA) { mostrarToast('Contraseña incorrecta', 'error'); return; }
+    if (pass !== PASS_MAPA) { toast('Contraseña incorrecta', 'error'); return; }
     editandoMapa = true;
     var btn = document.getElementById('btn-editar-mapa');
     if (btn) { btn.textContent = '🔒 SALIR'; btn.style.color = '#ffcc00'; btn.style.borderColor = '#ffcc00'; }
-    mostrarToast('Modo edición activado — toca un punto para editarlo', 'ok');
     activarEdicionMapa();
+    toast('Modo edición activo', 'ok');
   } else {
     editandoMapa = false;
     var btn = document.getElementById('btn-editar-mapa');
-    if (btn) { btn.textContent = '✏️ EDITAR'; btn.style.color = ''; btn.style.borderColor = ''; }
+    if (btn) { btn.textContent = '\u270F\uFE0F EDITAR'; btn.style.color = ''; btn.style.borderColor = ''; }
     desactivarEdicionMapa();
-    mostrarToast('Modo edición desactivado', 'ok');
+    cerrarPanelEdicion();
+    toast('Edición desactivada', 'ok');
   }
 }
 window.toggleEditarMapa = toggleEditarMapa;
 
 function activarEdicionMapa() {
   if (!mapaObj) return;
-  // Clic en el mapa para agregar punto nuevo
   mapaObj.on('click', onMapaFijoClick);
+  // Hacer todos los markers clicables para editar
+  for (var i = 0; i < gobMarkers.length; i++) {
+    gobMarkers[i].on('click', onGobMarkerClick);
+  }
 }
 function desactivarEdicionMapa() {
   if (!mapaObj) return;
   mapaObj.off('click', onMapaFijoClick);
+  for (var i = 0; i < gobMarkers.length; i++) {
+    gobMarkers[i].off('click', onGobMarkerClick);
+  }
 }
+
 function onMapaFijoClick(e) {
   if (!editandoMapa) return;
+  // Clic en mapa vacío — poner coords en el panel, modo nuevo punto
   var lat = e.latlng.lat.toFixed(6);
   var lng = e.latlng.lng.toFixed(6);
-  var nombre = prompt('Nombre del punto:\nCoords: ' + lat + ', ' + lng);
-  if (!nombre) return;
-  var tipo = prompt('Tipo (gobierno/hospital/escuela/politico/transporte):') || 'gobierno';
-  var tel = prompt('Teléfono (opcional):') || '';
-  var desc = prompt('Descripción breve:') || '';
-  // Agregar temporalmente como punto GOB custom
-  var nuevo = {
-    id: 'custom_' + Date.now(),
-    nombre: nombre, titular: '', dir: '', tel: tel, ext: '',
-    funcion: tipo, funcionLabel: tipo.charAt(0).toUpperCase() + tipo.slice(1),
-    desc: desc, lat: parseFloat(lat), lng: parseFloat(lng), web: ''
-  };
-  DEPENDENCIAS_GOB.push(nuevo);
-  renderGobMapa();
-  mostrarToast('Punto agregado: ' + nombre, 'ok');
+  var coordInput = document.getElementById('edit-coords');
+  if (coordInput) coordInput.value = lat + ', ' + lng;
+  abrirPanelEdicion(null, lat, lng);
 }
+
+function onGobMarkerClick(e) {
+  if (!editandoMapa) return;
+  L.DomEvent.stopPropagation(e);
+  var depId = this.depId;
+  var dep = null;
+  for (var i = 0; i < DEPENDENCIAS_GOB.length; i++) {
+    if (DEPENDENCIAS_GOB[i].id === depId) { dep = DEPENDENCIAS_GOB[i]; break; }
+  }
+  if (dep) abrirPanelEdicion(dep, null, null);
+}
+
+function abrirPanelEdicion(dep, lat, lng) {
+  puntoEditandoId = dep ? dep.id : null;
+  var panel = document.getElementById('panel-edicion');
+  var titulo = document.getElementById('edit-titulo');
+  var btnDel = document.getElementById('edit-btn-del');
+  if (!panel) return;
+
+  if (dep) {
+    // Editar punto existente
+    titulo.textContent = '\u270F\uFE0F EDITAR PUNTO';
+    document.getElementById('edit-nombre').value = dep.nombre || '';
+    document.getElementById('edit-tipo').value   = dep.funcion || 'gobierno';
+    document.getElementById('edit-tel').value    = dep.tel || '';
+    document.getElementById('edit-dir').value    = dep.dir || '';
+    document.getElementById('edit-desc').value   = dep.desc || '';
+    document.getElementById('edit-coords').value = dep.lat + ', ' + dep.lng;
+    if (btnDel) btnDel.style.display = 'inline-block';
+  } else {
+    // Nuevo punto
+    titulo.textContent = '\u2795 NUEVO PUNTO';
+    document.getElementById('edit-nombre').value = '';
+    document.getElementById('edit-tipo').value   = 'gobierno';
+    document.getElementById('edit-tel').value    = '';
+    document.getElementById('edit-dir').value    = '';
+    document.getElementById('edit-desc').value   = '';
+    document.getElementById('edit-coords').value = lat && lng ? lat + ', ' + lng : '';
+    if (btnDel) btnDel.style.display = 'none';
+  }
+  panel.classList.add('visible');
+}
+window.abrirPanelEdicion = abrirPanelEdicion;
+
+function cerrarPanelEdicion() {
+  var panel = document.getElementById('panel-edicion');
+  if (panel) panel.classList.remove('visible');
+  puntoEditandoId = null;
+}
+window.cerrarPanelEdicion = cerrarPanelEdicion;
+
+function nuevoPuntoMapa() {
+  abrirPanelEdicion(null, '', '');
+  toast('Toca el mapa para colocar las coordenadas', 'ok');
+}
+window.nuevoPuntoMapa = nuevoPuntoMapa;
+
+function guardarPuntoEdicion() {
+  var nombre = document.getElementById('edit-nombre').value.trim();
+  var tipo   = document.getElementById('edit-tipo').value;
+  var tel    = document.getElementById('edit-tel').value.trim();
+  var dir    = document.getElementById('edit-dir').value.trim();
+  var desc   = document.getElementById('edit-desc').value.trim();
+  var coords = document.getElementById('edit-coords').value.trim();
+
+  if (!nombre) { toast('El nombre es requerido', 'error'); return; }
+  if (!coords) { toast('Las coordenadas son requeridas', 'error'); return; }
+
+  var parts = coords.split(',');
+  var lat = parseFloat(parts[0]);
+  var lng = parseFloat(parts[1]);
+  if (isNaN(lat) || isNaN(lng)) { toast('Coordenadas inválidas', 'error'); return; }
+
+  var tipoLabel = {'gobierno':'Gobierno','hospital':'Hospital','escuela':'Escuela','politico':'Político','transporte':'Transporte'};
+
+  if (puntoEditandoId) {
+    // Actualizar punto existente
+    for (var i = 0; i < DEPENDENCIAS_GOB.length; i++) {
+      if (DEPENDENCIAS_GOB[i].id === puntoEditandoId) {
+        DEPENDENCIAS_GOB[i].nombre = nombre;
+        DEPENDENCIAS_GOB[i].funcion = tipo;
+        DEPENDENCIAS_GOB[i].funcionLabel = tipoLabel[tipo] || tipo;
+        DEPENDENCIAS_GOB[i].tel = tel;
+        DEPENDENCIAS_GOB[i].dir = dir;
+        DEPENDENCIAS_GOB[i].desc = desc;
+        DEPENDENCIAS_GOB[i].lat = lat;
+        DEPENDENCIAS_GOB[i].lng = lng;
+        break;
+      }
+    }
+    toast('Punto actualizado: ' + nombre, 'ok');
+  } else {
+    // Nuevo punto
+    var nuevo = {
+      id: 'custom_' + Date.now(),
+      nombre: nombre, titular: '', dir: dir, tel: tel, ext: '',
+      funcion: tipo, funcionLabel: tipoLabel[tipo] || tipo,
+      desc: desc, lat: lat, lng: lng, web: ''
+    };
+    DEPENDENCIAS_GOB.push(nuevo);
+    toast('Punto agregado: ' + nombre, 'ok');
+  }
+
+  cerrarPanelEdicion();
+  renderGobMapa();
+  // Re-activar edición en los nuevos markers
+  if (editandoMapa) {
+    for (var i = 0; i < gobMarkers.length; i++) {
+      gobMarkers[i].off('click', onGobMarkerClick);
+      gobMarkers[i].on('click', onGobMarkerClick);
+    }
+  }
+}
+window.guardarPuntoEdicion = guardarPuntoEdicion;
+
+function borrarPuntoEdicion() {
+  if (!puntoEditandoId) return;
+  var nombre = '';
+  for (var i = 0; i < DEPENDENCIAS_GOB.length; i++) {
+    if (DEPENDENCIAS_GOB[i].id === puntoEditandoId) {
+      nombre = DEPENDENCIAS_GOB[i].nombre;
+      DEPENDENCIAS_GOB.splice(i, 1);
+      break;
+    }
+  }
+  cerrarPanelEdicion();
+  renderGobMapa();
+  if (editandoMapa) {
+    for (var i = 0; i < gobMarkers.length; i++) {
+      gobMarkers[i].off('click', onGobMarkerClick);
+      gobMarkers[i].on('click', onGobMarkerClick);
+    }
+  }
+  toast('Punto borrado: ' + nombre, 'ok');
+}
+window.borrarPuntoEdicion = borrarPuntoEdicion;
 
 }); // fin DOMContentLoaded
 </script>
