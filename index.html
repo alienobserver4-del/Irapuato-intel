@@ -901,11 +901,17 @@ function verTab(cual) {
   for (var i = 0; i < tabs.length; i++) {
     tabs[i].classList.remove('active');
   }
-  // Ocultar todas las secciones
+  // Ocultar todas las secciones normales
   var secs = document.querySelectorAll('.seccion');
   for (var i = 0; i < secs.length; i++) {
     secs[i].classList.remove('activa');
     secs[i].style.display = 'none';
+  }
+  // Ocultar mapa si vamos a otra sección
+  var secMapa = document.getElementById('sec-mapa');
+  if (cual !== 'mapa' && secMapa) {
+    secMapa.style.display = 'none';
+    secMapa.classList.remove('activa');
   }
   var tabEl = document.querySelector('.tab.' + cual);
   if (tabEl) tabEl.classList.add('active');
