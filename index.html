@@ -570,7 +570,7 @@ header {
 
     <!-- ═══════════ MANUAL ═══════════ -->
     <div id="sec-manual" class="seccion">
-      <div class="sec-header">// ENTRADA MANUAL — <span>PEGAR TEXTO</span></div>
+      <div class="sec-header">// ENTRADA MANUAL — <span>PEGAR TEXTO COMPLETO</span></div>
 
       <div class="manual-form">
         <div>
@@ -593,8 +593,12 @@ header {
         </div>
 
         <div>
-          <div class="m-label">TEXTO DE LA NOTICIA — pega aquí el contenido completo</div>
-          <textarea class="m-textarea" id="m-texto" placeholder="Pega aquí el texto de la noticia, mensaje de WhatsApp, o cualquier reporte..."></textarea>
+          <div class="m-label" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>TEXTO COMPLETO — copia todo el artículo y pégalo aquí</span>
+            <button onclick="limpiarTextoManual()" style="font-family:var(--title);font-size:6px;padding:3px 8px;background:rgba(0,200,255,.08);color:var(--cyan);border:1px solid #00ccff44;border-radius:3px;cursor:pointer;letter-spacing:1px;">✦ LIMPIAR</button>
+          </div>
+          <textarea class="m-textarea" id="m-texto" oninput="actualizarStatsManual()" placeholder="Abre la noticia en el navegador → selecciona todo el texto (Ctrl+A) → copia (Ctrl+C) → pega aquí (Ctrl+V)&#10;&#10;No importa si trae publicidad o menús, el botón LIMPIAR los elimina automáticamente.&#10;&#10;También puedes pegar mensajes de WhatsApp o Facebook."></textarea>
+          <div id="m-texto-stats" style="font-family:var(--mono);font-size:7px;color:#2a5a7a;margin-top:3px;height:12px;"></div>
         </div>
 
         <button class="btn-analizar" id="btn-analizar" onclick="analizarManual()">🤖 ANALIZAR CON IA →</button>
@@ -1795,7 +1799,6 @@ function cargarTodas() {
       fetch(src.proxy)
       .then(function(res) { if (!res.ok) throw new Error('status ' + res.status); return res.text(); })
       .catch(function() { return fetch(proxyFallbackUrl).then(function(r) { return r.text(); }); })
-      .then(function(res) { return Promise.resolve(res); })
       .then(function(txt) {
         if (src.tipo === 'rss') { procesarRSSAcumulado(txt, src.nombre); }
         else { procesarScrapingAcumulado(txt, src.nombre, src.proxy); }
@@ -1870,10 +1873,6 @@ function crearTarjetaRSS(item) {
   card.dataset.texto = texto;
   card.dataset.fuente = item.fuente || '';
   card.dataset.link = item.link || '';
-  // Encolar fetch automático del artículo completo
-  if (item.link && item.link.indexOf('http') === 0) {
-    setTimeout(function(cid, curl) { encolarFetch(cid, curl); }, 50, id, item.link);
-  }
 
   var tituloSeg = (item.titulo||'').replace(/['"]/g, '');
   var descSeg = (item.desc||'').slice(0,100).replace(/['"]/g, '');
@@ -1981,8 +1980,6 @@ function analizarDesdeCard(id) {
       if (textoCompleto) {
         card.dataset.texto = textoCompleto;
         var palabras = textoCompleto.split(' ').length;
-        var resEl = document.getElementById(id + '-res');
-        if (resEl) resEl.textContent = textoCompleto.slice(0, 500) + (textoCompleto.length > 500 ? '...' : '');
         toast('Articulo completo: ~' + palabras + ' palabras', 'ok');
       }
       analizarConIA(id, textoFinal, fuente, link);
@@ -2410,6 +2407,9 @@ window.toggleEdit = toggleEdit;
 function aprobarCard(id, fuente, link) {
   var card = document.getElementById(id);
   if (!card) return;
+  // Fallback: leer URL del dataset si no viene en parámetro
+  if (!link && card.dataset.url) link = card.dataset.url;
+  if (!link && card.dataset.link) link = card.dataset.link;
   var titulo = (document.getElementById(id + '-tit') ? document.getElementById(id + '-tit').value : '') || card.querySelector('.nc-titulo').textContent;
   var tipo = document.getElementById(id + '-tipo') ? document.getElementById(id + '-tipo').value : 'rumor';
   var card2 = document.getElementById(id);
@@ -2517,6 +2517,81 @@ function descartarCard(id) {
 window.descartarCard = descartarCard;
 
 // ═══════════════════════════════════════════════════════════════
+
+// ── Limpieza de texto pegado en ENTRADA MANUAL ──
+function limpiarTextoManual() {
+  var ta = document.getElementById('m-texto');
+  if (!ta || !ta.value.trim()) { toast('Primero pega el texto', 'warn'); return; }
+  var texto = ta.value;
+
+  // Patrones a eliminar — publicidad, nav, timestamps, redes sociales
+  var patrones = [
+    // Metadatos de periódico al inicio
+    /^[\s\S]{0,300}?(Lunes|Martes|Miercoles|Miércoles|Jueves|Viernes|Sábado|Sabado|Domingo),?\s+\d{1,2}\s+de\s+\w+/i,
+    // Líneas cortas de nav/menú (menos de 35 chars)
+  ];
+
+  // Dividir en líneas y filtrar basura
+  var lineas = texto.split('\n');
+  var buenas = [];
+  var buenas = [];
+  var patronesLinea = [
+    /^(inicio|home|noticias|política|policia|seguridad|local|estado|deportes|espectáculos|espectaculos|opinion|opinión|contacto|aviso de privacidad|términos|terminos|buscar|busca|suscri|subscribe|newsletter|compartir|share|twitter|facebook|instagram|whatsapp|telegram|copiar enlace|copy link|publicidad|anuncio|patrocinado|sponsored)\s*$/i,
+    /^(leer más|lee también|lee mas|ver también|ver mas|también te puede interesar|relacionado|notas relacionadas)\s*$/i,
+    /^\s*[-•·|]\s*$/,   // separadores sueltos
+    /^\s*\d+\s*$/,      // solo números (contadores)
+    /^https?:\/\//i,    // URLs sueltas
+    /^@\w+$/,           // menciones sueltas
+    /^\s*[#]\w+/,       // hashtags
+  ];
+  var contadorBasura = 0;
+  for (var i = 0; i < lineas.length; i++) {
+    var l = lineas[i].trim();
+    // Línea muy corta que no es parte del texto
+    if (l.length > 0 && l.length < 4) { contadorBasura++; continue; }
+    var esBasura = false;
+    for (var p = 0; p < patronesLinea.length; p++) {
+      if (patronesLinea[p].test(l)) { esBasura = true; contadorBasura++; break; }
+    }
+    if (!esBasura) buenas.push(lineas[i]);
+  }
+
+  // Eliminar líneas vacías consecutivas (más de 2 seguidas)
+  var resultado = [];
+  var vacias = 0;
+  for (var j = 0; j < buenas.length; j++) {
+    if (buenas[j].trim() === '') {
+      vacias++;
+      if (vacias <= 1) resultado.push(buenas[j]);
+    } else {
+      vacias = 0;
+      resultado.push(buenas[j]);
+    }
+  }
+
+  var textoLimpio = resultado.join('\n').trim();
+  ta.value = textoLimpio;
+
+  var palabras = textoLimpio.split(/\s+/).filter(function(w) { return w.length > 0; }).length;
+  var statsEl = document.getElementById('m-texto-stats');
+  if (statsEl) statsEl.textContent = palabras + ' palabras · ' + textoLimpio.length + ' caracteres' + (contadorBasura > 0 ? ' · ' + contadorBasura + ' líneas de basura eliminadas' : '');
+  if (contadorBasura > 0) toast(contadorBasura + ' líneas de publicidad/menú eliminadas', 'ok');
+  else toast('Texto ya limpio (' + palabras + ' palabras)', 'ok');
+}
+window.limpiarTextoManual = limpiarTextoManual;
+
+// Contador de palabras en tiempo real para el textarea manual
+function actualizarStatsManual() {
+  var ta = document.getElementById('m-texto');
+  var statsEl = document.getElementById('m-texto-stats');
+  if (!ta || !statsEl) return;
+  var v = ta.value.trim();
+  if (!v) { statsEl.textContent = ''; return; }
+  var palabras = v.split(/\s+/).filter(function(w) { return w.length > 0; }).length;
+  statsEl.textContent = palabras + ' palabras · ' + v.length + ' caracteres';
+}
+window.actualizarStatsManual = actualizarStatsManual;
+
 // ENTRADA MANUAL
 // ═══════════════════════════════════════════════════════════════
 function selFuente(el, nombre) {
@@ -2558,6 +2633,7 @@ function analizarManual() {
       var cp = coordInput.value.split(',');
       if (cp.length === 2) { manualLat = parseFloat(cp[0]); manualLng = parseFloat(cp[1]); }
     }
+    card.dataset.url = url || '';
     card.dataset.lat = (manualLat && !isNaN(manualLat)) ? manualLat : (r.lat || 20.6795);
     card.dataset.lng = (manualLng && !isNaN(manualLng)) ? manualLng : (r.lng || -101.3540);
     card.dataset.colonia = r.colonia || '';
@@ -2840,6 +2916,7 @@ function guardarEditBD(id) {
     }
   }
 
+  var urlEl2 = document.getElementById('bde-url-' + id);
   var updates = {
     tipo: tipoEl2 ? tipoEl2.value : 'rumor',
     titulo: tit ? tit.value : '',
@@ -2850,7 +2927,8 @@ function guardarEditBD(id) {
     nombres: nom ? nom.value.trim() : '',
     fecha_evento: fevEl2 ? fevEl2.value.trim() : '',
     tiempo_dia: tdiaEl2 ? tdiaEl2.value : 'desconocido',
-    resumen: resEl2 ? resEl2.value.trim() : ''
+    resumen: resEl2 ? resEl2.value.trim() : '',
+    url: urlEl2 ? urlEl2.value.trim() : ''
   };
   if (latBD && lngBD) { updates.lat = latBD; updates.lng = lngBD; }
   db.collection('noticias-fase1').doc(id).update(updates)
@@ -2868,6 +2946,7 @@ function guardarEditBD(id) {
         noticias[i].resumen = updates.resumen;
         noticias[i].tiempo_dia = updates.tiempo_dia;
         noticias[i].fecha_evento = updates.fecha_evento;
+        if (updates.url !== undefined) noticias[i].url = updates.url;
         break;
       }
     }
@@ -2955,6 +3034,7 @@ function analizarFB() {
       var cp = coordInput.value.split(',');
       if (cp.length === 2) { manualLat = parseFloat(cp[0]); manualLng = parseFloat(cp[1]); }
     }
+    card.dataset.url = url || '';
     card.dataset.lat = (manualLat && !isNaN(manualLat)) ? manualLat : (r.lat || 20.6795);
     card.dataset.lng = (manualLng && !isNaN(manualLng)) ? manualLng : (r.lng || -101.3540);
     card.dataset.colonia = r.colonia || '';
