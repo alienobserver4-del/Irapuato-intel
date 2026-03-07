@@ -438,6 +438,10 @@ header {
 /* ── LINK EXTERNO ── */
 .nc-link { font-size:7px; color:var(--cyan); text-decoration:none; display:inline-block; margin-top:2px; }
 
+/* ── TEXTO MANUAL EN TARJETA ── */
+.nc-texto-manual-wrap { margin:6px 0; }
+.nc-texto-manual-wrap textarea:focus { border-color:#1a5a8a !important; outline:none; }
+
 /* ── MAPA ── */
 #mapa-container { width:100%; display:flex; flex-direction:column; }
 #mapa-leaflet { flex:1; width:100%; background:#060d18; display:block; min-height:0; }
@@ -1424,7 +1428,7 @@ function toast(msg, tipo) {
 // GEMINI
 // ═══════════════════════════════════════════════════════════════
 function llamarGemini(prompt, callback) {
-  var modelos = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-latest'];
+  var modelos = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
   var intentar = function(idx) {
     if (idx >= modelos.length) {
       callback(null, 'Gemini no disponible');
@@ -1895,6 +1899,14 @@ function crearTarjetaRSS(item) {
   h += '</div>';
   h += '<div class="nc-nombres" id="' + id + '-nombres" style="display:none"></div>';
   h += '<div class="nc-resumen" id="' + id + '-res">' + (item.desc||'') + '</div>';
+  h += '<div class="nc-texto-manual-wrap" style="margin:6px 0;padding:6px;background:#020810;border:1px solid #0d2040;border-radius:3px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+    '<span style="font-family:var(--title);font-size:6px;color:#2a5a7a;letter-spacing:1px;">📋 PEGA TEXTO COMPLETO — análisis IA más preciso</span>' +
+    '<button onclick="limpiarTextoCard(\'' + id + '\')" style="font-family:var(--title);font-size:6px;padding:2px 7px;background:rgba(0,200,255,.08);color:var(--cyan);border:1px solid #00ccff44;border-radius:3px;cursor:pointer;">✦ LIMPIAR</button>' +
+    '</div>' +
+    '<textarea id="' + id + '-texto-manual" oninput="actualizarStatsCard(\'' + id + '\')" style="width:100%;min-height:70px;max-height:160px;resize:vertical;background:#030810;border:1px dashed #1a3a5a;color:#7aaabb;font-family:var(--mono);font-size:8px;padding:6px;border-radius:3px;box-sizing:border-box;" placeholder="Abre la nota → copia todo (Ctrl+A, Ctrl+C) → pega aquí → LIMPIAR → ANALIZAR"></textarea>' +
+    '<div id="' + id + '-txt-stats" style="font-size:6px;color:#1a4a6a;height:11px;margin-top:1px;"></div>' +
+    '</div>';
   h += '<div class="nc-procesando" id="' + id + '-proc"><div class="mini-spin"></div> Analizando...</div>';
   h += '<div class="nc-edit" id="' + id + '-edit">';
   h += '<div class="nc-campo"><div class="nc-label">TITULO</div>';
@@ -1963,30 +1975,13 @@ function analizarDesdeCard(id) {
   var card = document.getElementById(id);
   if (!card) return;
   var link = card.dataset.link || '';
-  var texto = card.dataset.texto || '';
   var fuente = card.dataset.fuente || '';
-  // Si ya se cargó el texto completo en auto-fetch, usar directamente
-  if (card.dataset.textoCargado === '1' && texto.length > 120) {
-    analizarConIA(id, texto, fuente, link);
-    return;
-  }
-  // Si hay URL, intentar obtener el texto completo del articulo
-  if (link && link.indexOf('http') === 0) {
-    var proc = document.getElementById(id + '-proc');
-    if (proc) proc.className = 'nc-procesando visible';
-    fetchContenidoArticulo(link, function(textoCompleto) {
-      var textoFinal = textoCompleto || texto;
-      // Actualizar el texto guardado en la card para tener contexto completo
-      if (textoCompleto) {
-        card.dataset.texto = textoCompleto;
-        var palabras = textoCompleto.split(' ').length;
-        toast('Articulo completo: ~' + palabras + ' palabras', 'ok');
-      }
-      analizarConIA(id, textoFinal, fuente, link);
-    });
-  } else {
-    analizarConIA(id, texto, fuente, link);
-  }
+  // Preferir texto manual pegado en la tarjeta (si existe), luego el texto RSS
+  var textoManualEl = document.getElementById(id + '-texto-manual');
+  var textoManual = textoManualEl ? textoManualEl.value.trim() : '';
+  var texto = textoManual || card.dataset.texto || '';
+  if (!texto) { toast('Sin texto para analizar', 'warn'); return; }
+  analizarConIA(id, texto, fuente, link);
 }
 window.analizarDesdeCard = analizarDesdeCard;
 
@@ -2578,7 +2573,68 @@ function limpiarTextoManual() {
   if (contadorBasura > 0) toast(contadorBasura + ' líneas de publicidad/menú eliminadas', 'ok');
   else toast('Texto ya limpio (' + palabras + ' palabras)', 'ok');
 }
+
 window.limpiarTextoManual = limpiarTextoManual;
+
+// Limpiar texto pegado en una tarjeta RSS individual
+function limpiarTextoCard(id) {
+  var ta = document.getElementById(id + '-texto-manual');
+  if (!ta || !ta.value.trim()) { toast('Primero pega el texto en la tarjeta', 'warn'); return; }
+  var texto = ta.value;
+  var lineas = texto.split('
+');
+  var buenas = [];
+  var patronesLinea = [
+    /^(inicio|home|noticias|pol[ií]tica|policia|seguridad|local|estado|deportes|espect[aá]culos|opinion|opinión|contacto|aviso de privacidad|t[eé]rminos|buscar|suscri|subscribe|newsletter|compartir|share|twitter|facebook|instagram|whatsapp|telegram|copiar enlace|copy link|publicidad|anuncio|patrocinado|sponsored)\s*$/i,
+    /^(leer m[aá]s|lee tambi[eé]n|ver tambi[eé]n|tambi[eé]n te puede interesar|relacionado|notas relacionadas)\s*$/i,
+    /^\s*[-•·|]\s*$/,
+    /^\s*\d+\s*$/,
+    /^https?:\/\//i,
+    /^@\w+$/,
+    /^\s*[#]\w+/,
+  ];
+  var contadorBasura = 0;
+  for (var i = 0; i < lineas.length; i++) {
+    var l = lineas[i].trim();
+    if (l.length > 0 && l.length < 4) { contadorBasura++; continue; }
+    var esBasura = false;
+    for (var p = 0; p < patronesLinea.length; p++) {
+      if (patronesLinea[p].test(l)) { esBasura = true; contadorBasura++; break; }
+    }
+    if (!esBasura) buenas.push(lineas[i]);
+  }
+  var resultado = [];
+  var vacias = 0;
+  for (var j = 0; j < buenas.length; j++) {
+    if (buenas[j].trim() === '') {
+      vacias++;
+      if (vacias <= 1) resultado.push(buenas[j]);
+    } else {
+      vacias = 0;
+      resultado.push(buenas[j]);
+    }
+  }
+  var textoLimpio = resultado.join('
+').trim();
+  ta.value = textoLimpio;
+  var palabras = textoLimpio.split(/\s+/).filter(function(w){ return w.length > 0; }).length;
+  var statsEl = document.getElementById(id + '-txt-stats');
+  if (statsEl) statsEl.textContent = palabras + ' palabras' + (contadorBasura > 0 ? ' · ' + contadorBasura + ' líneas eliminadas' : '');
+  if (contadorBasura > 0) toast(contadorBasura + ' líneas de basura eliminadas', 'ok');
+  else toast('Texto ya limpio (' + palabras + ' palabras)', 'ok');
+}
+window.limpiarTextoCard = limpiarTextoCard;
+
+function actualizarStatsCard(id) {
+  var ta = document.getElementById(id + '-texto-manual');
+  var statsEl = document.getElementById(id + '-txt-stats');
+  if (!ta || !statsEl) return;
+  var v = ta.value.trim();
+  if (!v) { statsEl.textContent = ''; return; }
+  var palabras = v.split(/\s+/).filter(function(w){ return w.length > 0; }).length;
+  statsEl.textContent = palabras + ' palabras · ' + v.length + ' chars';
+}
+window.actualizarStatsCard = actualizarStatsCard;
 
 // Contador de palabras en tiempo real para el textarea manual
 function actualizarStatsManual() {
