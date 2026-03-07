@@ -1490,12 +1490,15 @@ function llamarGemini(prompt, callback) {
 
   function siguiente() {
     if (intentos++ > maxRondas) {
-      // Gemini agotado — intentar OpenRouter antes de clasificación local
-      if (orKey) {
-        toast('Gemini no disponible — usando OpenRouter...', 'warn');
-        llamarOpenRouter(prompt, orKey, callback);
+      // Gemini agotado — ir a OpenRouter si está configurado
+      var orK = window._openRouterKey || '';
+      if (orK) {
+        console.log('[IA] Gemini agotado — usando OpenRouter');
+        var statusEl2 = document.getElementById('gemini-status');
+        if (statusEl2) { statusEl2.textContent = '🔀 OpenRouter'; statusEl2.style.color = '#ff8800'; }
+        llamarOpenRouter(prompt, orK, callback);
       } else {
-        toast('IA no disponible — clasificación local', 'warn');
+        console.log('[IA] Sin IA disponible — clasificación local');
         callback(null, 'agotado');
       }
       return;
@@ -1555,8 +1558,27 @@ function llamarGemini(prompt, callback) {
                 statusEl.textContent = '⏳ ' + rem + 's';
               }, 500);
             }
-            toast('⏳ Rate limit — esperando ' + segs + 's...', 'warn');
-            setTimeout(siguiente, waitMs);
+            var orK2 = window._openRouterKey || '';
+            if (orK2) {
+              // Hay OpenRouter disponible — usarlo ahora en lugar de esperar
+              console.log('[IA] Rate limit en todas las Gemini keys — cambiando a OpenRouter');
+              var statusEl3 = document.getElementById('gemini-status');
+              if (statusEl3) { statusEl3.textContent = '🔀 OpenRouter'; statusEl3.style.color = '#ff8800'; }
+              llamarOpenRouter(prompt, orK2, callback);
+            } else {
+              // Sin OpenRouter — esperar el rate limit
+              var statusEl4 = document.getElementById('gemini-status');
+              if (statusEl4) {
+                var t0b = Date.now();
+                var cdb = setInterval(function() {
+                  var rem = segs - Math.floor((Date.now()-t0b)/1000);
+                  if (rem <= 0) { clearInterval(cdb); if(typeof actualizarStatusGemini==='function') actualizarStatusGemini(); return; }
+                  statusEl4.textContent = '⏳ ' + rem + 's';
+                }, 500);
+              }
+              console.warn('[IA] Rate limit — esperando ' + segs + 's (agrega OpenRouter para evitar esto)');
+              setTimeout(siguiente, waitMs);
+            }
           } else {
             // Hay otra key — rotar sin esperar
             console.log('[Gemini] 429 key' + ((keyIdx-1) % pool.length + 1) + ' → rotando a key' + (keyIdx % pool.length + 1));
@@ -4596,18 +4618,46 @@ window.actualizarStatusGemini = actualizarStatusGemini;
 function guardarORKey() {
   var input = document.getElementById('or-key-input');
   var key = input ? input.value.trim() : '';
-  if (!key || !key.startsWith('sk-or')) {
+  if (!key || key.length < 20) {
     alert('Pega una key de OpenRouter válida (empieza con sk-or-v1-)');
     return;
   }
   window._openRouterKey = key;
   try { localStorage.setItem('openrouter_key', key); } catch(e) {}
-  if (input) input.value = '';
+  if (input) input.value = '***guardada***';
+  setTimeout(function() { if (input) input.value = ''; }, 1500);
   var st = document.getElementById('or-key-status');
-  if (st) { st.textContent = '✓ Key guardada'; st.style.color = '#00ff88'; }
-  toast('✓ OpenRouter configurado — se usará como fallback de Gemini', 'ok');
+  if (st) { st.textContent = '✓ Key guardada — se usará automáticamente si Gemini falla'; st.style.color = '#00ff88'; }
+  // Actualizar indicador del header
+  var hdr = document.getElementById('gemini-status');
+  if (hdr) { hdr.textContent = '🤖 IA OK (OR)'; hdr.style.color = '#ff8800'; }
+  // Probar inmediatamente
+  probarOpenRouter(key);
 }
 window.guardarORKey = guardarORKey;
+
+function probarOpenRouter(key) {
+  var st = document.getElementById('or-key-status');
+  if (st) st.textContent = '⏳ Probando conexión...';
+  fetch('https://openrouter.ai/api/v1/models', {
+    headers: { 'Authorization': 'Bearer ' + key }
+  })
+  .then(function(res) {
+    if (st) {
+      if (res.status === 200) {
+        st.textContent = '✅ Conexión OK — OpenRouter listo para usar';
+        st.style.color = '#00ff88';
+      } else {
+        st.textContent = '⚠ Error ' + res.status + ' — verifica la key';
+        st.style.color = '#ffcc00';
+      }
+    }
+  })
+  .catch(function() {
+    if (st) { st.textContent = '⚠ No se pudo verificar (puede funcionar igual)'; st.style.color = '#ffcc00'; }
+  });
+}
+window.probarOpenRouter = probarOpenRouter;
 
 // Cargar keys guardadas del localStorage al iniciar
 (function() {
