@@ -531,6 +531,9 @@ header {
         <button class="rss-btn rss-am" onclick="cargarRSS('am_sucesos')">SUCESOS</button>
         <button class="rss-btn rss-correo" onclick="cargarRSS('correo')">CORREO</button>
         <button class="rss-btn" style="color:#ff6600;border-color:#ff6600;background:rgba(255,102,0,.08);" onclick="cargarRSS('tinta')">TINTA</button>
+        <button class="rss-btn" style="color:#ff6600;border-color:#ff6600;background:rgba(255,102,0,.08);" onclick="cargarRSS('am_policia')">AM POL</button>
+        <button class="rss-btn" style="color:#ff44aa;border-color:#ff44aa;background:rgba(255,68,170,.08);" onclick="cargarRSS('correo_seg')">COR SEG</button>
+        <button class="rss-btn" style="color:#aa44ff;border-color:#aa44ff;background:rgba(170,68,255,.08);" onclick="cargarRSS('silla_rota')">SILLA</button>
         <button class="rss-btn" style="color:#1877f2;border-color:#1877f2;background:rgba(24,119,242,.08);" onclick="abrirFacebook()">FB</button>
         <button class="rss-btn" style="color:var(--cyan);border-color:var(--cyan);background:transparent;" onclick="cargarTodas()">TODAS</button>
       </div>
@@ -990,6 +993,21 @@ var FUENTES_RSS = {
     nombre: 'Tinta Negra — Irapuato',
     tipo: 'rss',
     proxy: PROXY1 + encodeURIComponent('https://entintanegra.com/category/irapuato/feed/')
+  },
+  am_policia: {
+    nombre: 'AM Policía Irapuato',
+    tipo: 'scraping',
+    proxy: PROXY1 + encodeURIComponent('https://www.am.com.mx/tag/policia-de-irapuato')
+  },
+  correo_seg: {
+    nombre: 'Correo Seguridad',
+    tipo: 'scraping',
+    proxy: PROXY1 + encodeURIComponent('https://periodicocorreo.com.mx/seccion/seguridad/')
+  },
+  silla_rota: {
+    nombre: 'La Silla Rota — Irapuato',
+    tipo: 'scraping',
+    proxy: PROXY1 + encodeURIComponent('https://lasillarota.com/temas/irapuato-1082.html')
   },
   make_webhook: {
     nombre: 'Facebook (via Make.com)',
@@ -1496,7 +1514,7 @@ function procesarScraping(html, nombreFuente, proxyUrl) {
 window.cargarRSS = cargarRSS;
 
 function cargarTodas() {
-  var fuentes = ['sol_policiaca', 'am_irapuato', 'am_sucesos', 'correo'];
+  var fuentes = ['sol_policiaca', 'am_irapuato', 'am_policia', 'correo_seg', 'silla_rota'];
   var idx = 0;
   document.getElementById('lista-rss').innerHTML = '';
   var siguiente = function() {
@@ -2295,7 +2313,12 @@ function renderBD() {
           '<option value="noche"' + (n.tiempo_dia==='noche'?' selected':'') + '>Noche (19-24h)</option>' +
           '<option value="madrugada"' + (n.tiempo_dia==='madrugada'?' selected':'') + '>Madrugada (0-6h)</option>' +
         '</select>' +
-        '<button onclick="guardarEditBD(\'' + n.id + '\')" style="width:100%;padding:8px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88;font-family:var(--title);font-size:8px;cursor:pointer;">GUARDAR CAMBIOS</button>' +
+        '<button onclick="guardarEditBD(\'' + n.id + '\')" style="width:100%;padding:8px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88;font-family:var(--title);font-size:8px;cursor:pointer;margin-bottom:4px;">GUARDAR CAMBIOS</button>' +
+        '<div style="display:flex;gap:4px;">' +
+          '<button id="bde-btn-pos-' + n.id + '" onclick="posicionarBDEnIntel(\'' + n.id + '\')" style="flex:1;padding:6px;background:rgba(0,200,100,.08);color:#00c864;border:1px solid #00c864;font-family:var(--title);font-size:7px;cursor:pointer;letter-spacing:.5px;">📍 AUTO-UBICAR</button>' +
+          '<button id="bde-btn-del-' + n.id + '" onclick="quitarDeIntel(\'' + n.id + '\')" style="flex:1;padding:6px;background:rgba(255,34,85,.06);color:#ff2255;border:1px solid #ff2255;font-family:var(--title);font-size:7px;cursor:pointer;letter-spacing:.5px;">🗑 QUITAR MAPA</button>' +
+        '</div>' +
+        '<div id="bde-geo-status-' + n.id + '" style="font-size:7px;color:#3a7ab8;margin-top:3px;min-height:12px;"></div>' +
       '</div>';
     lista.appendChild(div);
   }
@@ -3128,6 +3151,7 @@ function renderIntel() {
       '<div style="color:#7a9ab8;font-size:7px;margin-bottom:2px;">📍 ' + (n.colonia||'') + (n.calle1?' · '+n.calle1:'') + '</div>' +
       '<div style="color:#3a5a7a;font-size:7px;">' + (n.fecha||'') + '</div>' +
       '</div>';
+    marker.noticiaId = n.id || null;
     marker.bindPopup(popup, {maxWidth:240});
     marker.addTo(intelObj);
     intelMarkers.push(marker);
@@ -3450,6 +3474,7 @@ function _colocarEnIntel(id, titulo, tipo, calle1, colonia, resumen, fecha, lat,
       (resumen ? '<div style="color:#3a5a7a;font-size:7px;margin-top:3px;">' + resumen.substring(0,100) + '</div>' : '') +
       (fecha ? '<div style="color:#3a5a7a;font-size:7px;margin-top:2px;">' + fecha + '</div>' : '') +
       '</div>';
+    marker.noticiaId = n.id || null;
     marker.bindPopup(popup, {maxWidth:240});
     marker.addTo(intelObj);
     intelMarkers.push(marker);
@@ -3463,6 +3488,85 @@ function _colocarEnIntel(id, titulo, tipo, calle1, colonia, resumen, fecha, lat,
   }, 400);
 }
 window._colocarEnIntel = _colocarEnIntel;
+
+
+// ── POSICIONAR NOTICIA DE BD EN MAPA INTEL ──
+function posicionarBDEnIntel(id) {
+  // Leer campos del formulario de edición (los que el usuario acaba de completar)
+  var calle1  = document.getElementById('bde-cal-'  + id) ? document.getElementById('bde-cal-'  + id).value.trim()  : '';
+  var calle2  = document.getElementById('bde-cal2-' + id) ? document.getElementById('bde-cal2-' + id).value.trim()  : '';
+  var colonia = document.getElementById('bde-col-'  + id) ? document.getElementById('bde-col-'  + id).value.trim()  : '';
+  var titulo  = document.getElementById('bde-tit-'  + id) ? document.getElementById('bde-tit-'  + id).value.trim()  : '';
+  var tipo    = document.getElementById('bde-tipo-' + id) ? document.getElementById('bde-tipo-' + id).value         : 'rumor';
+  var resumen = document.getElementById('bde-res-'  + id) ? document.getElementById('bde-res-'  + id).value.trim()  : '';
+  var fecha   = document.getElementById('bde-fev-'  + id) ? document.getElementById('bde-fev-'  + id).value.trim()  : '';
+  var status  = document.getElementById('bde-geo-status-' + id);
+
+  if (!calle1 && !colonia) {
+    if (status) status.textContent = '⚠ Necesitas al menos Calle 1 o Colonia para ubicar';
+    if (status) status.style.color = '#ff8800';
+    return;
+  }
+
+  if (status) { status.textContent = '⏳ Geocodificando...'; status.style.color = '#00ccff'; }
+
+  var query = [calle1, calle2, colonia, 'Irapuato Guanajuato Mexico'].filter(Boolean).join(' ');
+  var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) +
+            '&format=json&limit=1&bounded=1&viewbox=-101.60,20.45,-101.10,20.85';
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var lat, lng;
+      if (data && data[0]) {
+        lat = parseFloat(data[0].lat);
+        lng = parseFloat(data[0].lon);
+        if (status) { status.textContent = '✅ Ubicado: ' + (data[0].display_name||'').split(',').slice(0,2).join(','); status.style.color = '#00ff88'; }
+      } else {
+        lat = 20.6795; lng = -101.3540;
+        if (status) { status.textContent = '⚠ No encontrado — colocado en centro de Irapuato'; status.style.color = '#ff8800'; }
+      }
+      // Guardar coords en Firebase
+      if (db) {
+        db.collection('noticias-fase1').doc(id).update({ lat: lat, lng: lng });
+      }
+      // Actualizar en el array local
+      for (var i = 0; i < noticias.length; i++) {
+        if (noticias[i].id === id) { noticias[i].lat = lat; noticias[i].lng = lng; break; }
+      }
+      // Colocar en INTEL
+      _colocarEnIntel(id, titulo, tipo, calle1, colonia, resumen, fecha, lat, lng);
+    })
+    .catch(function() {
+      if (status) { status.textContent = '✗ Error de red. Verifica conexión.'; status.style.color = '#ff2255'; }
+    });
+}
+window.posicionarBDEnIntel = posicionarBDEnIntel;
+
+// ── QUITAR NOTICIA DEL MAPA INTEL ──
+function quitarDeIntel(id) {
+  // Quitar marcador del mapa intel si existe
+  var quitados = 0;
+  for (var i = intelMarkers.length - 1; i >= 0; i--) {
+    var m = intelMarkers[i];
+    if (m.noticiaId === id) {
+      if (intelObj) { try { intelObj.removeLayer(m); } catch(e) {} }
+      intelMarkers.splice(i, 1);
+      quitados++;
+    }
+  }
+  // Limpiar coords en Firebase (poner null para que no aparezca)
+  if (db) {
+    db.collection('noticias-fase1').doc(id).update({ lat: null, lng: null });
+  }
+  for (var i = 0; i < noticias.length; i++) {
+    if (noticias[i].id === id) { noticias[i].lat = null; noticias[i].lng = null; break; }
+  }
+  var status = document.getElementById('bde-geo-status-' + id);
+  if (status) { status.textContent = quitados > 0 ? '✅ Quitado del mapa INTEL' : '⚠ No había punto activo'; status.style.color = quitados > 0 ? '#00ff88' : '#ff8800'; }
+  toast('Punto quitado del mapa', 'ok');
+}
+window.quitarDeIntel = quitarDeIntel;
 
 }); // fin DOMContentLoaded
 </script>
