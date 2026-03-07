@@ -490,6 +490,12 @@ header {
   background:rgba(3,5,10,.88); color:#ff6600; white-space:nowrap;
 }
 .mapa-heat-btn.activo { background:rgba(255,102,0,.2); color:#ffaa44; border-color:#ffaa44; }
+.intel-t-btn {
+  padding:3px 7px; font-family:var(--title); font-size:6px; letter-spacing:.5px;
+  border-radius:3px; cursor:pointer; border:1px solid #1a3a5a;
+  background:transparent; color:#3a6a9a; white-space:nowrap;
+}
+.intel-t-btn.activo { border-color:#00ccff; color:#00ccff; background:rgba(0,204,255,.08); }
 /* Mini mapa en modal BD */
 #bd-mini-mapa { width:100%; height:160px; border-radius:4px; border:1px solid #0d2040; margin-top:8px; }
 .bd-modal-box { background:#060f1e; border:1px solid #00c8ff55; border-radius:6px; padding:20px; max-width:520px; width:92%; margin:30px auto; position:relative; }
@@ -534,6 +540,7 @@ header {
         <button class="rss-btn" style="color:#ff6600;border-color:#ff6600;background:rgba(255,102,0,.08);" onclick="cargarRSS('am_policia')">AM POL</button>
         <button class="rss-btn" style="color:#ff44aa;border-color:#ff44aa;background:rgba(255,68,170,.08);" onclick="cargarRSS('correo_seg')">COR SEG</button>
         <button class="rss-btn" style="color:#aa44ff;border-color:#aa44ff;background:rgba(170,68,255,.08);" onclick="cargarRSS('silla_rota')">SILLA</button>
+        <button class="rss-btn" style="color:#00ddaa;border-color:#00ddaa;background:rgba(0,221,170,.08);" onclick="cargarRSS('zona_franca')">Z.FRANCA</button>
         <button class="rss-btn" style="color:#1877f2;border-color:#1877f2;background:rgba(24,119,242,.08);" onclick="abrirFacebook()">FB</button>
         <button class="rss-btn" style="color:var(--cyan);border-color:var(--cyan);background:transparent;" onclick="cargarTodas()">TODAS</button>
       </div>
@@ -828,6 +835,17 @@ header {
           <button class="mapa-filtro-btn rum activo" onclick="filtrarIntel('rumor',this)">RUMOR</button>
           <button class="mapa-heat-btn" id="intel-btn-heat" onclick="toggleIntelHeat(this)">&#x1F525; CALOR</button>
         </div>
+        <div class="mapa-filtros" id="intel-tiempo-bar" style="background:rgba(0,0,0,.3);border-top:1px solid #0d2040;gap:4px;">
+          <span style="color:#3a5a7a;font-family:var(--title);font-size:6px;letter-spacing:1px;white-space:nowrap;padding:2px 0;">🕐</span>
+          <button class="intel-t-btn" onclick="filtrarIntelTiempo(7,this)">7D</button>
+          <button class="intel-t-btn activo" onclick="filtrarIntelTiempo(14,this)">2SEM</button>
+          <button class="intel-t-btn" onclick="filtrarIntelTiempo(30,this)">1MES</button>
+          <button class="intel-t-btn" onclick="filtrarIntelTiempo(90,this)">3M</button>
+          <button class="intel-t-btn" onclick="filtrarIntelTiempo(180,this)">6M</button>
+          <button class="intel-t-btn" onclick="filtrarIntelTiempo(365,this)">1AÑO</button>
+          <button class="intel-t-btn" onclick="filtrarIntelTiempo(0,this)">TODO</button>
+          <span id="intel-t-label" style="margin-left:auto;color:#3a7ab8;font-family:var(--mono);font-size:7px;white-space:nowrap;"></span>
+        </div>
         <div id="intel-leaflet" style="flex:1;width:100%;background:#060d18;"></div>
         <div class="mapa-info-bar">
           <div class="mapa-stat"><div class="mapa-dot" style="background:var(--red)"></div><span id="intel-cnt-seg">0</span> SEG</div>
@@ -1008,6 +1026,11 @@ var FUENTES_RSS = {
     nombre: 'La Silla Rota — Irapuato',
     tipo: 'scraping',
     proxy: PROXY1 + encodeURIComponent('https://lasillarota.com/temas/irapuato-1082.html')
+  },
+  zona_franca: {
+    nombre: 'Zona Franca — Irapuato',
+    tipo: 'scraping',
+    proxy: PROXY1 + encodeURIComponent('https://zonafranca.mx/location/irapuato/')
   },
   make_webhook: {
     nombre: 'Facebook (via Make.com)',
@@ -1514,7 +1537,7 @@ function procesarScraping(html, nombreFuente, proxyUrl) {
 window.cargarRSS = cargarRSS;
 
 function cargarTodas() {
-  var fuentes = ['sol_policiaca', 'am_irapuato', 'am_policia', 'correo_seg', 'silla_rota'];
+  var fuentes = ['sol_policiaca', 'am_irapuato', 'am_policia', 'correo_seg', 'silla_rota', 'zona_franca'];
   var idx = 0;
   document.getElementById('lista-rss').innerHTML = '';
   var siguiente = function() {
@@ -3093,6 +3116,7 @@ var intelMarkers = [];
 var intelHeatLayer = null;
 var intelHeatActivo = false;
 var intelFiltros = {seguridad:true, accidente:true, evento:true, gobierno:true, rumor:true};
+var intelDias = 14; // por defecto 2 semanas
 
 function iniciarIntel() {
   try {
@@ -3137,11 +3161,32 @@ function renderIntel() {
   var cuentas = {seguridad:0, accidente:0, evento:0, gobierno:0, rumor:0};
   var heatData = [];
 
+  var ahora = new Date();
+  var limiteMs = intelDias > 0 ? intelDias * 24 * 60 * 60 * 1000 : null;
+
+  // Actualizar label de tiempo
+  var tLabel = document.getElementById('intel-t-label');
+  if (tLabel) {
+    if (intelDias === 0) {
+      tLabel.textContent = 'Todo el historial';
+    } else {
+      tLabel.textContent = 'Últimos ' + intelDias + ' días';
+    }
+  }
+
   for (var i = 0; i < noticias.length; i++) {
     var n = noticias[i];
     if (!n.lat || !n.lng) continue;
     var tipo = n.tipo || 'rumor';
     if (!intelFiltros[tipo]) continue;
+    // Filtro de tiempo
+    if (limiteMs) {
+      var fechaN = parsearFechaNoticia(n);
+      if (fechaN) {
+        if ((ahora - fechaN) > limiteMs) continue;
+      }
+      // Si no tiene fecha parseable, incluir solo si intelDias <= 30 (recientes probables)
+    }
     cuentas[tipo] = (cuentas[tipo] || 0) + 1;
 
     var marker = crearIconoMapa ? L.marker([n.lat, n.lng], {icon: crearIconoMapa(tipo)}) : L.marker([n.lat, n.lng]);
@@ -3185,11 +3230,42 @@ function filtrarIntel(tipo, btn) {
   } else {
     intelFiltros[tipo] = !intelFiltros[tipo];
     if (btn) btn.classList.toggle('activo', intelFiltros[tipo]);
-    btn.classList.toggle('inactivo', !intelFiltros[tipo]);
+    if (btn) btn.classList.toggle('inactivo', !intelFiltros[tipo]);
   }
   renderIntel();
 }
 window.filtrarIntel = filtrarIntel;
+
+function filtrarIntelTiempo(dias, btn) {
+  intelDias = dias;
+  var btns = document.querySelectorAll('.intel-t-btn');
+  for (var i = 0; i < btns.length; i++) btns[i].classList.remove('activo');
+  if (btn) btn.classList.add('activo');
+  renderIntel();
+}
+window.filtrarIntelTiempo = filtrarIntelTiempo;
+
+// Parsear fecha de noticia a objeto Date
+function parsearFechaNoticia(n) {
+  // Intentar campo fecha_evento primero (DD/MM/YYYY), luego captura (timestamp)
+  if (n.fecha_evento) {
+    var parts = n.fecha_evento.split('/');
+    if (parts.length === 3) {
+      var d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+  if (n.captura) {
+    // captura puede ser "7/3/2026 11:53" o timestamp numérico
+    var d = new Date(n.captura);
+    if (!isNaN(d.getTime())) return d;
+  }
+  if (n.fecha) {
+    var d = new Date(n.fecha);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return null;
+}
 
 function toggleIntelHeat(btn) {
   intelHeatActivo = !intelHeatActivo;
