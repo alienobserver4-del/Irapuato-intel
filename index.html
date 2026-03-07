@@ -994,6 +994,7 @@ window.addEventListener('DOMContentLoaded', function() {
 var OPENROUTER_KEY = ''; // Legado — ahora se usa el pool
 var OPENROUTER_KEYS = []; // Pool de keys OpenRouter
 var _orKeyIdx = 0; // Índice de rotación
+window._orKeyIdx = 0; // Expuesto globalmente para el gestor visual
 var GEMINI_KEYS = [
   // Agrega tus keys aquí o usa el gestor visual (toca 🤖 en el header)
   // Obtén keys gratis en: aistudio.google.com → Get API Key
@@ -1615,7 +1616,7 @@ function llamarGemini(prompt, callback) {
 function llamarOpenRouterPool(prompt, callback, onAgotado) {
   var pool = (window._appORKeys && window._appORKeys.length) ? window._appORKeys : OPENROUTER_KEYS;
   if (!pool || pool.length === 0) { onAgotado && onAgotado(); return; }
-  var keyIdx = _orKeyIdx % pool.length;
+  var keyIdx = (window._orKeyIdx || 0) % pool.length;
   var vueltasKey = 0;
   var statusEl = document.getElementById('gemini-status');
 
@@ -1629,7 +1630,7 @@ function llamarOpenRouterPool(prompt, callback, onAgotado) {
     var key = pool[keyIdx % pool.length];
     llamarOpenRouter(prompt, key, function(r, err) {
       if (r) {
-        _orKeyIdx = keyIdx % pool.length; // guardar última key buena
+        _orKeyIdx = keyIdx % pool.length; window._orKeyIdx = _orKeyIdx; // guardar última key buena
         callback(r, null);
       } else if (err === '429') {
         // Rate limit en esta key — rotar a la siguiente
@@ -4568,7 +4569,7 @@ window.verTextoCompleto = verTextoCompleto;
       Las keys se guardan en tu navegador. Cada cuenta Google = 1 key con cuota propia.
     </div>
     <div style="border-top:1px solid #0d2040;padding-top:10px;margin-bottom:10px;">
-      <div style="font-family:'Orbitron',monospace;font-size:8px;color:#ff8800;letter-spacing:1px;margin-bottom:4px;">🔀 OPENROUTER — PRINCIPAL <span style="color:#3a5a3a;font-size:6px;">(rota automático entre keys)</span></div>
+      <div style="font-family:'Orbitron',monospace;font-size:8px;color:#ff8800;letter-spacing:1px;margin-bottom:4px;">🔀 OPENROUTER — PRINCIPAL <span style="color:#3a5a3a;font-size:6px;">(rota automático entre keys)</span> <span id="or-keys-count" style="color:#ff880099;font-size:6px;"></span></div>
       <div style="font-size:7px;color:#5a6a4a;margin-bottom:6px;line-height:1.7;">
         Registro gratis en <strong style="color:#ffaa44">openrouter.ai</strong> · Cada cuenta = 1 key · ~200 req/día gratis por key
       </div>
@@ -4617,6 +4618,7 @@ function renderKeysList() {
 
 function abrirGestorKeys() {
   renderKeysList();
+  renderORKeysList();
   document.getElementById('modal-keys').style.display = 'block';
 }
 window.abrirGestorKeys = abrirGestorKeys;
@@ -4725,20 +4727,33 @@ function renderORKeysList() {
   var lista = document.getElementById('or-keys-lista');
   if (!lista) return;
   var keys = window._appORKeys || [];
+  // Actualizar contador en el título del modal
+  var tit = document.getElementById('or-keys-count');
+  if (tit) tit.textContent = keys.length ? keys.length + ' key' + (keys.length > 1 ? 's' : '') : 'sin keys';
+
   if (!keys.length) {
-    lista.innerHTML = '<div style="font-size:8px;color:#4a4a2a;padding:6px;">Sin keys OR. Agrega al menos una para usar OpenRouter.</div>';
+    lista.innerHTML = '<div style="font-size:8px;color:#6a5a2a;padding:8px;border:1px dashed #3a3a1a;border-radius:3px;text-align:center;">Sin keys OpenRouter — agrega una abajo ↓</div>';
     return;
   }
+  var activo = (window._orKeyIdx || 0) % keys.length;
   var html = '';
   keys.forEach(function(k, i) {
-    var short = k.slice(0, 12) + '...' + k.slice(-4);
-    var esActual = (i === (_orKeyIdx % keys.length));
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin-bottom:3px;background:' + (esActual ? 'rgba(255,136,0,.1)' : '#030a15') + ';border:1px solid ' + (esActual ? '#ff880044' : '#0d2040') + ';border-radius:3px;">' +
-      '<span style="font-family:monospace;font-size:8px;color:' + (esActual ? '#ff8800' : '#4a6a8a') + ';">' + (esActual ? '▶ ' : '') + 'Key ' + (i+1) + ': <span style="color:#7a9aaa;">' + short + '</span></span>' +
-      '<div style="display:flex;gap:4px;">' +
-      '<span id="or-key-st-' + i + '" style="font-size:7px;color:#3a5a3a;"></span>' +
-      '<button onclick="eliminarORKey(' + i + ')" style="font-size:7px;padding:2px 7px;background:rgba(255,0,0,.08);color:#ff4466;border:1px solid #ff446633;border-radius:2px;cursor:pointer;">✕</button>' +
-      '</div></div>';
+    var short = k.slice(0, 14) + '...' + k.slice(-5);
+    var esActual = (i === activo);
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;margin-bottom:3px;' +
+      'background:' + (esActual ? 'rgba(255,136,0,.12)' : 'rgba(10,20,35,.8)') + ';' +
+      'border:1px solid ' + (esActual ? '#ff880055' : '#0d2040') + ';border-radius:3px;">' +
+      '<span style="font-family:monospace;font-size:8px;">' +
+        '<span style="color:' + (esActual ? '#ff8800' : '#336655') + ';margin-right:6px;">' + (esActual ? '▶' : '○') + '</span>' +
+        '<span style="color:#7a9aaa;">OR Key ' + (i+1) + '</span> ' +
+        '<span style="color:#3a6a5a;letter-spacing:1px;">' + short + '</span>' +
+        (esActual ? ' <span style="color:#ff8800;font-size:6px;">ACTIVA</span>' : '') +
+      '</span>' +
+      '<div style="display:flex;gap:5px;align-items:center;">' +
+        '<span id="or-key-st-' + i + '" style="font-size:7px;min-width:14px;text-align:center;"></span>' +
+        '<button onclick="eliminarORKey(' + i + ')" style="font-size:7px;padding:2px 8px;background:rgba(255,0,0,.08);color:#ff4466;border:1px solid #ff446633;border-radius:2px;cursor:pointer;letter-spacing:1px;">✕</button>' +
+      '</div>' +
+    '</div>';
   });
   lista.innerHTML = html;
 }
@@ -4767,7 +4782,7 @@ function eliminarORKey(i) {
   var pool = window._appORKeys || [];
   pool.splice(i, 1);
   window._appORKeys = pool;
-  if (_orKeyIdx >= pool.length) _orKeyIdx = 0;
+  if ((window._orKeyIdx||0) >= pool.length) { window._orKeyIdx = 0; }
   try { localStorage.setItem('or_keys_pool', JSON.stringify(pool)); } catch(e) {}
   renderORKeysList();
   actualizarStatusGemini();
