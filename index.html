@@ -2319,11 +2319,21 @@ function iniciarMapa() {
   }
   if (!el || !cont) { dbg('ERROR: div no encontrado'); return; }
 
-  // Con position:fixed en sec-mapa, el div ya tiene altura real
-  // Solo aseguramos que el leaflet-container llene el espacio
-  el.style.width = '100%';
-  el.style.height = '100%';
-  dbg('offsetH del contenedor: ' + el.offsetHeight + ' offsetW: ' + el.offsetWidth);
+  // Calcular altura disponible y aplicar en px directos
+  var headerH = (document.querySelector('header') ? document.querySelector('header').offsetHeight : 45);
+  var tabsH   = (document.getElementById('tabs')  ? document.getElementById('tabs').offsetHeight  : 38);
+  var altoMap  = window.innerHeight - headerH - tabsH;
+  if (altoMap < 200) altoMap = window.innerHeight - 83;
+
+  // Aplicar a todos los niveles para romper cualquier herencia de 0
+  var secEl = document.getElementById('sec-mapa');
+  if (secEl)  { secEl.style.height  = altoMap + 'px'; secEl.style.minHeight = altoMap + 'px'; }
+  if (cont)   { cont.style.height   = altoMap + 'px'; cont.style.minHeight  = altoMap + 'px'; }
+  el.style.width  = '100%';
+  el.style.height = altoMap + 'px';
+  el.style.minHeight = altoMap + 'px';
+  console.log('alturas px — header:' + headerH + ' tabs:' + tabsH + ' mapa:' + altoMap + ' offsetH real:' + el.offsetHeight);
+  dbg('altoMap=' + altoMap + 'px  offsetH=' + el.offsetHeight);
 
   if (mapaIniciado && mapaObj) {
     dbg('ya iniciado, invalidando...');
