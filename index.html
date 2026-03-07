@@ -442,6 +442,22 @@ header {
 #mapa-container { width:100%; display:flex; flex-direction:column; }
 #mapa-leaflet { flex:1; width:100%; background:#060d18; display:block; min-height:0; }
 .leaflet-tile-pane { filter: brightness(0.7) invert(1) contrast(1.2) hue-rotate(190deg) saturate(0.4) brightness(0.7); }
+.intel-barra-tipo {
+  display:flex; align-items:center; gap:4px; padding:4px 8px;
+  flex-wrap:nowrap; overflow-x:auto; flex-shrink:0;
+  background:rgba(0,10,30,.95); border-bottom:1px solid #0d2040;
+  min-height:32px; box-sizing:border-box;
+}
+.intel-barra-tiempo {
+  display:flex; align-items:center; gap:3px; padding:3px 8px;
+  flex-wrap:nowrap; overflow-x:auto; flex-shrink:0;
+  background:rgba(0,0,0,.5); border-bottom:1px solid #0a1a30;
+  min-height:26px; box-sizing:border-box;
+}
+.intel-barra-tipo::-webkit-scrollbar,
+.intel-barra-tiempo::-webkit-scrollbar { height:2px; }
+.intel-barra-tipo::-webkit-scrollbar-thumb,
+.intel-barra-tiempo::-webkit-scrollbar-thumb { background:#1a3a5a; border-radius:2px; }
 .mapa-filtros {
   position:absolute; top:8px; left:50%; transform:translateX(-50%);
   z-index:1000; display:flex; gap:4px; flex-wrap:wrap; justify-content:center;
@@ -826,7 +842,7 @@ header {
 <!-- INTEL: fuera de #panel para tener altura real -->
     <div id="sec-intel">
       <div id="intel-container" style="width:100%;height:100%;display:flex;flex-direction:column;">
-        <div class="mapa-filtros" id="intel-filtros" style="flex-wrap:nowrap;overflow-x:auto;">
+        <div class="intel-barra-tipo" id="intel-filtros">
           <button class="mapa-filtro-btn todos activo" onclick="filtrarIntel('todos',this)">TODOS</button>
           <button class="mapa-filtro-btn seg activo" onclick="filtrarIntel('seguridad',this)">SEG</button>
           <button class="mapa-filtro-btn acc activo" onclick="filtrarIntel('accidente',this)">ACC</button>
@@ -835,7 +851,7 @@ header {
           <button class="mapa-filtro-btn rum activo" onclick="filtrarIntel('rumor',this)">RUMOR</button>
           <button class="mapa-heat-btn" id="intel-btn-heat" onclick="toggleIntelHeat(this)">&#x1F525; CALOR</button>
         </div>
-        <div class="mapa-filtros" id="intel-tiempo-bar" style="background:rgba(0,0,0,.4);border-top:1px solid #0d2040;gap:3px;padding:3px 6px;flex-wrap:nowrap;overflow-x:auto;">
+        <div class="intel-barra-tiempo" id="intel-tiempo-bar">
           <span style="color:#3a5a7a;font-family:var(--title);font-size:6px;letter-spacing:1px;white-space:nowrap;padding:2px 0;">🕐</span>
           <button class="intel-t-btn" onclick="filtrarIntelTiempo(7,this)">7D</button>
           <button class="intel-t-btn activo" onclick="filtrarIntelTiempo(14,this)">2SEM</button>
@@ -2437,6 +2453,8 @@ function renderBD() {
           '<option value="noche"' + (n.tiempo_dia==='noche'?' selected':'') + '>Noche (19-24h)</option>' +
           '<option value="madrugada"' + (n.tiempo_dia==='madrugada'?' selected':'') + '>Madrugada (0-6h)</option>' +
         '</select>' +
+        '<div style="font-family:var(--mono);font-size:7px;color:#3a5a7a;padding:4px 0 2px;">COORDENADAS MANUALES (lat, lng) — sobreescribe autubicación</div>' +
+        '<input id="bde-coords-' + n.id + '" class="nc-input" value="' + (n.lat && n.lat !== 20.6795 ? (n.lat + ', ' + n.lng) : '') + '" placeholder="Ej: 20.6510, -101.3780" style="margin-bottom:6px;font-size:8px;">' +
         '<button onclick="guardarEditBD(\'' + n.id + '\')" style="width:100%;padding:8px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88;font-family:var(--title);font-size:8px;cursor:pointer;margin-bottom:4px;">GUARDAR CAMBIOS</button>' +
         '<div style="display:flex;gap:4px;">' +
           '<button id="bde-btn-pos-' + n.id + '" onclick="posicionarBDEnIntel(\'' + n.id + '\')" style="flex:1;padding:6px;background:rgba(0,200,100,.08);color:#00c864;border:1px solid #00c864;font-family:var(--title);font-size:7px;cursor:pointer;letter-spacing:.5px;">📍 AUTO-UBICAR</button>' +
@@ -2553,18 +2571,51 @@ function guardarEditBD(id) {
   var fevEl2 = document.getElementById('bde-fev-' + id);
   var tdiaEl2 = document.getElementById('bde-tdia-' + id);
   var resEl2 = document.getElementById('bde-res-' + id);
+  var coordsBD = document.getElementById('bde-coords-' + id);
+  var latBD = null, lngBD = null;
+  if (coordsBD && coordsBD.value.trim()) {
+    var cp = coordsBD.value.split(',');
+    if (cp.length === 2) {
+      latBD = parseFloat(cp[0].trim());
+      lngBD = parseFloat(cp[1].trim());
+      if (isNaN(latBD) || isNaN(lngBD)) { latBD = null; lngBD = null; }
+    }
+  }
+
+  var calleVal  = cal ? cal.value.trim() : '';
+  var coloniaVal = col ? col.value.trim() : '';
+
+  // Nutrir base interna de geo-relaciones si hay coords manuales + calle/colonia
+  if (latBD && lngBD && (calleVal || coloniaVal)) {
+    var key = calleVal.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (key && !GEO_BASE[key]) {
+      GEO_BASE[key] = { colonia: coloniaVal, lat: latBD, lng: lngBD, hits: 1 };
+    } else if (key) {
+      GEO_BASE[key].hits++;
+      // Promedio ponderado de coords
+      GEO_BASE[key].lat = (GEO_BASE[key].lat + latBD) / 2;
+      GEO_BASE[key].lng = (GEO_BASE[key].lng + lngBD) / 2;
+      if (coloniaVal) GEO_BASE[key].colonia = coloniaVal;
+    }
+    // Guardar en Firebase para persistencia
+    if (db) {
+      db.collection('geo-irapuato').doc(key).set({ calle: calleVal, colonia: coloniaVal, lat: latBD, lng: lngBD, hits: (GEO_BASE[key]||{hits:1}).hits }, { merge: true });
+    }
+  }
+
   var updates = {
     tipo: tipoEl2 ? tipoEl2.value : 'rumor',
     titulo: tit ? tit.value : '',
-    calle: cal ? cal.value : '',
-    calle2: cal2El2 ? cal2El2.value : '',
-    colonia: col ? col.value : '',
-    comunidad: com ? com.value : '',
-    nombres: nom ? nom.value : '',
-    fecha_evento: fevEl2 ? fevEl2.value : '',
+    calle: calleVal,
+    calle2: cal2El2 ? cal2El2.value.trim() : '',
+    colonia: coloniaVal,
+    comunidad: com ? com.value.trim() : '',
+    nombres: nom ? nom.value.trim() : '',
+    fecha_evento: fevEl2 ? fevEl2.value.trim() : '',
     tiempo_dia: tdiaEl2 ? tdiaEl2.value : 'desconocido',
-    resumen: resEl2 ? resEl2.value : ''
+    resumen: resEl2 ? resEl2.value.trim() : ''
   };
+  if (latBD && lngBD) { updates.lat = latBD; updates.lng = lngBD; }
   db.collection('noticias-fase1').doc(id).update(updates)
   .then(function() {
     toast('Cambios guardados', 'ok');
@@ -2774,6 +2825,17 @@ if (typeof firebase === 'undefined') {
 }
   db = firebase.firestore();
   escucharBD();
+  // Cargar base geo-interna
+  setTimeout(function() {
+    db.collection('geo-irapuato').limit(300).get()
+      .then(function(snap) {
+        snap.forEach(function(doc) {
+          var d = doc.data();
+          if (d.lat && d.lng) GEO_BASE[doc.id] = { calle: d.calle||'', colonia: d.colonia||'', lat: d.lat, lng: d.lng, hits: d.hits||1 };
+        });
+      })
+      .catch(function() {});
+  }, 1000);
 } catch(e) {
 }
 
@@ -3226,6 +3288,9 @@ var intelHeatActivo = false;
 var intelFiltros = {seguridad:true, accidente:true, evento:true, gobierno:true, rumor:true};
 var intelDias = 14; // por defecto 2 semanas
 
+// Base interna de geo-relaciones calle→colonia (se nutre con cada corrección manual)
+var GEO_BASE = {}; // { "calle_normalizada": { colonia: "X", lat: N, lng: N, hits: N } }
+
 function iniciarIntel() {
   try {
     var el = document.getElementById('intel-leaflet');
@@ -3304,7 +3369,7 @@ function renderIntel() {
       '<div style="color:#7a9ab8;font-size:7px;margin-bottom:2px;">📍 ' + (n.colonia||'') + (n.calle1?' · '+n.calle1:'') + '</div>' +
       '<div style="color:#3a5a7a;font-size:7px;">' + (n.fecha||'') + '</div>' +
       '</div>';
-    marker.noticiaId = id || null;
+    marker.noticiaId = n.id || null;
     marker.bindPopup(popup, {maxWidth:240});
     marker.addTo(intelObj);
     intelMarkers.push(marker);
@@ -3693,6 +3758,19 @@ function posicionarBDEnIntel(id) {
   }
 
   if (status) { status.textContent = '⏳ Geocodificando...'; status.style.color = '#00ccff'; }
+
+  // Consultar base interna primero
+  var keyBusca = calle1.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (keyBusca && GEO_BASE[keyBusca] && GEO_BASE[keyBusca].lat) {
+    var geoLocal = GEO_BASE[keyBusca];
+    if (status) { status.textContent = '✅ Base interna: ' + geoLocal.colonia; status.style.color = '#00ff88'; }
+    if (db) db.collection('noticias-fase1').doc(id).update({ lat: geoLocal.lat, lng: geoLocal.lng });
+    for (var i = 0; i < noticias.length; i++) {
+      if (noticias[i].id === id) { noticias[i].lat = geoLocal.lat; noticias[i].lng = geoLocal.lng; break; }
+    }
+    _colocarEnIntel(id, titulo, tipo, calle1, colonia || geoLocal.colonia, resumen, fecha, geoLocal.lat, geoLocal.lng);
+    return;
+  }
 
   var query = [calle1, calle2, colonia, 'Irapuato Guanajuato Mexico'].filter(Boolean).join(' ');
   var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) +
