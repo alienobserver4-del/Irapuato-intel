@@ -2307,76 +2307,68 @@ function dbg(msg) {
 }
 
 function iniciarMapa() {
-  console.log("iniciarMapa llamado");
-  var el = document.getElementById('mapa-leaflet');
-  var cont = document.getElementById('mapa-container');
-  dbg('iniciarMapa() - L:' + (typeof L) + ' el:' + (el ? el.offsetWidth+'x'+el.offsetHeight : 'null'));
-
-  if (typeof L === 'undefined') {
-    dbg('Leaflet no cargado, reintentando...');
-    setTimeout(iniciarMapa, 400);
-    return;
-  }
-  if (!el || !cont) { dbg('ERROR: div no encontrado'); return; }
-
-  // Calcular altura disponible y aplicar en px directos
-  var headerH = (document.querySelector('header') ? document.querySelector('header').offsetHeight : 45);
-  var tabsH   = (document.getElementById('tabs')  ? document.getElementById('tabs').offsetHeight  : 38);
-  var altoMap  = window.innerHeight - headerH - tabsH;
-  if (altoMap < 200) altoMap = window.innerHeight - 83;
-
-  // Aplicar a todos los niveles para romper cualquier herencia de 0
-  var secEl = document.getElementById('sec-mapa');
-  if (secEl)  { secEl.style.height  = altoMap + 'px'; secEl.style.minHeight = altoMap + 'px'; }
-  if (cont)   { cont.style.height   = altoMap + 'px'; cont.style.minHeight  = altoMap + 'px'; }
-  el.style.width  = '100%';
-  el.style.height = altoMap + 'px';
-  el.style.minHeight = altoMap + 'px';
-  console.log('alturas px — header:' + headerH + ' tabs:' + tabsH + ' mapa:' + altoMap + ' offsetH real:' + el.offsetHeight);
-  dbg('altoMap=' + altoMap + 'px  offsetH=' + el.offsetHeight);
-
-  if (mapaIniciado && mapaObj) {
-    dbg('ya iniciado, invalidando...');
-    mapaObj.invalidateSize(true);
-    setTimeout(function() { mapaObj.invalidateSize(true); renderMapa(); dbg('renderMapa OK'); }, 300);
-    return;
-  }
-
-  mapaIniciado = true;
-  dbg('creando L.map...');
-
   try {
+    console.log("iniciarMapa: paso 1 - inicio");
+
+    if (typeof L === 'undefined') {
+      console.log("iniciarMapa: Leaflet no listo, reintentando");
+      setTimeout(iniciarMapa, 400);
+      return;
+    }
+    console.log("iniciarMapa: paso 2 - Leaflet OK");
+
+    var el   = document.getElementById('mapa-leaflet');
+    var cont = document.getElementById('mapa-container');
+    var secEl = document.getElementById('sec-mapa');
+    console.log("iniciarMapa: paso 3 - el=" + (el ? 'ok' : 'null') + " cont=" + (cont ? 'ok' : 'null'));
+
+    if (!el) { console.log("ERROR: #mapa-leaflet no encontrado"); return; }
+
+    // Altura directa sin depender de CSS
+    var alto = window.innerHeight - 90;
+    console.log("iniciarMapa: paso 4 - alto=" + alto);
+
+    el.style.cssText = 'width:100% !important; height:' + alto + 'px !important; display:block !important; background:#060d18;';
+    if (cont)  cont.style.cssText  = 'width:100% !important; height:' + alto + 'px !important; position:relative !important; display:block !important;';
+    if (secEl) secEl.style.cssText = 'display:block !important; width:100% !important; height:' + alto + 'px !important; padding:0 !important; position:relative !important;';
+
+    console.log("iniciarMapa: paso 5 - offsetHeight=" + el.offsetHeight);
+
+    if (mapaIniciado && mapaObj) {
+      console.log("iniciarMapa: ya iniciado, invalidando");
+      mapaObj.invalidateSize(true);
+      setTimeout(function() { mapaObj.invalidateSize(true); renderMapa(); }, 300);
+      return;
+    }
+
+    mapaIniciado = true;
+    console.log("iniciarMapa: paso 6 - creando L.map");
+
     mapaObj = L.map('mapa-leaflet', {
       center: [20.6795, -101.3540],
       zoom: 12,
-      zoomControl: true,
-      preferCanvas: true
+      zoomControl: true
     });
-    dbg('L.map creado OK');
+    console.log("iniciarMapa: paso 7 - L.map creado");
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OSM',
       maxZoom: 18
     }).addTo(mapaObj);
-    dbg('tileLayer agregado');
+    console.log("iniciarMapa: paso 8 - tiles agregados");
 
     setTimeout(function() {
       mapaObj.invalidateSize(true);
-      dbg('invalidateSize 1');
-    }, 100);
+      console.log("iniciarMapa: paso 9 - invalidateSize OK");
+    }, 200);
     setTimeout(function() {
       mapaObj.invalidateSize(true);
       renderMapa();
-      dbg('invalidateSize 2 + renderMapa');
-      // Ocultar debug después de 8 segundos si todo va bien
-      setTimeout(function() {
-        var d = document.getElementById('mapa-debug');
-        if (d) d.style.display = 'none';
-      }, 8000);
-    }, 500);
-  } catch(e) {
-    dbg('ERROR: ' + e.message);
-    mapaIniciado = false;
+      console.log("iniciarMapa: paso 10 - renderMapa OK");
+    }, 600);
+
+  } catch(err) {
+    console.log("iniciarMapa ERROR en paso: " + err.message);
   }
 }
 window.iniciarMapa = iniciarMapa;
