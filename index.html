@@ -263,6 +263,12 @@ header {
   background:rgba(0,255,136,.12); color:var(--green); border:1px solid var(--green);
   border-radius:3px; cursor:pointer; letter-spacing:1px;
 }
+.btn-posicionar {
+  background: rgba(0,200,100,.08); color:#00c864; border:1px solid #00c864;
+  padding:5px 8px; font-family:var(--title); font-size:6px; letter-spacing:1px;
+  border-radius:3px; cursor:pointer; white-space:nowrap;
+}
+.btn-posicionar:disabled { opacity:.4; cursor:default; }
 .btn-descartar {
   flex:1; padding:8px; font-family:var(--title); font-size:8px; font-weight:700;
   background:rgba(255,34,85,.08); color:var(--red); border:1px solid rgba(255,34,85,.4);
@@ -1363,7 +1369,8 @@ function buildPrompt(texto) {
   p += '5. tiempo_dia: manana=6-12h o dice "manana". tarde=12-19h. noche=19-24h. madrugada=0-6h. desconocido=sin hora.\n';
   p += '6. tipo: seguridad=violencia/robos/disparos. accidente=choques/volcaduras/caidas. gobierno=autoridades/obras/programas.\n';
   p += '7. comunidad: rancho, ejido, comunidad rural (NO colonias urbanas).\n';
-  p += '8. titulo: maximo 80 caracteres, sin emojis, claro y directo.\n\n';
+  p += '8. titulo: MAXIMO 80 caracteres. NUNCA copies el resumen como titulo. El titulo es un encabezado corto y directo (ej: "Volcadura en Canal de Coria"). El resumen explica QUE paso con mas detalle.\n';
+  p += '9. resumen: 1-3 oraciones concisas. DIFERENTE al titulo. Incluye detalles: quienes, como, consecuencias.\n\n';
   p += 'TEXTO A ANALIZAR:\n' + frag + '\n\nJSON:';
   return p;
 }
@@ -1645,11 +1652,12 @@ function crearTarjetaRSS(item) {
   h += '<option value="madrugada">Madrugada (0-6h)</option>';
   h += '</select></div>';
   h += '<div class="nc-campo"><div class="nc-label">RESUMEN</div>';
-  h += '<textarea class="nc-input" id="' + id + '-sum" style="min-height:60px;resize:vertical;">' + descSeg + '</textarea></div>';
+  h += '<textarea class="nc-input" id="' + id + '-sum" style="min-height:60px;resize:vertical;"></textarea></div>';
   h += '</div>';
   h += '<div class="nc-acciones">';
   h += '<button class="btn-ia" onclick="analizarDesdeCard(\'' + id + '\')">ANALIZAR</button>';
   h += '<button class="btn-editar" onclick="toggleEdit(\'' + id + '\')">EDITAR</button>';
+  h += '<button class="btn-posicionar" id="' + id + '-btn-pos" onclick="posicionarEnIntel(\'' + id + '\')">📍 MAPA</button>';
   h += '<button class="btn-aprobar" id="' + id + '-btn-apr" onclick="aprobarCard(\'' + id + '\',\'' + fuenteSeg + '\',\'' + linkSeg + '\')">APROBAR</button>';
   h += '<button class="btn-descartar" onclick="descartarCard(\'' + id + '\')">X</button>';
   h += '</div>';
@@ -1946,7 +1954,14 @@ function analizarConIA(id, texto, fuente, link) {
 
     // Rellenar campos editables
     var titEl = document.getElementById(id + '-tit');
-    if (titEl && r.titulo) titEl.value = r.titulo;
+    if (titEl) {
+      if (r.titulo && r.titulo.length < 120) {
+        titEl.value = r.titulo;
+      } else if (r.resumen) {
+        // Si título muy largo o vacío, generar desde resumen
+        titEl.value = r.resumen.split('.')[0].slice(0,80).trim();
+      }
+    }
     var tipoEl = document.getElementById(id + '-tipo');
     if (tipoEl && r.tipo) tipoEl.value = r.tipo;
     var lugEl = document.getElementById(id + '-lug');
@@ -2178,6 +2193,7 @@ function analizarManual() {
         '<div class="nc-campo"><div class="nc-label">RESUMEN</div><textarea class="nc-input" id="' + id + '-sum" style="min-height:60px;resize:vertical;">' + (r.resumen||'').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea></div>' +
       '</div>' +
       '<div class="nc-acciones">' +
+        '<button class="btn-posicionar" onclick="posicionarEnIntel(\'' + id + '\')">📍 MAPA</button>' +
         '<button class="btn-aprobar" onclick="aprobarCard(\'' + id + '\',\'' + fuenteManual + '\',\'' + url + '\')">✓ APROBAR Y GUARDAR</button>' +
         '<button class="btn-descartar" onclick="descartarCard(\'' + id + '\')">✕ DESCARTAR</button>' +
       '</div>';
@@ -3366,6 +3382,87 @@ function borrarPuntoEdicion() {
   toast('Punto borrado: ' + nombre, 'ok');
 }
 window.borrarPuntoEdicion = borrarPuntoEdicion;
+
+
+// ── POSICIONAR NOTICIA EN MAPA INTEL ──
+function posicionarEnIntel(id) {
+  var card = document.getElementById(id);
+  if (!card) { toast('Card no encontrado', 'error'); return; }
+
+  // Leer datos del formulario (campos editados por el usuario)
+  var titulo  = (document.getElementById(id + '-tit')  ? document.getElementById(id + '-tit').value  : '') || card.querySelector('.nc-titulo') ? card.querySelector('.nc-titulo').textContent : 'Sin titulo';
+  var tipo    = (document.getElementById(id + '-tipo') ? document.getElementById(id + '-tipo').value : '') || 'rumor';
+  var calle1  = (document.getElementById(id + '-cal1') ? document.getElementById(id + '-cal1').value : '') || '';
+  var colonia = (document.getElementById(id + '-col')  ? document.getElementById(id + '-col').value  : '') || '';
+  var resumen = (document.getElementById(id + '-sum')  ? document.getElementById(id + '-sum').value  : '') || '';
+  var fecha   = (document.getElementById(id + '-fev')  ? document.getElementById(id + '-fev').value  : '') || '';
+
+  // Coordenadas: primero del dataset (análisis IA), luego default
+  var lat = parseFloat(card.dataset.lat) || 0;
+  var lng = parseFloat(card.dataset.lng) || 0;
+
+  // Si las coords son el centro genérico o inválidas, intentar geocodificar con calle+colonia
+  var esCentroGenerico = (Math.abs(lat - 20.6795) < 0.001 && Math.abs(lng - (-101.3540)) < 0.001);
+  if ((!lat || !lng || esCentroGenerico) && (calle1 || colonia)) {
+    var query = encodeURIComponent((calle1 + ' ' + colonia + ' Irapuato Guanajuato Mexico').trim());
+    var url = 'https://nominatim.openstreetmap.org/search?q=' + query + '&format=json&limit=1&bounded=1&viewbox=-101.60,20.45,-101.10,20.85';
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data[0]) {
+          lat = parseFloat(data[0].lat);
+          lng = parseFloat(data[0].lon);
+        } else {
+          lat = 20.6795; lng = -101.3540;
+        }
+        _colocarEnIntel(id, titulo, tipo, calle1, colonia, resumen, fecha, lat, lng);
+      })
+      .catch(function() {
+        _colocarEnIntel(id, titulo, tipo, calle1, colonia, resumen, fecha, 20.6795, -101.3540);
+      });
+    toast('Geocodificando ubicación...', 'ok');
+    return;
+  }
+
+  if (!lat || !lng) { lat = 20.6795; lng = -101.3540; }
+  _colocarEnIntel(id, titulo, tipo, calle1, colonia, resumen, fecha, lat, lng);
+}
+window.posicionarEnIntel = posicionarEnIntel;
+
+function _colocarEnIntel(id, titulo, tipo, calle1, colonia, resumen, fecha, lat, lng) {
+  // Guardar coords en el card para futuro uso
+  var card = document.getElementById(id);
+  if (card) { card.dataset.lat = lat; card.dataset.lng = lng; }
+
+  // Ir al tab INTEL
+  verTab('intel');
+
+  // Esperar a que el mapa esté listo y agregar el marcador
+  setTimeout(function() {
+    if (!intelObj) { toast('Mapa INTEL no listo, intenta de nuevo', 'error'); return; }
+
+    var color = COLORES_TIPO[tipo] || '#3a5a7a';
+    var marker = L.marker([lat, lng], { icon: crearIconoMapa(tipo) });
+    var popup = '<div style="font-family:monospace;font-size:9px;max-width:220px;background:#0d1b2a;color:#c8d8e8;padding:8px;border-radius:4px;">' +
+      '<div style="color:' + color + ';font-size:7px;letter-spacing:1px;margin-bottom:3px;">' + tipo.toUpperCase() + '</div>' +
+      '<div style="font-weight:bold;margin-bottom:4px;">' + titulo.substring(0,70) + '</div>' +
+      (calle1 ? '<div style="color:#7a9ab8;font-size:7px;">📍 ' + calle1 + (colonia ? ' · ' + colonia : '') + '</div>' : '') +
+      (resumen ? '<div style="color:#3a5a7a;font-size:7px;margin-top:3px;">' + resumen.substring(0,100) + '</div>' : '') +
+      (fecha ? '<div style="color:#3a5a7a;font-size:7px;margin-top:2px;">' + fecha + '</div>' : '') +
+      '</div>';
+    marker.bindPopup(popup, {maxWidth:240});
+    marker.addTo(intelObj);
+    intelMarkers.push(marker);
+    intelObj.setView([lat, lng], 15, {animate:true});
+    marker.openPopup();
+    toast('Noticia posicionada en INTEL', 'ok');
+
+    // Marcar el botón como ya posicionado
+    var btnPos = document.getElementById(id + '-btn-pos');
+    if (btnPos) { btnPos.textContent = '✅ MAPA'; btnPos.disabled = true; }
+  }, 400);
+}
+window._colocarEnIntel = _colocarEnIntel;
 
 }); // fin DOMContentLoaded
 </script>
