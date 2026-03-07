@@ -799,8 +799,8 @@ function simpleheat(canvas){if(!(this instanceof simpleheat)){return new simpleh
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <script>
+console.log('APP SCRIPT INICIANDO...');
 // ═══ INICIO DE APP ═══
-// Protección contra errores de extensiones externas del browser
 // ═══════════════════════════════════════════════════════════════
 // CONFIGURACIÓN
 // ═══════════════════════════════════════════════════════════════
@@ -896,6 +896,7 @@ function escucharBD() {
 // NAVEGACIÓN
 // ═══════════════════════════════════════════════════════════════
 function verTab(cual) {
+  console.log("verTab:", cual);
   var tabs = document.querySelectorAll('.tab');
   for (var i = 0; i < tabs.length; i++) {
     tabs[i].classList.remove('active');
@@ -2256,7 +2257,8 @@ function escucharMake() {
   }, function(e) { console.log('Make listener:', e.message); });
 }
 try {
-  firebase.initializeApp(firebaseConfig);
+  console.log("Iniciando Firebase...");
+firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
   escucharBD();
 } catch(e) {
@@ -2297,6 +2299,7 @@ function dbg(msg) {
 }
 
 function iniciarMapa() {
+  console.log("iniciarMapa llamado");
   var el = document.getElementById('mapa-leaflet');
   var cont = document.getElementById('mapa-container');
   dbg('iniciarMapa() - L:' + (typeof L) + ' el:' + (el ? el.offsetWidth+'x'+el.offsetHeight : 'null'));
@@ -2543,7 +2546,7 @@ document.getElementById('rss-estado').textContent = 'Sistema listo. Elige una fu
 document.getElementById('rss-estado').className = 'rss-estado ok';
 
 
-</script> 
+</script>
 
 </body>
 </html>
