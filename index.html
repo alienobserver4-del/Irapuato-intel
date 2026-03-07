@@ -1583,6 +1583,933 @@ function llamarGemini(prompt, callback) {
   siguiente();
 }
 
+
+function clasificarLocal(txt) {
+  var t = txt.toLowerCase();
+  var tipo = 'rumor';
+  var seg = ['bala','disparo','herido','fallecio','homicid','asesinat','ejecut','asalto','robo','secuestr','narcot','cartel','detenido','captura','asesin','muerto','cadaver','armado','balacera'];
+  var acc = ['accidente','choque','volcadura','atropell','colision','incendio','explosion','derrumbe'];
+  var eve = ['festival','feria','concierto','evento','ceremonia','inauguracion','aniversario','celebracion'];
+  var desp = ['desaparecido','desaparecida','se busca','extraviado','extraviada','paradero'];
+  var gob = ['municipio','alcalde','presidente municipal','obra publica','programa','ayuntamiento','secretaria de'];
+  var sal = ['hospital','clinica','imss','issste','salud','enfermedad','brote','vacuna'];
+  var trans = ['transporte publico','camion urbano','vialidad','cierre vial','bache','pavimento','semaforo'];
+  for (var i = 0; i < desp.length; i++) { if (t.indexOf(desp[i]) >= 0) { tipo = 'desaparecido'; break; } }
+  if (tipo==='rumor') { for (var i = 0; i < seg.length; i++) { if (t.indexOf(seg[i]) >= 0) { tipo = 'seguridad'; break; } } }
+  if (tipo==='rumor') { for (var i = 0; i < acc.length; i++) { if (t.indexOf(acc[i]) >= 0) { tipo = 'accidente'; break; } } }
+  if (tipo==='rumor') { for (var i = 0; i < eve.length; i++) { if (t.indexOf(eve[i]) >= 0) { tipo = 'evento'; break; } } }
+  if (tipo==='rumor') { for (var i = 0; i < gob.length; i++) { if (t.indexOf(gob[i]) >= 0) { tipo = 'gobierno'; break; } } }
+  if (tipo==='rumor') { for (var i = 0; i < sal.length; i++) { if (t.indexOf(sal[i]) >= 0) { tipo = 'salud'; break; } } }
+  if (tipo==='rumor') { for (var i = 0; i < trans.length; i++) { if (t.indexOf(trans[i]) >= 0) { tipo = 'transporte'; break; } } }
+    var partes = txt.split('.');
+  var titulo = (partes[0] || txt).trim().slice(0, 80);
+  return { titulo: titulo, tipo: tipo, calle1: '', calle2: '', colonia: '', comunidad: '', nombres: '', resumen: txt.slice(0, 300), lat: 20.6795, lng: -101.3540, confianza: 'baja' };
+}
+
+function buildPrompt(texto) {
+  var frag = texto.slice(0, 3000);
+  var p = 'Eres extractor de datos estructurados de noticias locales de Irapuato, Guanajuato, Mexico.\n';
+  p += 'Responde UNICAMENTE con el objeto JSON valido. Sin texto antes, sin texto despues, sin markdown.\n\n';
+  p += 'EJEMPLOS (aprende el patron):\n\n';
+  p += 'TEXTO: "Reportan herido tras ataque armado en la colonia El Cantador de Irapuato. El hecho ocurrio la tarde del jueves."\n';
+  p += 'JSON: {"titulo":"Herido tras ataque armado en colonia El Cantador","tipo":"seguridad","calle1":"","calle2":"","colonia":"El Cantador","comunidad":"","nombres":"","resumen":"Un hombre resulto herido en un ataque armado en la colonia El Cantador. El hecho ocurrio en la tarde del jueves.","fecha_evento":"","tiempo_dia":"tarde","lat":20.68,"lng":-101.35,"confianza":"media"}\n\n';
+  p += 'TEXTO: "Una camioneta volco en la carretera Irapuato-Leon a la altura del ITESI. Aproximadamente a las 9:15 de la manana de este viernes."\n';
+  p += 'JSON: {"titulo":"Camioneta vuelca en carretera Irapuato-Leon frente a ITESI","tipo":"accidente","calle1":"Carretera Irapuato-Leon","calle2":"Altura del ITESI","colonia":"","comunidad":"","nombres":"","resumen":"Una camioneta volco en la carretera Irapuato-Leon a la altura del ITESI el viernes por la manana.","fecha_evento":"","tiempo_dia":"manana","lat":20.68,"lng":-101.41,"confianza":"alta"}\n\n';
+  p += 'TEXTO: "Refuerzan formacion policial. El director Andres Clemente Carrillo Marrot destaco los beneficios otorgados en la Academia de Seguridad Publica."\n';
+  p += 'JSON: {"titulo":"Refuerzan formacion policial con becas y prestaciones","tipo":"gobierno","calle1":"","calle2":"","colonia":"","comunidad":"","nombres":"Andres Clemente Carrillo Marrot","resumen":"El director de la Academia de Seguridad, Andres Clemente Carrillo Marrot, destaco mejoras en la formacion policial con becas y salarios.","fecha_evento":"","tiempo_dia":"desconocido","lat":20.6795,"lng":-101.354,"confianza":"alta"}\n\n';
+  p += 'REGLAS CRITICAS:\n';
+  p += '1. colonia: Si el texto dice "colonia X", "col. X", "fraccionamiento X", "barrio X" => pon X en colonia. SIEMPRE.\n';
+  p += '2. nombres: Extrae TODOS los nombres propios de personas mencionadas (funcionarios, victimas, testigos). Separados por coma.\n';
+  p += '3. calle1: Cualquier via: calle, avenida, carretera, periferico, bulevar, camino, corredor. NUNCA vacio si hay referencia vial.\n';
+  p += '4. calle2: Segunda via, esquina, cruce o referencia ("altura del hospital", "frente a la plaza").\n';
+  p += '5. tiempo_dia: manana=6-12h o dice "manana". tarde=12-19h. noche=19-24h. madrugada=0-6h. desconocido=sin hora.\n';
+  p += '6. tipo: seguridad=violencia/robos/disparos. accidente=choques/volcaduras/caidas. gobierno=autoridades/obras/programas.\n';
+  p += '7. comunidad: rancho, ejido, comunidad rural (NO colonias urbanas).\n';
+  p += '8. titulo: MAXIMO 80 caracteres. Es el TITULAR periodistico: corto, accionable, sin repetir detalles del resumen. INCORRECTO: "Localizan cuerpo en el Trebol del Libramiento Sur a metros del reten de la GN". CORRECTO: "Hallan cuerpo de mujer en Avenida Insurgentes". NUNCA empieces el titulo igual que el resumen.\n';
+  p += '9. resumen: 2-3 oraciones. Comienza diferente al titulo. Amplifica detalles: donde exactamente, quienes intervinieron, que encontraron. Ej: "El cuerpo de una mujer fue localizado en un baldio de Av. Insurgentes, a la altura del Trebol del Libramiento Sur. Personal de la FGE inicio investigacion por huellas de violencia."\n';
+  p += '10. TEXTO BASURA: Si el texto parece ser menu de navegacion, footer o publicidad (repite el nombre del sitio, dice "Aviso de Privacidad", "Contacto", "Siguenos", "Lo mas leido") => pon titulo="SIN CONTENIDO" y tipo="rumor".\n\n';
+  p += 'TEXTO: "Zona Franca Zona Franca es un producto de Fabrica de Contenidos. Aviso de PrivacidadContacto Siguenos"\n';
+  p += 'JSON: {"titulo":"SIN CONTENIDO","tipo":"rumor","calle1":"","calle2":"","colonia":"","comunidad":"","nombres":"","resumen":"El texto capturado no contiene una noticia valida.","fecha_evento":"","tiempo_dia":"desconocido","lat":20.6795,"lng":-101.354,"confianza":"baja"}\n\n';
+  p += 'TEXTO: "Localizan cuerpo en el Trebol del Libramiento Sur. Irapuato, Gto. El cuerpo de una mujer sin vida fue localizado en la avenida Insurgentes, a la altura del Trebol del Libramiento Sur, a metros del reten de la Guardia Nacional, la tarde del martes 3 de marzo."\n';
+  p += 'JSON: {"titulo":"Hallan cuerpo de mujer con huellas de violencia en Av. Insurgentes","tipo":"seguridad","calle1":"Avenida Insurgentes","calle2":"Trebol del Libramiento Sur","colonia":"","comunidad":"","nombres":"","resumen":"El cuerpo de una mujer sin vida fue encontrado en un baldio de Av. Insurgentes, a metros del reten de la Guardia Nacional. Paramédicos confirmaron ausencia de signos vitales y el cuerpo presentaba huellas de violencia. La FGE inicio investigacion.","fecha_evento":"03/03/2026","tiempo_dia":"tarde","lat":20.65,"lng":-101.37,"confianza":"alta"}\n\n';
+  p += 'TEXTO A ANALIZAR:\n' + frag + '\n\nJSON:';
+  return p;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RSS
+// ═══════════════════════════════════════════════════════════════
+var rssActiva = '';
+var rssItems = {};
+
+function setEstadoRSS(msg, tipo) {
+  var el = document.getElementById('rss-estado');
+  el.textContent = msg;
+  el.className = 'rss-estado' + (tipo ? ' ' + tipo : '');
+}
+
+function cargarRSS(fuente) {
+  rssActiva = fuente;
+  var src = FUENTES_RSS[fuente];
+  if (!src) return;
+  setEstadoRSS('⏳ Cargando ' + src.nombre + '...', 'cargando');
+  document.getElementById('lista-rss').innerHTML = '';
+
+  // Intentar con proxy1, si falla usar proxy2
+  var url1 = src.proxy;
+  var url2 = url1.replace('https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?');
+
+  function intentarFetch(url, esReintentoFallback) {
+    fetch(url)
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    })
+    .then(function(txt) {
+      if (src.tipo === 'rss') {
+        procesarRSS(txt, src.nombre);
+      } else if (src.tipo === 'scraping_oem') {
+        procesarScrapingOEM(txt, src.nombre, src.proxy);
+      } else if (src.tipo === 'scraping_zf') {
+        procesarScrapingZF(txt, src.nombre, src.proxy);
+      } else if (src.tipo === 'scraping_silla') {
+        procesarScrapingSilla(txt, src.nombre, src.proxy);
+      } else {
+        procesarScraping(txt, src.nombre, src.proxy);
+      }
+    })
+    .catch(function(e) {
+      if (!esReintentoFallback) {
+        setEstadoRSS('Reintentando con proxy alternativo...', 'cargando');
+        intentarFetch(url2, true);
+      } else {
+        setEstadoRSS('Error al cargar ' + src.nombre + '. Intenta entrada manual.', 'error');
+      }
+    });
+  }
+  intentarFetch(url1, false);
+}
+
+function procesarScrapingOEM(html, nombreFuente, proxyUrl) {
+  // OEM / El Sol de Irapuato — CMS propio
+  // Portada: artículos en <article class="note"> o <div class="note">
+  // con <h2 class="note-title"><a href="..."> o <a class="note-link">
+  var base = 'https://oem.com.mx';
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, 'text/html');
+  var arr = [];
+  var seen = {};
+
+  // Limpiar basura primero
+  var basura = doc.querySelectorAll('nav, footer, header, aside, script, style, .widget, [class*="publicidad"], [class*="banner"], [class*="social"]');
+  for (var b = 0; b < basura.length; b++) {
+    if (basura[b].parentNode) basura[b].parentNode.removeChild(basura[b]);
+  }
+
+  // Estrategia 1: artículos OEM — nota con título
+  var noteTitles = doc.querySelectorAll('.note-title a, .note-link, h2 a, h3 a, article a, .article-title a');
+  for (var i = 0; i < noteTitles.length && arr.length < 20; i++) {
+    var a = noteTitles[i];
+    var titulo = (a.textContent || '').trim().replace(/\s+/g, ' ');
+    var href = a.getAttribute('href') || '';
+    if (titulo.length < 20 || titulo.length > 200) continue;
+    if (href.indexOf('#') >= 0 || href === '' || href === '/') continue;
+    // Excluir links de categoría/sección (sin guiones en la ruta)
+    var ruta = href.replace(/https?:\/\/[^/]+/, '');
+    if (ruta.split('/').filter(Boolean).length < 2) continue;
+    var urlCompleta = href.indexOf('http') === 0 ? href : base + (href.indexOf('/') === 0 ? href : '/' + href);
+    if (seen[titulo]) continue;
+    seen[titulo] = true;
+    arr.push({ titulo: titulo, desc: '', link: urlCompleta, fecha: 'Hoy', fuente: nombreFuente });
+  }
+
+  // Estrategia 2: todos los links con texto de titular (fallback)
+  if (arr.length < 5) {
+    var links = doc.querySelectorAll('a[href]');
+    for (var j = 0; j < links.length && arr.length < 20; j++) {
+      var a2 = links[j];
+      var titulo2 = (a2.textContent || '').trim().replace(/\s+/g, ' ');
+      var href2 = a2.getAttribute('href') || '';
+      if (titulo2.length < 25 || titulo2.length > 180) continue;
+      if (href2.indexOf('#') >= 0) continue;
+      if (href2.indexOf('oem.com.mx') < 0 && href2.indexOf('/') !== 0) continue;
+      var urlC = href2.indexOf('http') === 0 ? href2 : base + (href2.indexOf('/') === 0 ? href2 : '/' + href2);
+      if (seen[titulo2]) continue;
+      seen[titulo2] = true;
+      arr.push({ titulo: titulo2, desc: '', link: urlC, fecha: 'Hoy', fuente: nombreFuente });
+    }
+  }
+
+  if (arr.length === 0) {
+    procesarScraping(html, nombreFuente, proxyUrl);
+    return;
+  }
+  setEstadoRSS(arr.length + ' noticias de ' + nombreFuente, 'ok');
+  renderTarjetasRSS(arr, nombreFuente);
+}
+
+function procesarScrapingZF(html, nombreFuente, proxyUrl) {
+  // Zona Franca — WordPress. Artículos en <article> o h2/h3 con links a /seguridad/ o /local/
+  var urlMatch = proxyUrl.match(/url=([^&]+)/);
+  var baseUrl = urlMatch ? decodeURIComponent(urlMatch[1]) : '';
+  var base = 'https://zonafranca.mx';
+
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, 'text/html');
+  var arr = [];
+
+  // Buscar artículos en contenedores principales (evitar nav, footer, sidebar)
+  var contenedores = doc.querySelectorAll('article, .post, .entry, main a[href], .td-module-title a, h2 a, h3 a');
+  var seen = {};
+  for (var i = 0; i < contenedores.length && arr.length < 18; i++) {
+    var el = contenedores[i];
+    var a = (el.tagName === 'A') ? el : el.querySelector('a');
+    if (!a) continue;
+    var titulo = (a.textContent || '').trim().replace(/\s+/g, ' ');
+    var href = a.getAttribute('href') || '';
+    // Filtrar rutas de navegación (muy cortas o de sección)
+    if (titulo.length < 20 || titulo.length > 200) continue;
+    if (href.indexOf('#') >= 0) continue;
+    // Excluir links de menú/nav
+    var parent = a.parentElement;
+    var enNav = false;
+    while (parent) {
+      var tag = parent.tagName ? parent.tagName.toLowerCase() : '';
+      if (tag === 'nav' || tag === 'footer' || tag === 'header') { enNav = true; break; }
+      var cls = parent.className || '';
+      if (cls.indexOf('menu') >= 0 || cls.indexOf('widget') >= 0 || cls.indexOf('sidebar') >= 0) { enNav = true; break; }
+      parent = parent.parentElement;
+    }
+    if (enNav) continue;
+    var urlCompleta = href.indexOf('http') === 0 ? href : base + (href.indexOf('/') === 0 ? href : '/' + href);
+    if (seen[titulo]) continue;
+    seen[titulo] = true;
+    arr.push({ titulo: titulo, desc: '', link: urlCompleta, fecha: 'Hoy', fuente: nombreFuente });
+  }
+
+  if (arr.length === 0) {
+    // Fallback: scraping genérico
+    procesarScraping(html, nombreFuente, proxyUrl);
+    return;
+  }
+  setEstadoRSS(arr.length + ' noticias extraídas de ' + nombreFuente, 'ok');
+  renderTarjetasRSS(arr, nombreFuente);
+}
+
+function procesarScrapingSilla(html, nombreFuente, proxyUrl) {
+  // La Silla Rota — buscar artículos evitando footer/menú
+  var base = 'https://lasillarota.com';
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, 'text/html');
+  var arr = [];
+  var seen = {};
+
+  var candidatos = doc.querySelectorAll('.news-card a, .article-card a, .nota a, h2 a, h3 a, .title a, [class*="title"] a, article a');
+  for (var i = 0; i < candidatos.length && arr.length < 18; i++) {
+    var a = candidatos[i];
+    var titulo = (a.textContent || '').trim().replace(/\s+/g, ' ');
+    var href = a.getAttribute('href') || '';
+    if (titulo.length < 20 || titulo.length > 200) continue;
+    if (href.indexOf('#') >= 0) continue;
+    var urlCompleta = href.indexOf('http') === 0 ? href : base + (href.indexOf('/') === 0 ? href : '/' + href);
+    if (seen[titulo]) continue;
+    seen[titulo] = true;
+    arr.push({ titulo: titulo, desc: '', link: urlCompleta, fecha: 'Hoy', fuente: nombreFuente });
+  }
+
+  if (arr.length === 0) {
+    procesarScraping(html, nombreFuente, proxyUrl);
+    return;
+  }
+  setEstadoRSS(arr.length + ' noticias extraídas de ' + nombreFuente, 'ok');
+  renderTarjetasRSS(arr, nombreFuente);
+}
+
+function procesarRSS(txt, nombreFuente) {
+  var parser = new DOMParser();
+  var xml = parser.parseFromString(txt, 'application/xml');
+  var items = xml.querySelectorAll('item');
+  var arr = [];
+  for (var i = 0; i < items.length && i < 30; i++) {
+    var item = items[i];
+    var titulo = (item.querySelector('title') ? item.querySelector('title').textContent : '').trim();
+    var desc = (item.querySelector('description') ? item.querySelector('description').textContent : '').replace(/<[^>]*>/g, '').trim().slice(0, 400);
+    var link = (item.querySelector('link') ? item.querySelector('link').textContent : '').trim();
+    var fecha = (item.querySelector('pubDate') ? item.querySelector('pubDate').textContent : '').trim();
+    var completo = (titulo + ' ' + desc).toLowerCase();
+    if (completo.indexOf('irapuato') >= 0 || completo.indexOf('silao') >= 0 || completo.indexOf('salamanca') >= 0) {
+      arr.push({ titulo: titulo, desc: desc, link: link, fecha: fecha, fuente: nombreFuente });
+    }
+  }
+  if (arr.length === 0) {
+    setEstadoRSS('Sin noticias del Bajío en este feed. Prueba otra fuente.', 'error');
+    return;
+  }
+  setEstadoRSS(arr.length + ' noticias encontradas en ' + nombreFuente, 'ok');
+  renderTarjetasRSS(arr, nombreFuente);
+}
+
+function procesarScraping(html, nombreFuente, proxyUrl) {
+  // Extraer URL base del periódico del proxy URL
+  var urlMatch = proxyUrl.match(/url=([^&]+)/);
+  var baseUrl = urlMatch ? decodeURIComponent(urlMatch[1]) : '';
+  var dominio = baseUrl.match(/https?:\/\/[^\/]+/);
+  var base = dominio ? dominio[0] : '';
+
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, 'text/html');
+  var arr = [];
+
+  // Buscar artículos/noticias — patrones comunes en sitios de noticias
+  var selectores = ['article', '.post', '.news-item', '.nota', 'h2 a', 'h3 a', '.entry-title a'];
+  var encontrados = [];
+
+  // Buscar todos los enlaces con texto significativo
+  var links = doc.querySelectorAll('a');
+  for (var i = 0; i < links.length && arr.length < 15; i++) {
+    var a = links[i];
+    var titulo = (a.textContent || '').trim();
+    var href = a.getAttribute('href') || '';
+    // Filtrar: título largo (>20 chars), que sea noticia real
+    if (titulo.length > 25 && titulo.length < 200 && href && href.indexOf('#') < 0) {
+      // Construir URL completa
+      var urlCompleta = href;
+      if (href.indexOf('http') < 0) {
+        urlCompleta = href.indexOf('/') === 0 ? base + href : base + '/' + href;
+      }
+      // Evitar duplicados
+      var yaTiene = false;
+      for (var j = 0; j < arr.length; j++) {
+        if (arr[j].titulo === titulo) { yaTiene = true; break; }
+      }
+      if (!yaTiene) {
+        arr.push({ titulo: titulo, desc: '', link: urlCompleta, fecha: 'Hoy', fuente: nombreFuente });
+      }
+    }
+  }
+
+  if (arr.length === 0) {
+    setEstadoRSS('No se pudieron extraer noticias de ' + nombreFuente + '. El sitio puede bloquear el acceso.', 'error');
+    return;
+  }
+  setEstadoRSS(arr.length + ' noticias extraídas de ' + nombreFuente, 'ok');
+  renderTarjetasRSS(arr, nombreFuente);
+}
+window.cargarRSS = cargarRSS;
+
+function cargarTodas() {
+  var fuentes = ['sol_policiaca', 'am_irapuato', 'am_policia', 'correo_seg', 'silla_rota', 'zona_franca'];
+  var idx = 0;
+  document.getElementById('lista-rss').innerHTML = '';
+  var siguiente = function() {
+    if (idx < fuentes.length) {
+      var f = fuentes[idx];
+      idx++;
+      var src = FUENTES_RSS[f];
+      if (!src) { siguiente(); return; }
+      setEstadoRSS('⏳ Cargando ' + src.nombre + ' (' + idx + '/' + fuentes.length + ')...', 'cargando');
+      var proxyFallbackUrl = src.proxy.indexOf('corsproxy.io') >= 0
+        ? src.proxy.replace('https://corsproxy.io/?', 'https://api.allorigins.win/raw?url=')
+        : src.proxy.replace('https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?');
+      fetch(src.proxy)
+      .then(function(res) { if (!res.ok) throw new Error('status ' + res.status); return res.text(); })
+      .catch(function() { return fetch(proxyFallbackUrl).then(function(r) { return r.text(); }); })
+      .then(function(txt) {
+        if (src.tipo === 'rss') { procesarRSSAcumulado(txt, src.nombre); }
+        else { procesarScrapingAcumulado(txt, src.nombre, src.proxy); }
+        setTimeout(siguiente, 1500);
+      })
+      .catch(function() { setTimeout(siguiente, 1500); });
+    } else {
+      var count = document.getElementById('lista-rss').children.length;
+      setEstadoRSS(count + ' noticias cargadas de todas las fuentes', 'ok');
+    }
+  };
+  siguiente();
+}
+
+function procesarRSSAcumulado(txt, nombreFuente) {
+  var parser = new DOMParser();
+  var xml = parser.parseFromString(txt, 'application/xml');
+  var items = xml.querySelectorAll('item');
+  var lista = document.getElementById('lista-rss');
+  for (var i = 0; i < items.length && i < 20; i++) {
+    var item = items[i];
+    var titulo = (item.querySelector('title') ? item.querySelector('title').textContent : '').trim();
+    var desc = (item.querySelector('description') ? item.querySelector('description').textContent : '').replace(/<[^>]*>/g,'').trim().slice(0,400);
+    var link = (item.querySelector('link') ? item.querySelector('link').textContent : '').trim();
+    var completo = (titulo + ' ' + desc).toLowerCase();
+    if (completo.indexOf('irapuato') >= 0 || completo.indexOf('silao') >= 0 || completo.indexOf('salamanca') >= 0) {
+      lista.appendChild(crearTarjetaRSS({ titulo:titulo, desc:desc, link:link, fecha:'', fuente:nombreFuente }));
+    }
+  }
+}
+
+function procesarScrapingAcumulado(html, nombreFuente, proxyUrl) {
+  var urlMatch = proxyUrl.match(/url=([^&]+)/);
+  var baseUrl = urlMatch ? decodeURIComponent(urlMatch[1]) : '';
+  var dominio = baseUrl.match(/https?:[/][/][^/]+/);
+  var base = dominio ? dominio[0] : '';
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, 'text/html');
+  var lista = document.getElementById('lista-rss');
+  var count = 0;
+  var links = doc.querySelectorAll('a');
+  for (var i = 0; i < links.length && count < 8; i++) {
+    var a = links[i];
+    var titulo = (a.textContent || '').trim();
+    var href = a.getAttribute('href') || '';
+    if (titulo.length > 25 && titulo.length < 200 && href && href.indexOf('#') < 0) {
+      var urlCompleta = href;
+      if (href.indexOf('http') < 0) {
+        urlCompleta = href.charAt(0) === '/' ? base + href : base + '/' + href;
+      }
+      lista.appendChild(crearTarjetaRSS({ titulo:titulo, desc:'', link:urlCompleta, fecha:'', fuente:nombreFuente }));
+      count++;
+    }
+  }
+}
+window.cargarTodas = cargarTodas;
+
+function renderTarjetasRSS(arr, fuente) {
+  var lista = document.getElementById('lista-rss');
+  lista.innerHTML = '';
+  for (var i = 0; i < arr.length; i++) {
+    lista.appendChild(crearTarjetaRSS(arr[i]));
+  }
+}
+
+function crearTarjetaRSS(item) {
+  var id = 'card-' + (++cardCounter);
+  var texto = (item.titulo + '. ' + (item.desc||'')).slice(0, 300);
+  var card = document.createElement('div');
+  card.className = 'noticia-card';
+  card.id = id;
+  card.dataset.texto = texto;
+  card.dataset.fuente = item.fuente || '';
+  card.dataset.link = item.link || '';
+
+  var tituloSeg = (item.titulo||'').replace(/['"]/g, '');
+  var descSeg = (item.desc||'').slice(0,100).replace(/['"]/g, '');
+  var linkSeg = (item.link||'').replace(/['"]/g, '');
+  var fuenteSeg = (item.fuente||'').replace(/['"]/g, '');
+
+  var h = '';
+  h += '<div class="nc-header">';
+  h += '<span class="nc-tipo rumor" id="' + id + '-tipo-badge">RUMOR</span>';
+  h += '<div><div class="nc-titulo">' + (item.titulo||'') + '</div>';
+  if (item.link) { h += '<a href="' + linkSeg + '" target="_blank" class="nc-link">ver noticia</a>'; }
+  h += '</div></div>';
+  var ahora = new Date();
+  var fechaStr = ahora.getDate() + '/' + (ahora.getMonth()+1) + '/' + ahora.getFullYear() + ' ' + ahora.getHours() + ':' + (ahora.getMinutes()<10?'0':'') + ahora.getMinutes();
+  h += '<div class="nc-fecha">Capturado: ' + fechaStr + (item.fecha ? ' | Publicado: ' + item.fecha : '') + '</div>';
+  h += '<div class="nc-meta">';
+  h += '<span class="nc-fuente">' + (item.fuente||'') + '</span>';
+  h += '<span id="' + id + '-lugar" class="nc-lugar"></span>';
+  h += '<span id="' + id + '-conf"></span>';
+  h += '</div>';
+  h += '<div class="nc-nombres" id="' + id + '-nombres" style="display:none"></div>';
+  h += '<div class="nc-resumen" id="' + id + '-res">' + (item.desc||'') + '</div>';
+  h += '<div class="nc-procesando" id="' + id + '-proc"><div class="mini-spin"></div> Analizando...</div>';
+  h += '<div class="nc-edit" id="' + id + '-edit">';
+  h += '<div class="nc-campo"><div class="nc-label">TITULO</div>';
+  h += '<input class="nc-input" id="' + id + '-tit" value="' + tituloSeg + '"></div>';
+  h += '<div class="nc-campo"><div class="nc-label">TIPO</div>';
+  h += '<select class="nc-select" id="' + id + '-tipo">';
+  h += '<option value="seguridad">Seguridad</option>';
+  h += '<option value="accidente">Accidente</option>';
+  h += '<option value="evento">Evento</option>';
+  h += '<option value="rumor" selected>Rumor</option>';
+  h += '<option value="desaparecido">Desaparecido</option>';
+  h += '<option value="gobierno">Gobierno</option>';
+  h += '<option value="salud">Salud</option>';
+  h += '<option value="transporte">Transporte/Vialidad</option>';
+  h += '</select></div>';
+  h += '<div class="nc-campo"><div class="nc-label">TIPO SECUNDARIO (opcional)</div>';
+  h += '<select class="nc-select" id="' + id + '-tipo2">';
+  h += '<option value="">-- Ninguno --</option>';
+  h += '<option value="seguridad">Seguridad</option>';
+  h += '<option value="accidente">Accidente</option>';
+  h += '<option value="evento">Evento</option>';
+  h += '<option value="rumor">Rumor</option>';
+  h += '<option value="desaparecido">Desaparecido</option>';
+  h += '<option value="gobierno">Gobierno</option>';
+  h += '<option value="salud">Salud</option>';
+  h += '<option value="transporte">Transporte/Vialidad</option>';
+  h += '</select></div>';
+  h += '<div class="nc-campo"><div class="nc-label">CALLE 1</div>';
+  h += '<input class="nc-input" id="' + id + '-cal1" value="" placeholder="Primera calle mencionada..." onblur="autoColonia(\'' + id + '\')"></div>';
+  h += '<div class="nc-campo"><div class="nc-label">CALLE 2</div>';
+  h += '<input class="nc-input" id="' + id + '-cal2" value="" placeholder="Segunda calle (esquina/cruce)..." onblur="autoColoniaCalle2(\'' + id + '\')"></div>';
+  h += '<div class="nc-campo"><div class="nc-label">COLONIA</div>';
+  h += '<input class="nc-input" id="' + id + '-col" value="" placeholder="Se auto-completa por calles..."></div>';
+  h += '<div class="nc-campo"><div class="nc-label">COMUNIDAD</div>';
+  h += '<input class="nc-input" id="' + id + '-com" value=""></div>';
+  h += '<div class="nc-campo"><div class="nc-label">NOMBRES</div>';
+  h += '<input class="nc-input" id="' + id + '-nom" value="" placeholder="Nombres implicados..."></div>';
+  h += '<div class="nc-campo"><div class="nc-label">COORDENADAS (lat, lng) — opcional</div>';
+  h += '<input class="nc-input" id="' + id + '-coords" placeholder="Ej: 20.6721, -101.3475" style="font-size:8px;">';
+  h += '</div>';
+  h += '<div class="nc-campo"><div class="nc-label">FECHA DEL EVENTO</div>';
+  h += '<input class="nc-input" id="' + id + '-fev" value="" placeholder="DD/MM/YYYY segun la noticia..."></div>';
+  h += '<div class="nc-campo"><div class="nc-label">MOMENTO DEL DIA</div>';
+  h += '<select class="nc-select" id="' + id + '-tdia">';
+  h += '<option value="desconocido">Desconocido</option>';
+  h += '<option value="manana">Mañana (6-12h)</option>';
+  h += '<option value="tarde">Tarde (12-19h)</option>';
+  h += '<option value="noche">Noche (19-24h)</option>';
+  h += '<option value="madrugada">Madrugada (0-6h)</option>';
+  h += '</select></div>';
+  h += '<div class="nc-campo"><div class="nc-label">RESUMEN</div>';
+  h += '<textarea class="nc-input" id="' + id + '-sum" style="min-height:60px;resize:vertical;"></textarea></div>';
+  h += '</div>';
+  h += '<div class="nc-acciones">';
+  h += '<button class="btn-ia" onclick="analizarDesdeCard(\'' + id + '\')">ANALIZAR</button>';
+  h += '<button class="btn-editar" onclick="toggleEdit(\'' + id + '\')">EDITAR</button>';
+
+  h += '<button class="btn-aprobar" id="' + id + '-btn-apr" onclick="aprobarCard(\'' + id + '\',\'' + fuenteSeg + '\',\'' + linkSeg + '\')">APROBAR</button>';
+  h += '<button class="btn-descartar" onclick="descartarCard(\'' + id + '\')">X</button>';
+  h += '</div>';
+  card.innerHTML = h;
+  return card;
+}
+
+function analizarDesdeCard(id) {
+  var card = document.getElementById(id);
+  if (!card) return;
+  var link = card.dataset.link || '';
+  var texto = card.dataset.texto || '';
+  var fuente = card.dataset.fuente || '';
+  // Si ya se cargó el texto completo en auto-fetch, usar directamente
+  if (card.dataset.textoCargado === '1' && texto.length > 120) {
+    analizarConIA(id, texto, fuente, link);
+    return;
+  }
+  // Si hay URL, intentar obtener el texto completo del articulo
+  if (link && link.indexOf('http') === 0) {
+    var proc = document.getElementById(id + '-proc');
+    if (proc) proc.className = 'nc-procesando visible';
+    fetchContenidoArticulo(link, function(textoCompleto) {
+      var textoFinal = textoCompleto || texto;
+      // Actualizar el texto guardado en la card para tener contexto completo
+      if (textoCompleto) {
+        card.dataset.texto = textoCompleto;
+        var palabras = textoCompleto.split(' ').length;
+        toast('Articulo completo: ~' + palabras + ' palabras', 'ok');
+      }
+      analizarConIA(id, textoFinal, fuente, link);
+    });
+  } else {
+    analizarConIA(id, texto, fuente, link);
+  }
+}
+window.analizarDesdeCard = analizarDesdeCard;
+
+// Descarga y extrae el texto limpio de un articulo periodistico
+function fetchContenidoArticulo(url, callback) {
+  // Orden de proxies según el dominio — OEM bloquea allorigins, usar corsproxy primero
+  var esOEM = url.indexOf('oem.com.mx') >= 0;
+  var proxies;
+  if (esOEM) {
+    proxies = [
+      'https://corsproxy.io/?' + encodeURIComponent(url),
+      'https://api.allorigins.win/get?url=' + encodeURIComponent(url) + '&callback=',
+      'https://thingproxy.freeboard.io/fetch/' + url,
+      'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url)
+    ];
+  } else {
+    proxies = [
+      'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+      'https://corsproxy.io/?' + encodeURIComponent(url),
+      'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url),
+      'https://thingproxy.freeboard.io/fetch/' + url
+    ];
+  }
+
+  function intentar(idx) {
+    if (idx >= proxies.length) { callback(null); return; }
+    var proxyUrl = proxies[idx];
+    var timeoutId = setTimeout(function() { intentar(idx + 1); }, 8000); // timeout 8s
+    fetch(proxyUrl)
+    .then(function(res) {
+      clearTimeout(timeoutId);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    })
+    .then(function(raw) {
+      // allorigins /get devuelve JSON con {contents: "..."}
+      var html = raw;
+      if (raw && raw.indexOf('"contents"') >= 0) {
+        try { var j = JSON.parse(raw); html = j.contents || raw; } catch(e) {}
+      }
+      var texto = extraerTextoArticulo(html);
+      if (texto && texto.length > 120) {
+        callback(texto, idx); // pasar idx del proxy que funcionó
+      } else {
+        intentar(idx + 1);
+      }
+    })
+    .catch(function() { clearTimeout(timeoutId); intentar(idx + 1); });
+  }
+  intentar(0);
+}
+
+// Extrae el texto principal de un HTML periodistico
+function extraerTextoArticulo(html) {
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, 'text/html');
+
+  // ── PASO 1: Quitar basura estructural ──
+  var selectoresBasura = [
+    'script','style','nav','footer','aside','header','iframe','noscript',
+    'figure','picture','video','audio','form',
+    '[class*="share"]','[class*="social"]','[class*="related"]',
+    '[class*="recommend"]','[class*="popular"]','[class*="trending"]',
+    '[class*="newsletter"]','[class*="suscri"]','[class*="subscri"]',
+    '[class*="publicidad"]','[class*="banner"]','[class*="publi"]',
+    '[class*="ad-"]','[class*="-ad"]','[class*="ads"]',
+    '[class*="menu"]','[class*="sidebar"]','[class*="widget"]',
+    '[class*="comment"]','[class*="tag"]','[class*="categoria"]',
+    '[class*="breadcrumb"]','[class*="pagination"]','[class*="paginacion"]',
+    '[id*="share"]','[id*="social"]','[id*="menu"]',
+    '[id*="sidebar"]','[id*="comment"]','[id*="newsletter"]',
+    '.compartir','.redes','.tags','.etiquetas','.relacionadas',
+    '.mas-noticias','.otras-noticias','.notas-relacionadas',
+    '.nota-relacionada','.te-puede-interesar','.lee-tambien'
+  ];
+  for (var b = 0; b < selectoresBasura.length; b++) {
+    try {
+      var elems = doc.querySelectorAll(selectoresBasura[b]);
+      for (var e = 0; e < elems.length; e++) {
+        if (elems[e].parentNode) elems[e].parentNode.removeChild(elems[e]);
+      }
+    } catch(ex) {}
+  }
+
+  // ── PASO 2: Selectores específicos por periódico + genéricos ──
+  // OEM/El Sol de Irapuato, AM, Correo, Tinta Negra, genéricos
+  // Detectar el periódico por URL para usar selectores precisos primero
+  var urlDoc = (doc.location && doc.location.href) ? doc.location.href : '';
+  // Buscar en links canonicos
+  var canonical = doc.querySelector('link[rel="canonical"]');
+  if (canonical) urlDoc = canonical.getAttribute('href') || urlDoc;
+  var metaOg = doc.querySelector('meta[property="og:url"]');
+  if (metaOg) urlDoc = metaOg.getAttribute('content') || urlDoc;
+
+  var selectoresContenido = [];
+
+  // ── Selectores por periódico (orden: más específico primero) ──
+  if (urlDoc.indexOf('zonafranca.mx') >= 0) {
+    // Zona Franca — WordPress con Newspaper theme
+    selectoresContenido = [
+      '.entry-content', '.td-post-content', '.post-content',
+      'article .entry-content', '.tdb-block-inner p', '.td-pb-span8 .entry-content'
+    ];
+  } else if (urlDoc.indexOf('lasillarota.com') >= 0) {
+    // La Silla Rota
+    selectoresContenido = [
+      '.nota-container', '.article-body', '.content-nota',
+      '.nota-content', 'article .content', '.singular-content'
+    ];
+  } else if (urlDoc.indexOf('am.com.mx') >= 0) {
+    // AM Guanajuato
+    selectoresContenido = [
+      '.news-single-content', '.news-content', '.nota-content',
+      '.article-body', '.news-detail-text', 'article .text-content',
+      '[class*="single-content"]', '[itemprop="articleBody"]'
+    ];
+  } else if (urlDoc.indexOf('oem.com.mx') >= 0 || urlDoc.indexOf('elsoldeirapuato') >= 0) {
+    // El Sol de Irapuato / OEM — CMS propio con clases note-*
+    selectoresContenido = [
+      '.note-body',          // contenedor principal OEM
+      '.note-paragraph',     // cada párrafo individual
+      '.article-note-content',
+      '.note-content',
+      '.note-text',
+      '[itemprop="articleBody"]',
+      '.article-body-content',
+      '.story-content',
+      '.nota-cuerpo',
+      '.nota-interior',
+      'article .content',
+      '.article-content'
+    ];
+  } else if (urlDoc.indexOf('periodicocorreo.com.mx') >= 0) {
+    // Periodico Correo
+    selectoresContenido = [
+      '.entry-content', '.post-content', '.article-content',
+      '.nota-content', '[itemprop="articleBody"]', 'article .content'
+    ];
+  } else if (urlDoc.indexOf('entintanegra.com') >= 0) {
+    // Tinta Negra
+    selectoresContenido = [
+      '.entry-content', '.post-content', 'article .content'
+    ];
+  }
+
+  // Siempre agregar selectores genéricos al final como fallback
+  selectoresContenido = selectoresContenido.concat([
+    '[itemprop="articleBody"]',
+    '.note-paragraph','.note-body','.nota-cuerpo','.nota-interior',
+    '.article-body-content','.story-content',
+    '.news-content','.nota-content','.contenido-articulo',
+    '.entry-content','.post-content','.td-post-content',
+    '.single-content','.article-content',
+    'article .content','article .body','article .texto','article .cuerpo',
+    '[class*="article-body"]','[class*="nota-body"]',
+    '[class*="article-content"]','[class*="nota-content"]',
+    '[class*="story-body"]','[class*="content-body"]',
+    '[class*="cuerpo-nota"]','[class*="texto-nota"]',
+    '[class*="cuerpo"]','[class*="contenido"]',
+    '.nota-detalle','.contenido-nota','.article-text',
+    'article','main article','main .content',
+    '#article-body','#nota-body','#content-body','#cuerpo',
+    'main'
+  ]);
+
+  var mejor = '';
+  for (var s = 0; s < selectoresContenido.length; s++) {
+    try {
+      var el = doc.querySelector(selectoresContenido[s]);
+      if (el) {
+        // Extraer párrafos del elemento para evitar capturar títulos relacionados
+        // Para OEM: párrafos con clase note-paragraph además de <p>
+        var pElems = el.querySelectorAll('p, .note-paragraph, [class*="paragraph"]');
+        var txts = [];
+        if (pElems.length >= 1) {
+          for (var pi = 0; pi < pElems.length; pi++) {
+            var tp = limpiarTexto(pElems[pi].textContent || '');
+            if (tp.length > 40) txts.push(tp);
+          }
+        }
+        var txt = txts.length >= 1 ? txts.join(' ') : limpiarTexto(el.textContent || '');
+        if (txt.length > mejor.length && txt.length > 100) { mejor = txt; }
+      }
+    } catch(ex) {}
+  }
+
+  // ── PASO 3: Fallback heurístico — todos los <p> del documento ──
+  if (mejor.length < 200) {
+    var todosP = doc.querySelectorAll('p');
+    var bloques = [];
+    for (var p = 0; p < todosP.length; p++) {
+      var tp2 = limpiarTexto(todosP[p].textContent || '');
+      // Solo párrafos sustanciales (más de 60 chars, no títulos cortos)
+      if (tp2.length > 60 && tp2.length < 1500) bloques.push(tp2);
+    }
+    // Tomar los primeros 15 párrafos como máximo
+    if (bloques.length > 0) mejor = bloques.slice(0, 15).join(' ');
+  }
+
+  // ── PASO 4: Último recurso body ──
+  if (mejor.length < 100) {
+    mejor = limpiarTexto(doc.body ? (doc.body.textContent || '') : '');
+  }
+
+  // Devolver hasta 4000 chars (suficiente para Gemini, nota completa)
+  return mejor.slice(0, 4000);
+}
+
+function limpiarTexto(txt) {
+  return txt
+    // Quitar patrones tipicos de basura periodistica
+    .replace(/Facebook\s*X?\s*WhatsApp\s*Telegram\s*E-?Mail\s*Copiar\s*link[A-Za-z]*/gi, '')
+    .replace(/Compartir\s*(en\s*)?(Facebook|Twitter|WhatsApp|Telegram|Email|Link)?/gi, '')
+    .replace(/Suscr[íi]bete?\s*(al?\s*newsletter)?/gi, '')
+    .replace(/Lee\s*tambi[eé]n[:\s]*/gi, '')
+    .replace(/Te\s*puede\s*interesar[:\s]*/gi, '')
+    .replace(/Relacionadas?[:\s]*/gi, '')
+    .replace(/Lunes|Martes|Mi[eé]rcoles|Jueves|Viernes|S[aá]bado|Domingo/g, '')
+    .replace(/enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre/gi, function(m){ return m; })
+    .replace(/\d{1,2}\s*de\s*(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\s*de\s*\d{4}/gi, '')
+    .replace(/Local\s*(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)/gi, '')
+    .replace(/[A-Z][a-z]+\s*,\s*\d{1,2}\s*de\s*[a-z]+\s*de\s*\d{4}/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+// Auto-completar colonia al salir del campo calle
+// Si se ingresa calle2, busca la interseccion de ambas (mas preciso)
+function autoColonia(id) {
+  var cal1El = document.getElementById(id + '-cal1');
+  var cal2El = document.getElementById(id + '-cal2');
+  var colEl = document.getElementById(id + '-col');
+  if (!cal1El || !colEl || !cal1El.value.trim()) return;
+  var cal1 = cal1El.value.trim();
+  var cal2 = cal2El ? cal2El.value.trim() : '';
+  // Si hay calle2, buscar la interseccion para mayor precision
+  var query = cal2 ? (cal1 + ' esquina ' + cal2) : cal1;
+  colEl.style.borderColor = '#00ccff';
+  buscarColoniaOSM(query, function(col) {
+    if (col && colEl) {
+      colEl.value = col;
+      colEl.style.borderColor = '#00ff88';
+    } else if (cal2) {
+      // Si fallo con interseccion, intentar solo con calle1
+      buscarColoniaOSM(cal1, function(col2) {
+        if (col2 && colEl) { colEl.value = col2; colEl.style.borderColor = '#ffcc00'; }
+        else if (colEl) colEl.style.borderColor = '';
+      });
+    } else if (colEl) { colEl.style.borderColor = ''; }
+  });
+}
+window.autoColonia = autoColonia;
+
+// Recalcular colonia cuando se llena calle2 (mas preciso que solo calle1)
+function autoColoniaCalle2(id) {
+  var cal1El = document.getElementById(id + '-cal1');
+  var cal2El = document.getElementById(id + '-cal2');
+  var colEl = document.getElementById(id + '-col');
+  if (!cal1El || !cal2El || !colEl) return;
+  var cal1 = cal1El.value.trim();
+  var cal2 = cal2El.value.trim();
+  // Solo recalcular si hay ambas calles
+  if (!cal1 || !cal2) return;
+  colEl.style.borderColor = '#00ccff';
+  buscarColoniaOSM(cal1 + ' esquina ' + cal2, function(col) {
+    if (col && colEl) {
+      colEl.value = col;
+      colEl.style.borderColor = '#00ff88';
+      toast('Colonia actualizada con interseccion', 'ok');
+    } else {
+      colEl.style.borderColor = '';
+    }
+  });
+}
+window.autoColoniaCalle2 = autoColoniaCalle2;
+
+// Buscar colonia en OpenStreetMap Nominatim
+function buscarColoniaOSM(calle, callback) {
+  // Bounding box del municipio completo de Irapuato (incluye rancherias y comunidades rurales)
+  // SW: 20.45,-101.60  NE: 20.85,-101.10
+  var bbox = '20.45,-101.60,20.85,-101.10';
+  var query = calle + ', Irapuato, Guanajuato, Mexico';
+  var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) +
+    '&format=json&addressdetails=1&limit=3&countrycodes=mx&viewbox=-101.60,20.85,-101.10,20.45&bounded=1';
+  fetch(url, { headers: { 'Accept-Language': 'es', 'User-Agent': 'IrapuatoIntel/1.0' } })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data && data[0] && data[0].address) {
+      var addr = data[0].address;
+      // Prioridad: colonia > barrio > localidad rural > municipio de referencia
+      var colonia = addr.suburb || addr.neighbourhood || addr.quarter || addr.city_district ||
+                    addr.village || addr.hamlet || addr.locality || '';
+      // Si la referencia es rural, agregar municipio para mayor contexto
+      if (!addr.suburb && !addr.neighbourhood && (addr.village || addr.hamlet)) {
+        colonia = (addr.village || addr.hamlet || '') + (addr.municipality ? ', ' + addr.municipality : '');
+      }
+      callback(colonia.trim());
+    } else {
+      // Segundo intento sin bounded para carreteras interurbanas
+      var url2 = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(query) +
+        '&format=json&addressdetails=1&limit=1&countrycodes=mx';
+      fetch(url2, { headers: { 'Accept-Language': 'es', 'User-Agent': 'IrapuatoIntel/1.0' } })
+      .then(function(r2) { return r2.json(); })
+      .then(function(data2) {
+        if (data2 && data2[0] && data2[0].address) {
+          var a2 = data2[0].address;
+          var col2 = a2.suburb || a2.neighbourhood || a2.village || a2.hamlet || a2.city_district || '';
+          callback(col2.trim());
+        } else { callback(''); }
+      })
+      .catch(function() { callback(''); });
+    }
+  })
+  .catch(function() { callback(''); });
+}
+
+
+function analizarConIA(id, texto, fuente, link) {
+  var proc = document.getElementById(id + '-proc');
+  var edit = document.getElementById(id + '-edit');
+  if (proc) { proc.className = 'nc-procesando visible'; }
+  if (edit) { edit.className = 'nc-edit'; }
+
+  llamarGemini(buildPrompt(texto), function(r, err) {
+    if (proc) proc.className = 'nc-procesando';
+    if (!r) {
+      r = clasificarLocal(texto);
+      toast('IA no disponible — clasificación local', 'warn');
+    }
+    // Actualizar badge de tipo
+    var badge = document.getElementById(id + '-tipo-badge');
+    if (badge) { badge.className = 'nc-tipo ' + (r.tipo||'rumor'); badge.textContent = (r.tipo||'rumor').toUpperCase(); }
+
+    var lugarEl = document.getElementById(id + '-lugar');
+    if (lugarEl) lugarEl.textContent = '📍 ' + (r.lugar||'');
+
+    var confEl = document.getElementById(id + '-conf');
+    if (confEl) {
+      confEl.className = 'nc-conf-' + (r.confianza||'baja');
+      confEl.textContent = '▲ ' + (r.confianza||'baja').toUpperCase();
+    }
+
+    var resEl = document.getElementById(id + '-res');
+    if (resEl && r.resumen) resEl.textContent = r.resumen;
+
+    // Rellenar campos editables
+    var titEl = document.getElementById(id + '-tit');
+    if (titEl) {
+      if (r.titulo === 'SIN CONTENIDO') {
+        // El texto era basura (footer/menú) — avisar al usuario
+        var card = document.getElementById(id);
+        if (card) card.style.opacity = '0.5';
+        var confEl2 = document.getElementById(id + '-conf');
+        if (confEl2) { confEl2.textContent = '⚠ TEXTO NO VÁLIDO'; confEl2.style.color = '#ff8800'; }
+        titEl.value = 'SIN CONTENIDO — descarta esta tarjeta';
+      } else if (r.titulo && r.titulo.length < 120) {
+        titEl.value = r.titulo;
+      } else if (r.resumen) {
+        titEl.value = r.resumen.split('.')[0].slice(0,80).trim();
+      }
+    }
+    var tipoEl = document.getElementById(id + '-tipo');
+    if (tipoEl && r.tipo) tipoEl.value = r.tipo;
+    var lugEl = document.getElementById(id + '-lug');
+    if (lugEl && r.lugar) lugEl.value = r.lugar;
+    var sumEl = document.getElementById(id + '-sum');
+    if (sumEl && r.resumen) sumEl.value = r.resumen.slice(0,200);
+    var cal1El = document.getElementById(id + '-cal1');
+    if (cal1El) cal1El.value = r.calle1 || r.calle || '';
+    var cal2El = document.getElementById(id + '-cal2');
+    if (cal2El) cal2El.value = r.calle2 || '';
+    var colEl = document.getElementById(id + '-col');
+    if (colEl) colEl.value = r.colonia || '';
+    // Si hay calle pero no colonia, buscar en OSM
+    if ((r.calle1 || r.calle) && !r.colonia) {
+      var calBuscar = r.calle1 || r.calle;
+      buscarColoniaOSM(calBuscar, function(coloniaOSM) {
+        if (coloniaOSM && colEl) colEl.value = coloniaOSM;
+      });
+    }
+    var comEl = document.getElementById(id + '-com');
+    if (comEl) comEl.value = r.comunidad || '';
+    var nomEl = document.getElementById(id + '-nom');
+    if (nomEl) nomEl.value = r.nombres || '';
+    var fevEl = document.getElementById(id + '-fev');
+    if (fevEl) fevEl.value = r.fecha_evento || '';
+    var tdiaEl = document.getElementById(id + '-tdia');
+    if (tdiaEl && r.tiempo_dia) tdiaEl.value = r.tiempo_dia;
+    // Mostrar nombres si los hay
+    var nomDiv = document.getElementById(id + '-nombres');
+    if (nomDiv && r.nombres) { nomDiv.style.display = 'block'; nomDiv.textContent = 'Implicados: ' + r.nombres; }
+
+    // Guardar datos en el card para el aprobar
+    var card = document.getElementById(id);
+    if (card) {
+      card.dataset.lat = r.lat || 20.6795;
+      card.dataset.lng = r.lng || -101.3540;
+      card.dataset.colonia = r.colonia || '';
+      card.dataset.confianza = r.confianza || 'baja';
+    }
+
+    // Mostrar edicion automaticamente
+    var editEl = document.getElementById(id + '-edit');
+    if (editEl) editEl.className = 'nc-edit visible';
+
+    toast('✓ Análisis completo', 'ok');
+  });
+}
 window.analizarConIA = analizarConIA;
 
 function toggleEdit(id) {
