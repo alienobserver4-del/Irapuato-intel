@@ -532,6 +532,9 @@ header {
       <span class="logo-txt">IRA INTEL</span>
     </div>
     <span class="logo-sub">// CAPTURA DE NOTICIAS v4.0</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+      <span id="gemini-status" onclick="abrirGestorKeys()" style="font-family:var(--title);font-size:6px;padding:3px 8px;border-radius:3px;border:1px solid #1a4a2a;background:rgba(0,255,136,.06);color:#00ff88;cursor:pointer;letter-spacing:1px;" title="Gestionar API Keys">🤖 IA OK</span>
+    </div>
   </header>
 
   <!-- TABS -->
@@ -985,7 +988,42 @@ window.addEventListener('DOMContentLoaded', function() {
 // ═══════════════════════════════════════════════════════════════
 // CONFIGURACIÓN
 // ═══════════════════════════════════════════════════════════════
-var GEMINI_KEY = 'AIzaSyAfe_lNoHA6pckySvyxTdeaPNZcdyOpkwc';
+// ── POOL DE API KEYS GEMINI ──
+// Agrega aquí todas las keys que tengas (una por cuenta Google en aistudio.google.com)
+// El sistema rota automáticamente cuando una alcanza su límite diario
+var GEMINI_KEYS = [
+  'AIzaSyAfe_lNoHA6pckySvyxTdeaPNZcdyOpkwc',  // key 1 — agrega más abajo
+  // 'AIzaSy....',  // key 2
+  // 'AIzaSy....',  // key 3
+];
+var _geminiKeyIdx = 0;
+var _geminiKeyAgotadas = {};
+
+function getGeminiKey() {
+  // Buscar la siguiente key no agotada
+  for (var i = 0; i < GEMINI_KEYS.length; i++) {
+    var idx = (_geminiKeyIdx + i) % GEMINI_KEYS.length;
+    if (!_geminiKeyAgotadas[idx]) {
+      _geminiKeyIdx = idx;
+      return GEMINI_KEYS[idx];
+    }
+  }
+  // Todas agotadas — limpiar flags (puede que se haya reseteado la cuota) y reintentar
+  _geminiKeyAgotadas = {};
+  _geminiKeyIdx = 0;
+  return GEMINI_KEYS[0];
+}
+
+function marcarKeyAgotada(key) {
+  var idx = GEMINI_KEYS.indexOf(key);
+  if (idx >= 0) {
+    _geminiKeyAgotadas[idx] = true;
+    console.warn('[Gemini] Key ' + (idx+1) + ' agotada, rotando...');
+    // Avanzar al siguiente
+    _geminiKeyIdx = (idx + 1) % GEMINI_KEYS.length;
+  }
+}
+var GEMINI_KEY = GEMINI_KEYS[0]; // compatibilidad
 
 var firebaseConfig = {
   apiKey: "AIzaSyDQ0DDscWK0HR5nNkhMyzOVk_sxYZ0pGg4",
@@ -1446,7 +1484,8 @@ function llamarGemini(prompt, callback) {
     if (intentado[modelo]) { intentar(idx + 1); return; }
     intentado[modelo] = true;
 
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelo + ':generateContent?key=' + GEMINI_KEY;
+    var keyActual = getGeminiKey();
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelo + ':generateContent?key=' + keyActual;
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1468,12 +1507,22 @@ function llamarGemini(prompt, callback) {
           var msg = (errBody && errBody.error && errBody.error.message) ? errBody.error.message : '';
           console.warn('[Gemini] ' + modelo + ' → ' + status + ': ' + msg.slice(0,120));
           if (status === 429) {
-            // Rate limit — esperar el tiempo sugerido y reintentar este mismo modelo
-            var retryMatch = msg.match(/retry in ([0-9.]+)s/i);
-            var waitMs = retryMatch ? Math.ceil(parseFloat(retryMatch[1]) * 1000) + 500 : 22000;
-            toast('⏳ Límite de cuota — reintentando en ' + Math.ceil(waitMs/1000) + 's...', 'warn');
-            delete intentado[modelo]; // permitir reintento
-            setTimeout(function() { intentar(idx); }, waitMs);
+            // Cuota agotada en esta key — marcarla y rotar a la siguiente
+            marcarKeyAgotada(keyActual);
+            var keysDisponibles = GEMINI_KEYS.length - Object.keys(_geminiKeyAgotadas).length;
+            if (keysDisponibles > 0) {
+              toast('🔄 Key ' + (GEMINI_KEYS.indexOf(keyActual)+1) + ' agotada — rotando a siguiente key...', 'warn');
+              delete intentado[modelo]; // permitir reintento del mismo modelo con nueva key
+              intentar(idx);
+            } else {
+              // Todas las keys agotadas — esperar y reintentar
+              var retryMatch = msg.match(/retry in ([0-9.]+)s/i);
+              var waitMs = retryMatch ? Math.ceil(parseFloat(retryMatch[1]) * 1000) + 500 : 22000;
+              toast('⏳ Todas las keys agotadas — reintentando en ' + Math.ceil(waitMs/1000) + 's...', 'warn');
+              _geminiKeyAgotadas = {}; // resetear para próximo intento
+              delete intentado[modelo];
+              setTimeout(function() { intentar(idx); }, waitMs);
+            }
           } else if (status === 403) {
             toast('🔑 API Key sin acceso — probando modelo alternativo...', 'warn');
             intentar(idx + 1);
@@ -4302,6 +4351,183 @@ function verTextoCompleto(id) {
 window.verTextoCompleto = verTextoCompleto;
 
 }); // fin DOMContentLoaded
+</script>
+
+<!-- MODAL GESTOR DE KEYS -->
+<div id="modal-keys" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;overflow-y:auto;padding:20px;">
+  <div style="background:#060f1e;border:1px solid #00f5ff44;border-radius:6px;padding:20px;max-width:480px;margin:20px auto;">
+    <div style="font-family:'Orbitron',monospace;font-size:10px;color:#00f5ff;letter-spacing:2px;margin-bottom:16px;">🔑 GESTOR DE API KEYS GEMINI</div>
+    <div style="font-size:8px;color:#5a8aaa;margin-bottom:12px;line-height:1.7;">
+      Cada cuenta Google en <strong style="color:#00ccff">aistudio.google.com</strong> genera una key gratuita con cuota diaria propia.<br>
+      Con 3-4 keys rotando tienes análisis ilimitado para uso diario.
+    </div>
+    <div id="keys-lista" style="margin-bottom:12px;"></div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <input id="nueva-key-input" placeholder="Pega aquí tu nueva API key (AIzaSy...)" type="password"
+        style="flex:1;background:#030810;border:1px solid #1a3a5a;color:#c0e8ff;font-family:'Share Tech Mono',monospace;font-size:9px;padding:7px 10px;border-radius:3px;outline:none;">
+      <button onclick="agregarKeyDesdeModal()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 12px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff8844;border-radius:3px;cursor:pointer;white-space:nowrap;letter-spacing:1px;">+ AGREGAR</button>
+    </div>
+    <div style="font-size:7px;color:#2a5a4a;margin-bottom:16px;line-height:1.8;">
+      💡 Crear key gratis: ve a <strong style="color:#00ccff">aistudio.google.com</strong> → Get API Key → Create API Key<br>
+      Las keys se guardan en tu navegador. Cada cuenta Google = 1 key con cuota propia.
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="probarKeys()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 14px;background:rgba(0,200,255,.08);color:#00f5ff;border:1px solid #00ccff44;border-radius:3px;cursor:pointer;letter-spacing:1px;">🧪 PROBAR</button>
+      <button onclick="cerrarGestorKeys()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 14px;background:rgba(255,0,0,.08);color:#ff4466;border:1px solid #ff446644;border-radius:3px;cursor:pointer;letter-spacing:1px;">CERRAR</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Gestor de keys (fuera del DOMContentLoaded para acceso global) ──
+function renderKeysList() {
+  var lista = document.getElementById('keys-lista');
+  if (!lista) return;
+  var keys = window._appGeminiKeys || [];
+  if (keys.length === 0) {
+    lista.innerHTML = '<div style="font-size:8px;color:#2a4a6a;padding:8px;">No hay keys guardadas. Agrega al menos una.</div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    var agotada = window._geminiKeyAgotadas && window._geminiKeyAgotadas[i];
+    var esActual = window._geminiKeyIdx === i;
+    var preview = k.slice(0,8) + '...' + k.slice(-4);
+    html += '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #0d2040;">';
+    html += '<span style="font-size:8px;color:' + (agotada ? '#ff4466' : (esActual ? '#00ff88' : '#5a8aaa')) + ';min-width:60px;">';
+    html += (esActual ? '▶ ACTIVA' : (agotada ? '⚠ AGOTADA' : '○ EN POOL'));
+    html += '</span>';
+    html += '<span style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#c0e8ff;flex:1;">' + preview + '</span>';
+    html += '<button onclick="eliminarKey(' + i + ')" style="font-size:8px;background:none;border:none;color:#ff4466;cursor:pointer;padding:2px 6px;">✕</button>';
+    html += '</div>';
+  }
+  lista.innerHTML = html;
+}
+
+function abrirGestorKeys() {
+  renderKeysList();
+  document.getElementById('modal-keys').style.display = 'block';
+}
+window.abrirGestorKeys = abrirGestorKeys;
+
+function cerrarGestorKeys() {
+  document.getElementById('modal-keys').style.display = 'none';
+}
+window.cerrarGestorKeys = cerrarGestorKeys;
+
+function agregarKeyDesdeModal() {
+  var input = document.getElementById('nueva-key-input');
+  var key = input ? input.value.trim() : '';
+  if (!key || key.length < 20) {
+    alert('Pega una API key válida (empieza con AIzaSy...)');
+    return;
+  }
+  if (!window._appGeminiKeys) window._appGeminiKeys = [];
+  if (window._appGeminiKeys.indexOf(key) >= 0) {
+    alert('Esa key ya está en el pool.');
+    return;
+  }
+  window._appGeminiKeys.push(key);
+  // Actualizar el array global y localStorage
+  if (typeof GEMINI_KEYS !== 'undefined') GEMINI_KEYS.push(key);
+  try { localStorage.setItem('gemini_keys_pool', JSON.stringify(window._appGeminiKeys)); } catch(e) {}
+  if (input) input.value = '';
+  renderKeysList();
+  actualizarStatusGemini();
+  var n = window._appGeminiKeys.length;
+  alert('✓ Key agregada. Pool: ' + n + ' key' + (n > 1 ? 's' : '') + '.');
+}
+window.agregarKeyDesdeModal = agregarKeyDesdeModal;
+
+function eliminarKey(idx) {
+  if (!window._appGeminiKeys) return;
+  window._appGeminiKeys.splice(idx, 1);
+  if (typeof GEMINI_KEYS !== 'undefined') { GEMINI_KEYS.splice(idx, 1); }
+  try { localStorage.setItem('gemini_keys_pool', JSON.stringify(window._appGeminiKeys)); } catch(e) {}
+  if (window._geminiKeyIdx >= window._appGeminiKeys.length) window._geminiKeyIdx = 0;
+  renderKeysList();
+  actualizarStatusGemini();
+}
+window.eliminarKey = eliminarKey;
+
+function probarKeys() {
+  var keys = window._appGeminiKeys || [];
+  if (!keys.length) { alert('No hay keys para probar.'); return; }
+  var btn = event.target;
+  btn.textContent = '⏳ Probando...';
+  btn.disabled = true;
+  var resultados = [];
+  var pendientes = keys.length;
+  keys.forEach(function(k, i) {
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + k;
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: 'Responde solo: OK' }] }], generationConfig: { maxOutputTokens: 5 } })
+    })
+    .then(function(res) { resultados[i] = res.status; })
+    .catch(function() { resultados[i] = 'error'; })
+    .finally(function() {
+      pendientes--;
+      if (pendientes === 0) {
+        btn.textContent = '🧪 PROBAR';
+        btn.disabled = false;
+        var msg = 'Resultados:\n';
+        keys.forEach(function(k2, j) {
+          var st = resultados[j];
+          msg += 'Key ' + (j+1) + ': ' + (st === 200 ? '✓ OK' : st === 429 ? '⚠ Cuota agotada' : st === 403 ? '✗ Sin permiso' : '? ' + st) + '\n';
+        });
+        alert(msg);
+        renderKeysList();
+      }
+    });
+  });
+}
+window.probarKeys = probarKeys;
+
+function actualizarStatusGemini() {
+  var el = document.getElementById('gemini-status');
+  if (!el) return;
+  var keys = window._appGeminiKeys || [];
+  var agotadas = Object.keys(window._geminiKeyAgotadas || {}).length;
+  var disponibles = keys.length - agotadas;
+  if (disponibles > 0) {
+    el.textContent = '🤖 IA ' + disponibles + '/' + keys.length + ' keys';
+    el.style.color = '#00ff88';
+    el.style.borderColor = '#00ff8844';
+    el.style.background = 'rgba(0,255,136,.06)';
+  } else {
+    el.textContent = '⚠ IA SIN CUOTA';
+    el.style.color = '#ffcc00';
+    el.style.borderColor = '#ffcc0044';
+    el.style.background = 'rgba(255,204,0,.06)';
+  }
+}
+window.actualizarStatusGemini = actualizarStatusGemini;
+
+// Cargar keys guardadas del localStorage al iniciar
+(function() {
+  try {
+    var saved = localStorage.getItem('gemini_keys_pool');
+    if (saved) {
+      var arr = JSON.parse(saved);
+      if (Array.isArray(arr) && arr.length) {
+        window._appGeminiKeys = arr;
+        if (typeof GEMINI_KEYS !== 'undefined') {
+          // Fusionar con las hardcoded
+          arr.forEach(function(k) { if (GEMINI_KEYS.indexOf(k) < 0) GEMINI_KEYS.push(k); });
+        }
+        console.log('[Gemini] ' + arr.length + ' keys cargadas del localStorage');
+      }
+    }
+  } catch(e) {}
+  // Inicializar _appGeminiKeys desde GEMINI_KEYS hardcoded
+  if (!window._appGeminiKeys && typeof GEMINI_KEYS !== 'undefined') {
+    window._appGeminiKeys = GEMINI_KEYS.slice();
+  }
+  setTimeout(actualizarStatusGemini, 1000);
+})();
 </script>
 
 </body>
