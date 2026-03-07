@@ -86,14 +86,14 @@ header {
 .tab.active.gob { color:#00ccff; border-bottom-color:#00ccff; background:rgba(0,204,255,.04); }
 
 /* ── SECCIÓN GOBIERNO ── */
-#sec-gob { padding:0; }
-.gob-header { padding:10px 14px 6px; border-bottom:1px solid var(--border); }
-.gob-filtros { display:flex; gap:6px; flex-wrap:wrap; padding:8px 14px; border-bottom:1px solid var(--border); overflow-x:auto; }
+#sec-gob { padding:0; display:flex; flex-direction:column; height:100%; }
+.gob-header { padding:10px 14px 6px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.gob-filtros { display:flex; gap:6px; flex-wrap:wrap; padding:8px 14px; border-bottom:1px solid var(--border); overflow-x:auto; flex-shrink:0; }
 .gob-filtro { padding:4px 10px; font-family:var(--title); font-size:6px; letter-spacing:1px;
   border-radius:3px; cursor:pointer; border:1px solid var(--border); background:transparent;
   color:var(--muted); white-space:nowrap; }
 .gob-filtro.activo { border-color:#00ccff; color:#00ccff; background:rgba(0,204,255,.08); }
-.gob-lista { padding:10px 14px; display:flex; flex-direction:column; gap:8px; overflow-y:auto; }
+.gob-lista { padding:10px 14px; display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex:1; }
 .gob-card { background:var(--surface); border:1px solid var(--border); border-radius:4px;
   padding:10px 12px; cursor:pointer; transition:border-color .2s; }
 .gob-card:hover { border-color:#00ccff44; }
@@ -773,7 +773,7 @@ header {
     </div>
 
     <!-- ═══════════ GOBIERNO ═══════════ -->
-    <div id="sec-gob" class="seccion" style="display:none;">
+    <div id="sec-gob" class="seccion">
       <div class="gob-header sec-header">// GOBIERNO — <span>DEPENDENCIAS MUNICIPALES</span></div>
       <div class="gob-filtros" id="gob-filtros">
         <button class="gob-filtro activo" onclick="filtrarGob('todos',this)">TODOS</button>
@@ -972,6 +972,8 @@ function verTab(cual) {
     secEl.style.display = 'block';
   }
   if (cual === 'gob') {
+    var gobSec = document.getElementById('sec-gob');
+    if (gobSec) gobSec.style.display = 'flex';
     renderGobLista(gobFiltroActivo);
   }
   if (cual === 'mapa') {
@@ -1007,127 +1009,142 @@ var DEPENDENCIAS_GOB = [
    dir:'Palacio Municipal s/n, Zona Centro', tel:'462 606 9999', ext:'1401',
    funcion:'administracion', funcionLabel:'Administración',
    desc:'Actas de cabildo, certificaciones y trámites oficiales del municipio.',
-   lat:20.6770, lng:-101.3490, web:''},
-  {id:'pal2', nombre:'Presidencia Municipal', titular:'Adriana Elizarraraz Sandoval',
+   lat:20.672656, lng:-101.347467, web:''},
+  {id:'pal2', nombre:'Secretaría Particular del Presidente', titular:'Adriana Elizarraraz Sandoval',
    dir:'Palacio Municipal s/n, Zona Centro', tel:'462 606 9999', ext:'1101',
    funcion:'administracion', funcionLabel:'Administración',
    desc:'Oficina directa del Presidente Municipal. Audiencias y gestiones ciudadanas.',
-   lat:20.6771, lng:-101.3491, web:'irapuato.gob.mx'},
-  {id:'pal3', nombre:'Comunicación Social', titular:'Brenda Rocío Orozco Torres',
+   lat:20.672656, lng:-101.347467, web:'irapuato.gob.mx'},
+  {id:'pal3', nombre:'Secretaría Técnica', titular:'Salvador Alonso Ruiz',
+   dir:'Palacio Municipal s/n, Zona Centro', tel:'462 606 9999', ext:'',
+   funcion:'administracion', funcionLabel:'Administración',
+   desc:'Coordinación técnica de proyectos y programas municipales.',
+   lat:20.672656, lng:-101.347467, web:''},
+  {id:'pal4', nombre:'Comunicación Social', titular:'Brenda Rocío Orozco Torres',
    dir:'Palacio Municipal s/n, Zona Centro', tel:'462 606 9999', ext:'1130',
    funcion:'administracion', funcionLabel:'Administración',
    desc:'Información pública, prensa y comunicados oficiales del municipio.',
-   lat:20.6769, lng:-101.3489, web:''},
+   lat:20.672656, lng:-101.347467, web:''},
   {id:'cg1', nombre:'Tesorería Municipal', titular:'Miguel Ángel Fonseca',
-   dir:'Álvaro Obregón #100, Zona Centro', tel:'462 606 9999', ext:'1501',
+   dir:'Álvaro Obregón #100, Zona Centro — Centro de Gobierno', tel:'462 606 9999', ext:'1501',
    funcion:'finanzas', funcionLabel:'Finanzas',
    desc:'Pago de predial, licencias y adeudos municipales.',
-   lat:20.6765, lng:-101.3496, web:''},
+   lat:20.672056, lng:-101.345499, web:''},
   {id:'cg2', nombre:'Contraloría Municipal', titular:'Gustavo Sánchez Guerrero',
-   dir:'Álvaro Obregón #100, Zona Centro', tel:'462 606 9999', ext:'1701',
+   dir:'Álvaro Obregón #100, Zona Centro — Centro de Gobierno', tel:'462 606 9999', ext:'1701',
    funcion:'finanzas', funcionLabel:'Finanzas',
    desc:'Quejas, denuncias y fiscalización del gasto público municipal.',
-   lat:20.6764, lng:-101.3497, web:''},
+   lat:20.672056, lng:-101.345499, web:''},
   {id:'cg3', nombre:'Oficialía Mayor', titular:'Ana María Flores Bello',
-   dir:'Álvaro Obregón #100, Zona Centro', tel:'462 606 9999', ext:'1581',
+   dir:'Álvaro Obregón #100, Zona Centro — Centro de Gobierno', tel:'462 606 9999', ext:'1581',
    funcion:'administracion', funcionLabel:'Administración',
    desc:'Recursos humanos, nómina y administración interna municipal.',
-   lat:20.6766, lng:-101.3495, web:''},
-  {id:'seg1', nombre:'Secretaría de Seguridad Ciudadana', titular:'Ma. del Consuelo Cruz Galindo',
+   lat:20.672056, lng:-101.345499, web:''},
+  {id:'cg4', nombre:'Dir. Tecnologías de la Información y Geomática', titular:'Jorge Alberto Wells Mendoza',
+   dir:'Álvaro Obregón #100, Zona Centro — Centro de Gobierno', tel:'462 606 9999', ext:'1621',
+   funcion:'administracion', funcionLabel:'Administración',
+   desc:'Sistemas digitales, geomática y tecnología del municipio.',
+   lat:20.672056, lng:-101.345499, web:''},
+  {id:'seg1', nombre:'Secretaría de Seguridad Ciudadana Municipal', titular:'Ma. del Consuelo Cruz Galindo',
    dir:'Solidaridad 11189, Fraccionamiento CFE', tel:'462 627 3952', ext:'',
    funcion:'seguridad', funcionLabel:'Seguridad',
    desc:'Policía municipal, emergencias, denuncia ciudadana y vigilancia.',
-   lat:20.6412, lng:-101.4178, web:''},
+   lat:20.692857, lng:-101.342322, web:''},
   {id:'sxx1', nombre:'Dirección de Desarrollo Urbano', titular:'Paola Berenice Frausto Reyes',
-   dir:'Blvd. Solidaridad #8350, Col. Lázaro Cárdenas', tel:'462 635 8800', ext:'',
+   dir:'Blvd. Solidaridad #8350 — Edificio Siglo XXI', tel:'462 635 8800', ext:'',
    funcion:'obras', funcionLabel:'Obras y Urbanismo',
    desc:'Licencias de construcción, usos de suelo y permisos de subdivisión.',
-   lat:20.6522, lng:-101.3978, web:''},
+   lat:20.667872, lng:-101.328957, web:''},
   {id:'sxx2', nombre:'Dirección de Obras Públicas', titular:'Manuel Venegas Pérez',
-   dir:'Blvd. Solidaridad #8350, Col. Lázaro Cárdenas', tel:'462 635 8800', ext:'',
+   dir:'Blvd. Solidaridad #8350 — Edificio Siglo XXI', tel:'462 635 8800', ext:'',
    funcion:'obras', funcionLabel:'Obras y Urbanismo',
    desc:'Construcción y mantenimiento de infraestructura pública municipal.',
-   lat:20.6521, lng:-101.3979, web:''},
+   lat:20.667872, lng:-101.328957, web:''},
   {id:'sxx3', nombre:'Dirección de Servicios Públicos', titular:'Rogelio Pérez Espinoza',
-   dir:'Blvd. Solidaridad #8350, Col. Lázaro Cárdenas', tel:'462 635 8804', ext:'',
+   dir:'Blvd. Solidaridad #8350 — Edificio Siglo XXI', tel:'462 635 8804', ext:'',
    funcion:'obras', funcionLabel:'Obras y Urbanismo',
    desc:'Alumbrado, recolección de basura, bacheo y mantenimiento urbano.',
-   lat:20.6520, lng:-101.3980, web:''},
+   lat:20.667872, lng:-101.328957, web:''},
   {id:'sal1', nombre:'Dirección General de Salud', titular:'Eduardo Tovar Guerrero',
    dir:'Blvd. Lázaro Cárdenas #3247, La Moderna', tel:'462 606 9999', ext:'2032',
    funcion:'salud', funcionLabel:'Salud',
    desc:'Programas de salud pública, vacunación y atención médica municipal.',
-   lat:20.6682, lng:-101.3748, web:''},
+   lat:20.681304, lng:-101.359924, web:''},
   {id:'sal2', nombre:'Sistema DIF Irapuato', titular:'Liliana del Carmen Torrero García',
    dir:'Av. Vasco de Quiroga s/n, Col. Morelos', tel:'462 626 1124', ext:'',
    funcion:'salud', funcionLabel:'Salud y Social',
    desc:'Apoyos alimentarios, adultos mayores, discapacidad y familia.',
-   lat:20.6828, lng:-101.3542, web:'dif.irapuato.gob.mx'},
+   lat:20.657002, lng:-101.330241, web:'dif.irapuato.gob.mx'},
   {id:'sal3', nombre:'INMIRA — Instituto de las Mujeres Irapuatenses', titular:'Georgina Aboytes Guerrero',
    dir:'Francisco Sarabia 1066, Prol. La Moderna', tel:'462 627 5967', ext:'',
    funcion:'salud', funcionLabel:'Salud y Social',
    desc:'Atención a víctimas de violencia, asesoría legal y apoyo a la mujer.',
-   lat:20.6681, lng:-101.3758, web:'mujeres.irapuato.gob.mx'},
-  {id:'sal4', nombre:'Dirección de Desarrollo Social', titular:'Liliana Flores Rodríguez',
+   lat:20.678172, lng:-101.363812, web:'mujeres.irapuato.gob.mx'},
+  {id:'sal4', nombre:'Dirección de Desarrollo Social y Humano', titular:'Liliana Flores Rodríguez',
    dir:'Blvd. Paseo Solidaridad 11615, CFE', tel:'462 606 9999', ext:'2104',
    funcion:'salud', funcionLabel:'Salud y Social',
    desc:'Programas sociales, apoyos a comunidades y atención a vulnerables.',
-   lat:20.6402, lng:-101.4188, web:''},
+   lat:20.693176, lng:-101.342115, web:''},
+  {id:'sal5', nombre:'Dirección de Desarrollo Rural', titular:'Jorge Israel Lizama Ibarra',
+   dir:'Blvd. Paseo Solidaridad #11615, CFE', tel:'462 606 9999', ext:'2132',
+   funcion:'salud', funcionLabel:'Salud y Social',
+   desc:'Apoyo a comunidades rurales, campo y desarrollo agropecuario.',
+   lat:20.693153, lng:-101.342275, web:''},
   {id:'edu1', nombre:'Dirección de Educación y Juventudes', titular:'Joyce Guerrero Barajas',
    dir:'Calle Juan Álvarez #64, Zona Centro', tel:'462 606 9999', ext:'200',
    funcion:'educacion', funcionLabel:'Educación y Cultura',
    desc:'Becas, programas educativos y atención a jóvenes irapuatenses.',
-   lat:20.6768, lng:-101.3485, web:''},
+   lat:20.674177, lng:-101.347952, web:''},
   {id:'edu2', nombre:'IMCAR — Casa de la Cultura', titular:'Gloria Magaly Cano de la Fuente',
    dir:'Álvaro Obregón #16, Zona Centro', tel:'462 626 8095', ext:'',
    funcion:'educacion', funcionLabel:'Educación y Cultura',
    desc:'Talleres artísticos, eventos culturales, biblioteca y exposiciones.',
-   lat:20.6769, lng:-101.3487, web:'cultura.irapuato.gob.mx'},
+   lat:20.672063, lng:-101.346458, web:'cultura.irapuato.gob.mx'},
   {id:'agua1', nombre:'JAPAMI — Agua Potable y Alcantarillado', titular:'Roberto Castañeda Tejeda',
    dir:'Prol. Torres Landa #1720, Col. Independencia', tel:'462 606 9100', ext:'',
    funcion:'servicios', funcionLabel:'Agua y Servicios',
    desc:'Tomas de agua, adeudos, reporte de fugas y alcantarillado.',
-   lat:20.6888, lng:-101.3422, web:'japami.gob.mx'},
+   lat:20.680238, lng:-101.346371, web:'japami.gob.mx'},
   {id:'agua2', nombre:'IMUVII — Instituto Municipal de Vivienda', titular:'Lourdes Liliana Pérez Mares',
    dir:'Av. Revolución #179 int. 105, Zona Centro', tel:'462 490 3737', ext:'',
    funcion:'servicios', funcionLabel:'Agua y Servicios',
    desc:'Créditos y apoyos para adquisición de vivienda social.',
-   lat:20.6772, lng:-101.3472, web:'imuvii.gob.mx'},
+   lat:20.674002, lng:-101.348694, web:'imuvii.gob.mx'},
   {id:'mov1', nombre:'Dirección de Movilidad y Transporte', titular:'Alfredo Torres Nohra',
    dir:'Av. Revolución #24 esq. Ramón Corona, Centro', tel:'462 215 3867', ext:'',
    funcion:'movilidad', funcionLabel:'Movilidad',
    desc:'Transporte público, permisos de circulación y control de tránsito.',
-   lat:20.6772, lng:-101.3475, web:''},
+   lat:20.671517, lng:-101.348730, web:''},
   {id:'dep1', nombre:'COMUDAJ — Comisión Municipal del Deporte', titular:'Janet Estrada Ponce',
    dir:'Av. Tulipanes s/n, Col. Ciudad Deportiva', tel:'462 693 0605', ext:'',
    funcion:'deporte', funcionLabel:'Deporte y Recreación',
    desc:'Instalaciones deportivas, eventos y programas para la juventud.',
-   lat:20.6620, lng:-101.3352, web:'irapuato.gob.mx/comudaj'},
+   lat:20.694335, lng:-101.376498, web:'irapuato.gob.mx/comudaj'},
   {id:'dep2', nombre:'Parque Irekua', titular:'Esther Córdoba Aguirre',
    dir:'Reverte Mexicano s/n, Viveros Revolución', tel:'462 635 1749', ext:'',
    funcion:'deporte', funcionLabel:'Deporte y Recreación',
    desc:'Parque familiar con áreas verdes, actividades recreativas y deportivas.',
-   lat:20.6750, lng:-101.3302, web:''},
+   lat:20.686031, lng:-101.356258, web:''},
   {id:'plan1', nombre:'IMPLAN — Instituto Municipal de Planeación', titular:'Teresita Gallardo Arroyo',
    dir:'Blvd. Villas de Irapuato #1460, Plaza Provincia', tel:'462 625 9999', ext:'',
    funcion:'planeacion', funcionLabel:'Planeación y Economía',
    desc:'Planeación urbana, estadística y proyectos de desarrollo municipal.',
-   lat:20.6512, lng:-101.3718, web:'implanirapuato.gob.mx'},
+   lat:20.682801, lng:-101.380457, web:'implanirapuato.gob.mx'},
   {id:'plan2', nombre:'Dirección de Desarrollo Económico', titular:'Humberto Hernández Salgado',
    dir:'Casimiro Liceaga esq. Ramón Barreto #770', tel:'462 660 3601', ext:'',
    funcion:'planeacion', funcionLabel:'Planeación y Economía',
    desc:'Apoyo a empresas, inversión y fomento al empleo local.',
-   lat:20.6760, lng:-101.3512, web:''},
+   lat:20.678885, lng:-101.360043, web:''},
   {id:'plan3', nombre:'Dir. Innovación y Gobernanza Regulatoria', titular:'Álvaro Pereira Luna',
    dir:'Blvd. Lázaro Cárdenas #3247, Col. La Moderna', tel:'462 625 5019', ext:'',
    funcion:'planeacion', funcionLabel:'Planeación y Economía',
    desc:'Simplificación de trámites e innovación gubernamental.',
-   lat:20.6680, lng:-101.3750, web:''},
+   lat:20.681304, lng:-101.359924, web:''},
   {id:'plan4', nombre:'Dirección de Sustentabilidad', titular:'Gonzalo Guerrero',
    dir:'Parque Ecológico, Av. Villas de Irapuato 2278', tel:'462 606 9999', ext:'1112',
    funcion:'planeacion', funcionLabel:'Planeación y Economía',
    desc:'Medio ambiente, parques ecológicos y sustentabilidad municipal.',
-   lat:20.6482, lng:-101.3648, web:''}
+   lat:20.683552, lng:-101.387539, web:''}
 ];
 
 var GOB_COLORES = {
