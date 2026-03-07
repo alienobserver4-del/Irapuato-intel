@@ -992,35 +992,38 @@ window.addEventListener('DOMContentLoaded', function() {
 // Agrega aquí todas las keys que tengas (una por cuenta Google en aistudio.google.com)
 // El sistema rota automáticamente cuando una alcanza su límite diario
 var GEMINI_KEYS = [
-  'AIzaSyAfe_lNoHA6pckySvyxTdeaPNZcdyOpkwc',  // key 1 — agrega más abajo
+  // Agrega tus keys aquí o usa el gestor visual (toca 🤖 en el header)
+  // Obtén keys gratis en: aistudio.google.com → Get API Key
+  // 'AIzaSy....',  // key 1
   // 'AIzaSy....',  // key 2
-  // 'AIzaSy....',  // key 3
 ];
 var _geminiKeyIdx = 0;
 var _geminiKeyAgotadas = {};
 
 function getGeminiKey() {
-  // Buscar la siguiente key no agotada
-  for (var i = 0; i < GEMINI_KEYS.length; i++) {
-    var idx = (_geminiKeyIdx + i) % GEMINI_KEYS.length;
+  // Usar siempre el array más actualizado (puede incluir keys del localStorage)
+  var pool = (window._appGeminiKeys && window._appGeminiKeys.length) ? window._appGeminiKeys : GEMINI_KEYS;
+  if (!pool || pool.length === 0) return '';
+  for (var i = 0; i < pool.length; i++) {
+    var idx = (_geminiKeyIdx + i) % pool.length;
     if (!_geminiKeyAgotadas[idx]) {
       _geminiKeyIdx = idx;
-      return GEMINI_KEYS[idx];
+      return pool[idx];
     }
   }
-  // Todas agotadas — limpiar flags (puede que se haya reseteado la cuota) y reintentar
+  // Todas agotadas — limpiar y reintentar desde el inicio
   _geminiKeyAgotadas = {};
   _geminiKeyIdx = 0;
-  return GEMINI_KEYS[0];
+  return pool[0];
 }
 
 function marcarKeyAgotada(key) {
-  var idx = GEMINI_KEYS.indexOf(key);
+  var pool = (window._appGeminiKeys && window._appGeminiKeys.length) ? window._appGeminiKeys : GEMINI_KEYS;
+  var idx = pool.indexOf(key);
   if (idx >= 0) {
     _geminiKeyAgotadas[idx] = true;
     console.warn('[Gemini] Key ' + (idx+1) + ' agotada, rotando...');
-    // Avanzar al siguiente
-    _geminiKeyIdx = (idx + 1) % GEMINI_KEYS.length;
+    _geminiKeyIdx = (idx + 1) % pool.length;
   }
 }
 var GEMINI_KEY = GEMINI_KEYS[0]; // compatibilidad
@@ -1470,9 +1473,8 @@ function llamarGemini(prompt, callback) {
   var modelos = [
     'gemini-2.0-flash',
     'gemini-2.0-flash-lite',
-    'gemini-2.5-flash-preview-04-17',
-    'gemini-1.5-flash-001',
-    'gemini-1.5-flash-002'
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b'
   ];
   var intentado = {};  // evitar reintentos del mismo modelo por el doble-catch
   var intentar = function(idx) {
@@ -1485,6 +1487,11 @@ function llamarGemini(prompt, callback) {
     intentado[modelo] = true;
 
     var keyActual = getGeminiKey();
+    if (!keyActual) {
+      toast('⚠ No hay API Keys — toca 🤖 en el header para agregar una', 'err');
+      callback(null, 'sin keys');
+      return;
+    }
     var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelo + ':generateContent?key=' + keyActual;
     fetch(url, {
       method: 'POST',
@@ -4398,7 +4405,7 @@ function renderKeysList() {
     html += '<span style="font-size:8px;color:' + (agotada ? '#ff4466' : (esActual ? '#00ff88' : '#5a8aaa')) + ';min-width:60px;">';
     html += (esActual ? '▶ ACTIVA' : (agotada ? '⚠ AGOTADA' : '○ EN POOL'));
     html += '</span>';
-    html += '<span style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#c0e8ff;flex:1;">' + preview + '</span>';
+    html += '<span style="font-family:monospace;font-size:8px;color:#c0e8ff;flex:1;">' + preview + '</span>';
     html += '<button onclick="eliminarKey(' + i + ')" style="font-size:8px;background:none;border:none;color:#ff4466;cursor:pointer;padding:2px 6px;">✕</button>';
     html += '</div>';
   }
