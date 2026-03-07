@@ -1471,10 +1471,11 @@ function toast(msg, tipo) {
 function llamarGemini(prompt, callback) {
   // Modelos en orden — nombres exactos del API v1beta actual (marzo 2026)
   // Modelos disponibles en free tier (sin billing) — orden de preferencia
+  // gemini-1.5-flash tiene límites por minuto más generosos en free tier
   var modelos = [
-    'gemini-2.0-flash-lite',   // free tier — más rápido
-    'gemini-1.5-flash-8b-001', // free tier — fallback
-    'gemini-1.5-flash-latest'  // free tier — último recurso
+    'gemini-1.5-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash-8b'
   ];
   var intentado = {};  // evitar reintentos del mismo modelo por el doble-catch
   var intentar = function(idx) {
@@ -1514,22 +1515,28 @@ function llamarGemini(prompt, callback) {
           var msg = (errBody && errBody.error && errBody.error.message) ? errBody.error.message : '';
           console.warn('[Gemini] ' + modelo + ' → ' + status + ': ' + msg.slice(0,120));
           if (status === 429) {
-            // Cuota agotada en esta key — marcarla y rotar a la siguiente
-            marcarKeyAgotada(keyActual);
-            var keysDisponibles = GEMINI_KEYS.length - Object.keys(_geminiKeyAgotadas).length;
-            if (keysDisponibles > 0) {
-              toast('🔄 Key ' + (GEMINI_KEYS.indexOf(keyActual)+1) + ' agotada — rotando a siguiente key...', 'warn');
-              delete intentado[modelo]; // permitir reintento del mismo modelo con nueva key
-              intentar(idx);
-            } else {
-              // Todas las keys agotadas — esperar y reintentar
-              var retryMatch = msg.match(/retry in ([0-9.]+)s/i);
-              var waitMs = retryMatch ? Math.ceil(parseFloat(retryMatch[1]) * 1000) + 500 : 22000;
-              toast('⏳ Todas las keys agotadas — reintentando en ' + Math.ceil(waitMs/1000) + 's...', 'warn');
-              _geminiKeyAgotadas = {}; // resetear para próximo intento
-              delete intentado[modelo];
-              setTimeout(function() { intentar(idx); }, waitMs);
+            // 429 = límite de velocidad (por minuto) — NO marcar la key como agotada
+            // Solo esperar y reintentar con la misma key
+            var retryMatch = msg.match(/retry in ([0-9.]+)s/i);
+            var waitMs = retryMatch ? Math.ceil(parseFloat(retryMatch[1]) * 1000) + 1000 : 8000;
+            var segs = Math.ceil(waitMs/1000);
+            toast('⏳ Límite/minuto — esperando ' + segs + 's...', 'warn');
+            // Countdown en el indicador del header
+            var statusEl = document.getElementById('gemini-status');
+            if (statusEl) {
+              var t0 = Date.now();
+              var cdInterval = setInterval(function() {
+                var restante = segs - Math.floor((Date.now()-t0)/1000);
+                if (restante <= 0) { clearInterval(cdInterval); actualizarStatusGemini(); return; }
+                if (statusEl) statusEl.textContent = '⏳ ' + restante + 's';
+              }, 500);
             }
+            delete intentado[modelo];
+            var pool = (window._appGeminiKeys && window._appGeminiKeys.length) ? window._appGeminiKeys : GEMINI_KEYS;
+            if (pool.length > 1) {
+              _geminiKeyIdx = (_geminiKeyIdx + 1) % pool.length;
+            }
+            setTimeout(function() { intentar(idx); }, waitMs);
           } else if (status === 403) {
             toast('🔑 API Key sin acceso — probando modelo alternativo...', 'warn');
             intentar(idx + 1);
