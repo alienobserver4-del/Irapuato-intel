@@ -94,8 +94,9 @@ header {
 .seccion { display:none; padding:12px; }
 .seccion.activa { display:block; }
 /* El mapa necesita display:block siempre para que Leaflet calcule dimensiones */
-#sec-mapa { display:block; padding:0; position:absolute; top:0; left:0; width:100%; height:0; overflow:hidden; visibility:hidden; pointer-events:none; }
-#sec-mapa.activa { height:auto; overflow:visible; visibility:visible; pointer-events:auto; position:relative; }
+#sec-mapa { display:block !important; padding:0 !important; }
+#sec-mapa:not(.activa) { position:fixed !important; top:-9999px !important; left:-9999px !important; width:1px !important; height:1px !important; overflow:hidden !important; }
+#sec-mapa.activa { position:relative !important; top:auto !important; left:auto !important; width:100% !important; height:auto !important; overflow:visible !important; }
 
 /* ── RSS ── */
 .rss-controles {
@@ -371,8 +372,8 @@ header {
 .nc-link { font-size:7px; color:var(--cyan); text-decoration:none; display:inline-block; margin-top:2px; }
 
 /* ── MAPA ── */
-#mapa-container { width:100%; height:calc(100dvh - 110px); min-height:400px; position:relative; }
-#mapa-leaflet { width:100%; height:100%; min-height:400px; background:#060d18; display:block; }
+#mapa-container { width:100%; height:calc(100dvh - 110px); min-height:400px; position:relative; display:flex; flex-direction:column; }
+#mapa-leaflet { flex:1; width:100%; min-height:300px; background:#060d18; display:block; }
 .leaflet-tile-pane { filter: brightness(0.7) invert(1) contrast(1.2) hue-rotate(190deg) saturate(0.4) brightness(0.7); }
 .mapa-filtros {
   position:absolute; top:8px; left:50%; transform:translateX(-50%);
@@ -747,7 +748,7 @@ header {
           <button class="mapa-filtro-btn rum activo" onclick="filtrarMapa('rumor',this)">RUMOR</button>
           <button class="mapa-heat-btn" id="btn-heatmap" onclick="toggleHeatmap(this)">&#x1F525; CALOR</button>
         </div>
-        <div id="mapa-leaflet"></div>
+        <div id="mapa-leaflet"><div id="mapa-debug" style="position:absolute;top:4px;left:4px;z-index:9999;background:rgba(0,0,0,.85);color:#00ff88;font-size:9px;font-family:monospace;padding:6px 8px;border-radius:3px;max-height:200px;overflow-y:auto;max-width:90%;pointer-events:none;"></div></div>
         <div class="mapa-info-bar">
           <div class="mapa-stat"><div class="mapa-dot" style="background:var(--red)"></div><span id="mapa-cnt-seg">0</span> SEG</div>
           <div class="mapa-stat"><div class="mapa-dot" style="background:var(--orange)"></div><span id="mapa-cnt-acc">0</span> ACC</div>
@@ -2270,47 +2271,73 @@ var HEAT_PESO = {
   transporte:0.5, salud:0.5, rumor:0.4, gobierno:0.3, evento:0.2
 };
 
-function iniciarMapa() {
-  if (typeof L === 'undefined') { setTimeout(iniciarMapa, 300); return; }
+function dbg(msg) {
+  var el = document.getElementById('mapa-debug');
+  if (el) el.innerHTML += '<div>' + msg + '</div>';
+}
 
+function iniciarMapa() {
   var el = document.getElementById('mapa-leaflet');
   var cont = document.getElementById('mapa-container');
-  if (!el || !cont) return;
+  dbg('iniciarMapa() - L:' + (typeof L) + ' el:' + (el ? el.offsetWidth+'x'+el.offsetHeight : 'null'));
 
-  // Forzar tamaño explícito en px antes de que Leaflet lo lea
-  var altoPx = window.innerHeight - 110;
-  if (altoPx < 300) altoPx = 300;
-  el.style.height = altoPx + 'px';
-  cont.style.height = altoPx + 'px';
+  if (typeof L === 'undefined') {
+    dbg('Leaflet no cargado, reintentando...');
+    setTimeout(iniciarMapa, 400);
+    return;
+  }
+  if (!el || !cont) { dbg('ERROR: div no encontrado'); return; }
 
-  if (mapaIniciado) {
-    if (mapaObj) {
-      mapaObj.invalidateSize(true);
-      setTimeout(function() { mapaObj.invalidateSize(true); renderMapa(); }, 200);
-    }
+  // Forzar tamaño explícito en píxeles
+  var alto = window.innerHeight - 155;
+  if (alto < 250) alto = 250;
+  el.style.width = '100%';
+  el.style.height = alto + 'px';
+  dbg('altura forzada: ' + alto + 'px, offsetH ahora: ' + el.offsetHeight);
+
+  if (mapaIniciado && mapaObj) {
+    dbg('ya iniciado, invalidando...');
+    mapaObj.invalidateSize(true);
+    setTimeout(function() { mapaObj.invalidateSize(true); renderMapa(); dbg('renderMapa OK'); }, 300);
     return;
   }
 
   mapaIniciado = true;
+  dbg('creando L.map...');
 
-  mapaObj = L.map('mapa-leaflet', {
-    center: [20.6795, -101.3540],
-    zoom: 12,
-    zoomControl: true,
-    preferCanvas: true,
-    renderer: L.canvas()
-  });
+  try {
+    mapaObj = L.map('mapa-leaflet', {
+      center: [20.6795, -101.3540],
+      zoom: 12,
+      zoomControl: true,
+      preferCanvas: true
+    });
+    dbg('L.map creado OK');
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-    maxZoom: 19,
-    subdomains: 'abc'
-  }).addTo(mapaObj);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OSM',
+      maxZoom: 18
+    }).addTo(mapaObj);
+    dbg('tileLayer agregado');
 
-  // Secuencia de invalidaciones para Android
-  setTimeout(function() { if (mapaObj) mapaObj.invalidateSize(true); }, 50);
-  setTimeout(function() { if (mapaObj) mapaObj.invalidateSize(true); }, 250);
-  setTimeout(function() { if (mapaObj) { mapaObj.invalidateSize(true); renderMapa(); } }, 600);
+    setTimeout(function() {
+      mapaObj.invalidateSize(true);
+      dbg('invalidateSize 1');
+    }, 100);
+    setTimeout(function() {
+      mapaObj.invalidateSize(true);
+      renderMapa();
+      dbg('invalidateSize 2 + renderMapa');
+      // Ocultar debug después de 8 segundos si todo va bien
+      setTimeout(function() {
+        var d = document.getElementById('mapa-debug');
+        if (d) d.style.display = 'none';
+      }, 8000);
+    }, 500);
+  } catch(e) {
+    dbg('ERROR: ' + e.message);
+    mapaIniciado = false;
+  }
 }
 window.iniciarMapa = iniciarMapa;
 
