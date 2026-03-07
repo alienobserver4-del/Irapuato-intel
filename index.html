@@ -991,7 +991,9 @@ window.addEventListener('DOMContentLoaded', function() {
 // ── POOL DE API KEYS GEMINI ──
 // Agrega aquí todas las keys que tengas (una por cuenta Google en aistudio.google.com)
 // El sistema rota automáticamente cuando una alcanza su límite diario
-var OPENROUTER_KEY = ''; // Opcional — openrouter.ai (gratis con registro)
+var OPENROUTER_KEY = ''; // Legado — ahora se usa el pool
+var OPENROUTER_KEYS = []; // Pool de keys OpenRouter
+var _orKeyIdx = 0; // Índice de rotación
 var GEMINI_KEYS = [
   // Agrega tus keys aquí o usa el gestor visual (toca 🤖 en el header)
   // Obtén keys gratis en: aistudio.google.com → Get API Key
@@ -1609,16 +1611,64 @@ function llamarGemini(prompt, callback) {
 // ── OpenRouter — modelos gratuitos sin límites agresivos ──
 // Registro gratis en openrouter.ai — da crédito inicial gratuito
 // Modelos FREE marcados con :free en openrouter
-function llamarOpenRouter(prompt, apiKey, callback) {
+// llamarOpenRouterPool — usa el pool de keys OR, rota si hay rate limit
+function llamarOpenRouterPool(prompt, callback, onAgotado) {
+  var pool = (window._appORKeys && window._appORKeys.length) ? window._appORKeys : OPENROUTER_KEYS;
+  if (!pool || pool.length === 0) { onAgotado && onAgotado(); return; }
+  var keyIdx = _orKeyIdx % pool.length;
+  var vueltasKey = 0;
+  var statusEl = document.getElementById('gemini-status');
+
+  function intentarConKey() {
+    if (vueltasKey >= pool.length) {
+      // Todas las keys de OR dieron rate limit
+      console.warn('[OpenRouter] Todas las keys con rate limit');
+      onAgotado && onAgotado();
+      return;
+    }
+    var key = pool[keyIdx % pool.length];
+    llamarOpenRouter(prompt, key, function(r, err) {
+      if (r) {
+        _orKeyIdx = keyIdx % pool.length; // guardar última key buena
+        callback(r, null);
+      } else if (err === '429') {
+        // Rate limit en esta key — rotar a la siguiente
+        console.log('[OpenRouter] Rate limit key' + (keyIdx % pool.length + 1) + ' → rotando');
+        keyIdx++;
+        vueltasKey++;
+        setTimeout(intentarConKey, 500);
+      } else {
+        onAgotado && onAgotado();
+      }
+    }, true); // true = modo pool (reporta 429 como error especial)
+  }
+  intentarConKey();
+}
+window.llamarOpenRouterPool = llamarOpenRouterPool;
+
+function llamarOpenRouter(prompt, apiKey, callback, esPool) {
+  // Modelos gratuitos — ordenados por calidad de análisis de texto en español
   var modelos = [
-    'meta-llama/llama-3.1-8b-instruct:free',
-    'mistralai/mistral-7b-instruct:free',
-    'google/gemma-3-4b-it:free'
+    'google/gemma-3-12b-it:free',           // mejor para español
+    'meta-llama/llama-3.1-8b-instruct:free', // muy bueno para JSON estructurado
+    'mistralai/mistral-7b-instruct:free',    // fallback rápido
+    'google/gemma-3-4b-it:free',            // fallback ligero
+    'microsoft/phi-3-mini-128k-instruct:free' // último recurso
   ];
   var idx = 0;
+  var statusEl = document.getElementById('gemini-status');
+
   function intentar() {
-    if (idx >= modelos.length) { callback(null, 'openrouter agotado'); return; }
+    if (idx >= modelos.length) {
+      console.warn('[OpenRouter] Todos los modelos fallaron');
+      if (statusEl) { statusEl.textContent = '⚠ Sin IA'; statusEl.style.color = '#ff4466'; }
+      callback(null, 'openrouter agotado');
+      return;
+    }
     var modelo = modelos[idx];
+    var nombreCorto = modelo.split('/')[1] || modelo;
+    if (statusEl) { statusEl.textContent = '🔀 ' + nombreCorto.split(':')[0].slice(0,12); statusEl.style.color = '#ff8800'; }
+
     fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -1629,31 +1679,78 @@ function llamarOpenRouter(prompt, apiKey, callback) {
       },
       body: JSON.stringify({
         model: modelo,
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 800,
+        messages: [
+          { role: 'system', content: 'Eres un extractor de datos de noticias locales de Irapuato, Mexico. Respondes UNICAMENTE con JSON valido, sin texto adicional ni markdown.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 1000,
         temperature: 0.05
       })
     })
     .then(function(res) { return res.json().then(function(d) { return { status: res.status, data: d }; }); })
     .then(function(rd) {
-      if (rd.status !== 200) { console.warn('[OpenRouter] ' + rd.status + ' en ' + modelo); idx++; intentar(); return; }
+      if (rd.status === 429) {
+        console.warn('[OpenRouter] 429 rate limit en ' + modelo);
+        if (esPool) { callback(null, '429'); return; } // reportar al pool para rotar key
+        setTimeout(function() { idx++; intentar(); }, 5000);
+        return;
+      }
+      if (rd.status !== 200) {
+        console.warn('[OpenRouter] ' + rd.status + ' en ' + modelo);
+        idx++; intentar(); return;
+      }
       var txt = rd.data.choices && rd.data.choices[0] && rd.data.choices[0].message && rd.data.choices[0].message.content;
       if (!txt) { idx++; intentar(); return; }
-      var match = txt.match(/\{[\s\S]*\}/);
-      if (!match) { idx++; intentar(); return; }
+      // Extraer JSON — puede venir con markdown o sin él
+      var match = txt.match(/```json\s*([\s\S]*?)```/) || txt.match(/```([\s\S]*?)```/) || txt.match(/(\{[\s\S]*\})/);
+      if (!match) { console.warn('[OpenRouter] No JSON en respuesta de ' + modelo); idx++; intentar(); return; }
+      var jsonStr = match[1] || match[0];
       try {
-        var r = JSON.parse(match[0]);
+        var r = JSON.parse(jsonStr.trim());
         console.log('[OpenRouter] OK — ' + modelo);
+        if (statusEl) { statusEl.textContent = '🤖 OR OK'; statusEl.style.color = '#00ff88'; }
         callback(r, null);
-      } catch(e) { idx++; intentar(); }
+      } catch(e) {
+        console.warn('[OpenRouter] JSON inválido en ' + modelo + ':', e.message);
+        idx++; intentar();
+      }
     })
-    .catch(function() { idx++; intentar(); });
+    .catch(function(e) {
+      console.warn('[OpenRouter] fetch error en ' + modelo);
+      idx++; intentar();
+    });
   }
   intentar();
 }
 window.llamarOpenRouter = llamarOpenRouter;
 
 
+// ── Función central de IA — OpenRouter primero, Gemini como fallback ──
+function llamarIA(prompt, callback) {
+  var orPool = (window._appORKeys && window._appORKeys.length) ? window._appORKeys : OPENROUTER_KEYS;
+  if (orPool && orPool.length > 0) {
+    // OpenRouter disponible — usarlo como principal con pool
+    llamarOpenRouterPool(prompt, callback, function() {
+      // OR agotado — intentar Gemini como fallback
+      var gPool = (window._appGeminiKeys && window._appGeminiKeys.length) ? window._appGeminiKeys : GEMINI_KEYS;
+      if (gPool && gPool.length > 0) {
+        console.log('[IA] OpenRouter pool agotado — usando Gemini como fallback');
+        llamarGemini(prompt, callback);
+      } else {
+        callback(null, 'sin IA disponible');
+      }
+    });
+  } else {
+    // Sin OpenRouter — usar Gemini
+    var gPool2 = (window._appGeminiKeys && window._appGeminiKeys.length) ? window._appGeminiKeys : GEMINI_KEYS;
+    if (gPool2 && gPool2.length > 0) {
+      llamarGemini(prompt, callback);
+    } else {
+      callback(null, 'sin keys configuradas');
+    }
+  }
+}
+window.llamarIA = llamarIA;
 
 function clasificarLocal(txt) {
   var t = txt.toLowerCase();
@@ -2487,7 +2584,7 @@ function analizarConIA(id, texto, fuente, link) {
   if (proc) { proc.className = 'nc-procesando visible'; }
   if (edit) { edit.className = 'nc-edit'; }
 
-  llamarGemini(buildPrompt(texto), function(r, err) {
+  llamarIA(buildPrompt(texto), function(r, err) {
     if (proc) proc.className = 'nc-procesando';
     if (!r) {
       r = clasificarLocal(texto);
@@ -2848,7 +2945,7 @@ function analizarManual() {
 
   var url = document.getElementById('m-url').value.trim();
 
-  llamarGemini(buildPrompt(texto), function(r, err) {
+  llamarIA(buildPrompt(texto), function(r, err) {
     btn.disabled = false;
     btn.textContent = '🤖 ANALIZAR CON IA →';
     if (!r) {
@@ -3254,7 +3351,7 @@ function analizarFB() {
   var resultado = document.getElementById('fb-resultado');
   resultado.innerHTML = '<div style="color:#00f5ff;font-size:8px;padding:10px 0;">Analizando con IA...</div>';
 
-  llamarGemini(buildPrompt(texto), function(r, err) {
+  llamarIA(buildPrompt(texto), function(r, err) {
     if (!r) {
       r = clasificarLocal(texto);
       toast('IA no disponible — clasificacion local', 'warn');
@@ -4471,20 +4568,21 @@ window.verTextoCompleto = verTextoCompleto;
       Las keys se guardan en tu navegador. Cada cuenta Google = 1 key con cuota propia.
     </div>
     <div style="border-top:1px solid #0d2040;padding-top:10px;margin-bottom:10px;">
-      <div style="font-family:'Orbitron',monospace;font-size:8px;color:#ff8800;letter-spacing:1px;margin-bottom:6px;">🔀 OPENROUTER — alternativa gratuita (recomendado)</div>
+      <div style="font-family:'Orbitron',monospace;font-size:8px;color:#ff8800;letter-spacing:1px;margin-bottom:4px;">🔀 OPENROUTER — PRINCIPAL <span style="color:#3a5a3a;font-size:6px;">(rota automático entre keys)</span></div>
       <div style="font-size:7px;color:#5a6a4a;margin-bottom:6px;line-height:1.7;">
-        Si Gemini falla, usa OpenRouter automáticamente. Registro gratis en <strong style="color:#ffaa44">openrouter.ai</strong><br>
-        Modelos gratuitos: Llama 3.1, Mistral 7B, Gemma 3. Sin límites agresivos de cuota.
+        Registro gratis en <strong style="color:#ffaa44">openrouter.ai</strong> · Cada cuenta = 1 key · ~200 req/día gratis por key
       </div>
-      <div style="display:flex;gap:6px;">
+      <div id="or-keys-lista" style="margin-bottom:8px;max-height:100px;overflow-y:auto;"></div>
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
         <input id="or-key-input" placeholder="sk-or-v1-..." type="password"
           style="flex:1;background:#030810;border:1px solid #2a3a1a;color:#c0e8ff;font-family:'Share Tech Mono',monospace;font-size:9px;padding:7px 10px;border-radius:3px;outline:none;">
-        <button onclick="guardarORKey()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 12px;background:rgba(255,136,0,.1);color:#ff8800;border:1px solid #ff880044;border-radius:3px;cursor:pointer;white-space:nowrap;letter-spacing:1px;">GUARDAR</button>
+        <button onclick="agregarORKey()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 12px;background:rgba(255,136,0,.1);color:#ff8800;border:1px solid #ff880044;border-radius:3px;cursor:pointer;white-space:nowrap;letter-spacing:1px;">+ AGREGAR</button>
       </div>
-      <div id="or-key-status" style="font-size:7px;color:#3a5a3a;margin-top:4px;height:12px;"></div>
+      <div id="or-key-status" style="font-size:7px;color:#3a5a3a;margin-top:2px;min-height:12px;"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
-      <button onclick="probarKeys()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 14px;background:rgba(0,200,255,.08);color:#00f5ff;border:1px solid #00ccff44;border-radius:3px;cursor:pointer;letter-spacing:1px;">🧪 PROBAR</button>
+      <button onclick="probarKeysOR()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 14px;background:rgba(255,136,0,.08);color:#ff8800;border:1px solid #ff880033;border-radius:3px;cursor:pointer;letter-spacing:1px;">🧪 PROBAR OR</button>
+      <button onclick="probarKeys()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 14px;background:rgba(0,200,255,.08);color:#00f5ff;border:1px solid #00ccff44;border-radius:3px;cursor:pointer;letter-spacing:1px;">🧪 PROBAR GEMINI</button>
       <button onclick="cerrarGestorKeys()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 14px;background:rgba(255,0,0,.08);color:#ff4466;border:1px solid #ff446644;border-radius:3px;cursor:pointer;letter-spacing:1px;">CERRAR</button>
     </div>
   </div>
@@ -4601,13 +4699,20 @@ function actualizarStatusGemini() {
   var keys = window._appGeminiKeys || [];
   var agotadas = Object.keys(window._geminiKeyAgotadas || {}).length;
   var disponibles = keys.length - agotadas;
-  if (disponibles > 0) {
-    el.textContent = '🤖 IA ' + disponibles + '/' + keys.length + ' keys';
+  var orPool = window._appORKeys || [];
+  var hasOR = orPool.length > 0;
+  if (hasOR) {
+    el.textContent = '🔀 OR ' + orPool.length + (keys.length ? ' + G' + disponibles : '') + ' keys';
+    el.style.color = '#ff8800';
+    el.style.borderColor = '#ff880044';
+    el.style.background = 'rgba(255,136,0,.06)';
+  } else if (disponibles > 0) {
+    el.textContent = '🤖 G ' + disponibles + '/' + keys.length + ' keys';
     el.style.color = '#00ff88';
     el.style.borderColor = '#00ff8844';
     el.style.background = 'rgba(0,255,136,.06)';
   } else {
-    el.textContent = '⚠ IA SIN CUOTA';
+    el.textContent = '⚠ Sin IA';
     el.style.color = '#ffcc00';
     el.style.borderColor = '#ffcc0044';
     el.style.background = 'rgba(255,204,0,.06)';
@@ -4615,48 +4720,88 @@ function actualizarStatusGemini() {
 }
 window.actualizarStatusGemini = actualizarStatusGemini;
 
-function guardarORKey() {
-  var input = document.getElementById('or-key-input');
-  var key = input ? input.value.trim() : '';
-  if (!key || key.length < 20) {
-    alert('Pega una key de OpenRouter válida (empieza con sk-or-v1-)');
+// ── Pool OpenRouter ──
+function renderORKeysList() {
+  var lista = document.getElementById('or-keys-lista');
+  if (!lista) return;
+  var keys = window._appORKeys || [];
+  if (!keys.length) {
+    lista.innerHTML = '<div style="font-size:8px;color:#4a4a2a;padding:6px;">Sin keys OR. Agrega al menos una para usar OpenRouter.</div>';
     return;
   }
-  window._openRouterKey = key;
-  try { localStorage.setItem('openrouter_key', key); } catch(e) {}
-  if (input) input.value = '***guardada***';
-  setTimeout(function() { if (input) input.value = ''; }, 1500);
-  var st = document.getElementById('or-key-status');
-  if (st) { st.textContent = '✓ Key guardada — se usará automáticamente si Gemini falla'; st.style.color = '#00ff88'; }
-  // Actualizar indicador del header
-  var hdr = document.getElementById('gemini-status');
-  if (hdr) { hdr.textContent = '🤖 IA OK (OR)'; hdr.style.color = '#ff8800'; }
-  // Probar inmediatamente
-  probarOpenRouter(key);
+  var html = '';
+  keys.forEach(function(k, i) {
+    var short = k.slice(0, 12) + '...' + k.slice(-4);
+    var esActual = (i === (_orKeyIdx % keys.length));
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin-bottom:3px;background:' + (esActual ? 'rgba(255,136,0,.1)' : '#030a15') + ';border:1px solid ' + (esActual ? '#ff880044' : '#0d2040') + ';border-radius:3px;">' +
+      '<span style="font-family:monospace;font-size:8px;color:' + (esActual ? '#ff8800' : '#4a6a8a') + ';">' + (esActual ? '▶ ' : '') + 'Key ' + (i+1) + ': <span style="color:#7a9aaa;">' + short + '</span></span>' +
+      '<div style="display:flex;gap:4px;">' +
+      '<span id="or-key-st-' + i + '" style="font-size:7px;color:#3a5a3a;"></span>' +
+      '<button onclick="eliminarORKey(' + i + ')" style="font-size:7px;padding:2px 7px;background:rgba(255,0,0,.08);color:#ff4466;border:1px solid #ff446633;border-radius:2px;cursor:pointer;">✕</button>' +
+      '</div></div>';
+  });
+  lista.innerHTML = html;
 }
-window.guardarORKey = guardarORKey;
+window.renderORKeysList = renderORKeysList;
 
-function probarOpenRouter(key) {
+function agregarORKey() {
+  var input = document.getElementById('or-key-input');
+  var key = input ? input.value.trim() : '';
+  if (!key || key.length < 20) { alert('Pega una key válida de OpenRouter (sk-or-v1-...)'); return; }
+  var pool = window._appORKeys || [];
+  if (pool.indexOf(key) >= 0) { alert('Esta key ya está en el pool.'); return; }
+  pool.push(key);
+  window._appORKeys = pool;
+  try { localStorage.setItem('or_keys_pool', JSON.stringify(pool)); } catch(e) {}
+  if (input) input.value = '';
+  renderORKeysList();
+  actualizarStatusGemini();
   var st = document.getElementById('or-key-status');
-  if (st) st.textContent = '⏳ Probando conexión...';
-  fetch('https://openrouter.ai/api/v1/models', {
-    headers: { 'Authorization': 'Bearer ' + key }
-  })
+  if (st) { st.textContent = '✓ Key ' + pool.length + ' agregada'; st.style.color = '#00ff88'; }
+  // Probar la key recién agregada
+  probarORKey(key, pool.length - 1);
+}
+window.agregarORKey = agregarORKey;
+
+function eliminarORKey(i) {
+  var pool = window._appORKeys || [];
+  pool.splice(i, 1);
+  window._appORKeys = pool;
+  if (_orKeyIdx >= pool.length) _orKeyIdx = 0;
+  try { localStorage.setItem('or_keys_pool', JSON.stringify(pool)); } catch(e) {}
+  renderORKeysList();
+  actualizarStatusGemini();
+}
+window.eliminarORKey = eliminarORKey;
+
+function probarORKey(key, idx) {
+  var stEl = document.getElementById('or-key-st-' + idx);
+  if (stEl) stEl.textContent = '⏳';
+  fetch('https://openrouter.ai/api/v1/models', { headers: { 'Authorization': 'Bearer ' + key } })
   .then(function(res) {
-    if (st) {
-      if (res.status === 200) {
-        st.textContent = '✅ Conexión OK — OpenRouter listo para usar';
-        st.style.color = '#00ff88';
-      } else {
-        st.textContent = '⚠ Error ' + res.status + ' — verifica la key';
-        st.style.color = '#ffcc00';
-      }
+    if (stEl) {
+      stEl.textContent = res.status === 200 ? '✓' : '✗' + res.status;
+      stEl.style.color = res.status === 200 ? '#00ff88' : '#ff4466';
     }
   })
-  .catch(function() {
-    if (st) { st.textContent = '⚠ No se pudo verificar (puede funcionar igual)'; st.style.color = '#ffcc00'; }
-  });
+  .catch(function() { if (stEl) { stEl.textContent = '?'; stEl.style.color = '#ffcc00'; } });
 }
+window.probarORKey = probarORKey;
+
+function probarKeysOR() {
+  var pool = window._appORKeys || [];
+  if (!pool.length) { alert('No hay keys OR para probar.'); return; }
+  var st = document.getElementById('or-key-status');
+  if (st) { st.textContent = 'Probando ' + pool.length + ' keys...'; st.style.color = '#ffcc00'; }
+  pool.forEach(function(k, i) { probarORKey(k, i); });
+  setTimeout(function() { if (st) { st.textContent = ''; } }, 4000);
+}
+window.probarKeysOR = probarKeysOR;
+
+// Legado — mantener por compatibilidad
+function guardarORKey() { agregarORKey(); }
+window.guardarORKey = guardarORKey;
+function probarOpenRouter(key) { probarORKey(key, 0); }
 window.probarOpenRouter = probarOpenRouter;
 
 // Cargar keys guardadas del localStorage al iniciar
@@ -4675,18 +4820,23 @@ window.probarOpenRouter = probarOpenRouter;
       }
     }
   } catch(e) {}
-  // Cargar key de OpenRouter si existe
+  // Cargar pool OR del localStorage
   try {
-    var orSaved = localStorage.getItem('openrouter_key');
-    if (orSaved) {
-      window._openRouterKey = orSaved;
-      console.log('[OpenRouter] Key cargada');
-      setTimeout(function() {
-        var orEl = document.getElementById('or-key-status');
-        if (orEl) { orEl.textContent = '✓ Key configurada'; orEl.style.color = '#00ff88'; }
-      }, 800);
+    var orPoolSaved = localStorage.getItem('or_keys_pool');
+    if (orPoolSaved) {
+      var orArr = JSON.parse(orPoolSaved);
+      if (Array.isArray(orArr) && orArr.length) {
+        window._appORKeys = orArr;
+        console.log('[OpenRouter] ' + orArr.length + ' keys cargadas del localStorage');
+      }
+    }
+    // Legado: clave única
+    if (!window._appORKeys || !window._appORKeys.length) {
+      var orLegacy = localStorage.getItem('openrouter_key');
+      if (orLegacy) { window._appORKeys = [orLegacy]; }
     }
   } catch(e) {}
+  setTimeout(function() { if (typeof renderORKeysList === 'function') renderORKeysList(); }, 900);
   // Inicializar _appGeminiKeys desde GEMINI_KEYS hardcoded
   if (!window._appGeminiKeys && typeof GEMINI_KEYS !== 'undefined') {
     window._appGeminiKeys = GEMINI_KEYS.slice();
