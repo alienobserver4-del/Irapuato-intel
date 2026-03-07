@@ -6,13 +6,10 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>IRAPUATO INTEL — Fase 1 v3</title>
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
+<title>IRAPUATO INTEL — Fase 1 v4</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-<script>console.log('HEAD OK - HTML parseando correctamente');</script>
+<script></script>
 
 <style>
 :root {
@@ -46,7 +43,7 @@ header {
   display:flex;
   align-items:center;
   gap:10px;
-  position:relative; z-index:60;
+  position:relative; z-index:200;
 }
 .logo { display:flex; align-items:center; gap:8px; }
 .diamond {
@@ -66,7 +63,7 @@ header {
   border-bottom:1px solid var(--border);
   flex-shrink:0;
   overflow-x:auto;
-  position:relative; z-index:60;
+  position:relative; z-index:200;
 }
 #tabs::-webkit-scrollbar { display:none; }
 .tab {
@@ -97,8 +94,10 @@ header {
 .seccion { display:none; padding:12px; }
 .seccion.activa { display:block; }
 /* El mapa necesita display:block siempre para que Leaflet calcule dimensiones */
-/* Mapa: gestionado 100% por JS, sin CSS especial */
-#sec-mapa { padding:0 !important; margin:0 !important; }
+/* Mapa: fuera del flujo de #panel, posición fija cuando activo */
+#sec-mapa { display:none; padding:0; margin:0; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:100; background:var(--bg); }
+#sec-mapa.activa { display:block; }
+#mapa-container { width:100%; height:100%; display:flex; flex-direction:column; }
 
 /* ── RSS ── */
 .rss-controles {
@@ -440,7 +439,7 @@ header {
       <div class="diamond"></div>
       <span class="logo-txt">IRA INTEL</span>
     </div>
-    <span class="logo-sub">// CAPTURA DE NOTICIAS v2.0</span>
+    <span class="logo-sub">// CAPTURA DE NOTICIAS v4.0</span>
   </header>
 
   <!-- TABS -->
@@ -739,7 +738,13 @@ header {
 
 
     <!-- ═══════════ MAPA ═══════════ -->
-    <div id="sec-mapa" class="seccion">
+    </div>
+
+  </div>
+</div>
+
+<!-- MAPA: fuera de #panel para que tenga altura real -->
+    <div id="sec-mapa">
       <div id="mapa-container">
         <div class="mapa-filtros">
           <button class="mapa-filtro-btn todos activo" onclick="filtrarMapa('todos',this)">TODOS</button>
@@ -750,7 +755,7 @@ header {
           <button class="mapa-filtro-btn rum activo" onclick="filtrarMapa('rumor',this)">RUMOR</button>
           <button class="mapa-heat-btn" id="btn-heatmap" onclick="toggleHeatmap(this)">&#x1F525; CALOR</button>
         </div>
-        <div id="mapa-leaflet"><div id="mapa-debug" style="position:absolute;top:4px;left:4px;z-index:9999;background:rgba(0,0,0,.85);color:#00ff88;font-size:9px;font-family:monospace;padding:6px 8px;border-radius:3px;max-height:200px;overflow-y:auto;max-width:90%;pointer-events:none;"></div></div>
+        <div id="mapa-leaflet"></div>
         <div class="mapa-info-bar">
           <div class="mapa-stat"><div class="mapa-dot" style="background:var(--red)"></div><span id="mapa-cnt-seg">0</span> SEG</div>
           <div class="mapa-stat"><div class="mapa-dot" style="background:var(--orange)"></div><span id="mapa-cnt-acc">0</span> ACC</div>
@@ -762,8 +767,6 @@ header {
       </div>
     </div>
 
-  </div>
-</div>
 <div id="toast"></div>
 
 <!-- Leaflet Maps -->
@@ -798,9 +801,7 @@ function simpleheat(canvas){if(!(this instanceof simpleheat)){return new simpleh
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js" defer></script>
 
 <script>
-console.log('SCRIPT BLOQUE PRINCIPAL PARSEADO');
 window.addEventListener('DOMContentLoaded', function() {
-console.log('APP SCRIPT INICIANDO - DOMContentLoaded');
 // ═══ INICIO DE APP ═══
 // ═══════════════════════════════════════════════════════════════
 // CONFIGURACIÓN
@@ -889,7 +890,6 @@ function escucharBD() {
     actualizarBadge();
     if (mapaIniciado) renderMapa();
   }, function(err) {
-    console.log('Firebase error:', err.message);
   });
 }
 
@@ -897,7 +897,6 @@ function escucharBD() {
 // NAVEGACIÓN
 // ═══════════════════════════════════════════════════════════════
 function verTab(cual) {
-  console.log("verTab:", cual);
   var tabs = document.querySelectorAll('.tab');
   for (var i = 0; i < tabs.length; i++) {
     tabs[i].classList.remove('active');
@@ -923,12 +922,23 @@ function verTab(cual) {
     if (alto < 200) alto = 500;
     var mapaEl  = document.getElementById('mapa-leaflet');
     var contEl  = document.getElementById('mapa-container');
-    if (secEl)  { secEl.style.display = 'block'; secEl.style.height = alto + 'px'; }
-    if (contEl) { contEl.style.display = 'flex'; contEl.style.height = alto + 'px'; }
-    if (mapaEl) { mapaEl.style.display = 'block'; mapaEl.style.height = alto + 'px'; }
-    console.log("verTab mapa: alto=" + alto + " offsetH=" + (mapaEl ? mapaEl.offsetHeight : 'null'));
-    setTimeout(iniciarMapa, 50);
-    setTimeout(iniciarMapa, 400);
+    var topOffset = headerH + tabsH;
+    var altoReal = window.innerHeight - topOffset;
+    if (altoReal < 200) altoReal = 400;
+    if (secEl)  {
+      secEl.style.display = 'block';
+      secEl.style.position = 'fixed';
+      secEl.style.top = topOffset + 'px';
+      secEl.style.left = '0';
+      secEl.style.width = '100vw';
+      secEl.style.height = altoReal + 'px';
+    }
+    if (contEl) { contEl.style.display = 'flex'; contEl.style.height = altoReal + 'px'; contEl.style.width = '100%'; }
+    if (mapaEl) { mapaEl.style.display = 'block'; mapaEl.style.height = altoReal + 'px'; mapaEl.style.width = '100%'; }
+    // Destruir mapa anterior para recrearlo con dimensiones correctas
+    if (mapaObj) { try { mapaObj.remove(); } catch(e) {} mapaObj = null; mapaIniciado = false; }
+    // Delay para que browser aplique estilos ANTES de que Leaflet lea el DOM
+    setTimeout(iniciarMapa, 200);
   }
 }
 window.verTab = verTab;
@@ -2268,20 +2278,17 @@ function escucharMake() {
         toast('📘 Nueva publicación de Facebook recibida', 'ok');
       }
     });
-  }, function(e) { console.log('Make listener:', e.message); });
+  }, function(e) {  });
 }
 try {
-  console.log("Iniciando Firebase...");
 if (typeof firebase === 'undefined') {
   console.error('Firebase no cargó — verifica tu conexión a internet');
 } else {
   firebase.initializeApp(firebaseConfig);
-  console.log('Firebase OK');
 }
   db = firebase.firestore();
   escucharBD();
 } catch(e) {
-  console.log('Firebase error:', e.message);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2312,71 +2319,58 @@ var HEAT_PESO = {
   transporte:0.5, salud:0.5, rumor:0.4, gobierno:0.3, evento:0.2
 };
 
-function dbg(msg) {
-  var el = document.getElementById('mapa-debug');
-  if (el) el.innerHTML += '<div>' + msg + '</div>';
-}
 
 function iniciarMapa() {
   try {
-    console.log("iniciarMapa: paso 1 - inicio");
 
     if (typeof L === 'undefined') {
-      console.log("iniciarMapa: Leaflet no listo, reintentando");
-      setTimeout(iniciarMapa, 400);
+            setTimeout(iniciarMapa, 400);
       return;
     }
-    console.log("iniciarMapa: paso 2 - Leaflet OK");
 
     var el   = document.getElementById('mapa-leaflet');
     var cont = document.getElementById('mapa-container');
     var secEl = document.getElementById('sec-mapa');
-    console.log("iniciarMapa: paso 3 - el=" + (el ? 'ok' : 'null') + " cont=" + (cont ? 'ok' : 'null'));
+    
 
     if (!el) { console.log("ERROR: #mapa-leaflet no encontrado"); return; }
 
-    // Altura directa sin depender de CSS
-    var alto = window.innerHeight - 90;
-    console.log("iniciarMapa: paso 4 - alto=" + alto);
+    // El div ya fue posicionado por verTab — leer dimensiones reales
+    var alto = el.offsetHeight;
 
-    el.style.cssText = 'width:100% !important; height:' + alto + 'px !important; display:block !important; background:#060d18;';
-    if (cont)  cont.style.cssText  = 'width:100% !important; height:' + alto + 'px !important; position:relative !important; display:block !important;';
-    if (secEl) secEl.style.cssText = 'display:block !important; width:100% !important; height:' + alto + 'px !important; padding:0 !important; position:relative !important;';
-
-    console.log("iniciarMapa: paso 5 - offsetHeight=" + el.offsetHeight);
+    if (alto < 50) { console.log("ERROR: mapa-leaflet tiene altura 0"); return; }
 
     if (mapaIniciado && mapaObj) {
-      console.log("iniciarMapa: ya iniciado, invalidando");
-      mapaObj.invalidateSize(true);
+            mapaObj.invalidateSize(true);
       setTimeout(function() { mapaObj.invalidateSize(true); renderMapa(); }, 300);
       return;
     }
 
     mapaIniciado = true;
-    console.log("iniciarMapa: paso 6 - creando L.map");
 
     mapaObj = L.map('mapa-leaflet', {
       center: [20.6795, -101.3540],
       zoom: 12,
       zoomControl: true
     });
-    console.log("iniciarMapa: paso 7 - L.map creado");
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OSM',
       maxZoom: 18
     }).addTo(mapaObj);
-    console.log("iniciarMapa: paso 8 - tiles agregados");
 
     setTimeout(function() {
       mapaObj.invalidateSize(true);
-      console.log("iniciarMapa: paso 9 - invalidateSize OK");
-    }, 200);
+          }, 100);
     setTimeout(function() {
       mapaObj.invalidateSize(true);
+          }, 400);
+    setTimeout(function() {
+      mapaObj.invalidateSize(true);
+      mapaObj.invalidateSize({animate:false});
+      mapaObj.setView([20.6795, -101.3540], 12, {animate:false});
       renderMapa();
-      console.log("iniciarMapa: paso 10 - renderMapa OK");
-    }, 600);
+          }, 800);
 
   } catch(err) {
     console.log("iniciarMapa ERROR en paso: " + err.message);
