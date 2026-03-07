@@ -12,6 +12,7 @@
 <meta http-equiv="Expires" content="0">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script>console.log('HEAD OK - HTML parseando correctamente');</script>
 
 <style>
 :root {
@@ -795,11 +796,13 @@ function simpleheat(canvas){if(!(this instanceof simpleheat)){return new simpleh
 } catch(e) { console.warn('leaflet.heat no disponible:', e.message); }
 </script>
 <!-- Firebase v8 -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js" defer></script>
 
 <script>
-console.log('APP SCRIPT INICIANDO...');
+console.log('SCRIPT BLOQUE PRINCIPAL PARSEADO');
+window.addEventListener('DOMContentLoaded', function() {
+console.log('APP SCRIPT INICIANDO - DOMContentLoaded');
 // ═══ INICIO DE APP ═══
 // ═══════════════════════════════════════════════════════════════
 // CONFIGURACIÓN
@@ -2258,7 +2261,12 @@ function escucharMake() {
 }
 try {
   console.log("Iniciando Firebase...");
-firebase.initializeApp(firebaseConfig);
+if (typeof firebase === 'undefined') {
+  console.error('Firebase no cargó — verifica tu conexión a internet');
+} else {
+  firebase.initializeApp(firebaseConfig);
+  console.log('Firebase OK');
+}
   db = firebase.firestore();
   escucharBD();
 } catch(e) {
@@ -2546,6 +2554,8 @@ document.getElementById('rss-estado').textContent = 'Sistema listo. Elige una fu
 document.getElementById('rss-estado').className = 'rss-estado ok';
 
 
+
+}); // fin DOMContentLoaded
 </script>
 
 </body>
