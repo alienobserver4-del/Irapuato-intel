@@ -93,6 +93,9 @@ header {
 /* ── SECCIONES ── */
 .seccion { display:none; padding:12px; }
 .seccion.activa { display:block; }
+/* El mapa necesita display:block siempre para que Leaflet calcule dimensiones */
+#sec-mapa { display:block; padding:0; position:absolute; top:0; left:0; width:100%; height:0; overflow:hidden; visibility:hidden; pointer-events:none; }
+#sec-mapa.activa { height:auto; overflow:visible; visibility:visible; pointer-events:auto; position:relative; }
 
 /* ── RSS ── */
 .rss-controles {
@@ -368,9 +371,8 @@ header {
 .nc-link { font-size:7px; color:var(--cyan); text-decoration:none; display:inline-block; margin-top:2px; }
 
 /* ── MAPA ── */
-#mapa-container { width:100%; height:calc(100dvh - 110px); min-height:300px; position:relative; }
-#mapa-leaflet { width:100%; height:100%; min-height:300px; background:#060d18; }
-/* Overlay oscuro sobre los tiles para mantener estética dark */
+#mapa-container { width:100%; height:calc(100dvh - 110px); min-height:400px; position:relative; }
+#mapa-leaflet { width:100%; height:100%; min-height:400px; background:#060d18; display:block; }
 .leaflet-tile-pane { filter: brightness(0.7) invert(1) contrast(1.2) hue-rotate(190deg) saturate(0.4) brightness(0.7); }
 .mapa-filtros {
   position:absolute; top:8px; left:50%; transform:translateX(-50%);
@@ -887,20 +889,10 @@ function verTab(cual) {
   if (secEl) secEl.classList.add('activa');
   // Iniciar mapa al entrar a esa pestaña
   if (cual === 'mapa') {
-    // Esperar a que el browser calcule el layout antes de iniciar Leaflet
-    setTimeout(function() {
-      if (!mapaIniciado) {
-        iniciarMapa();
-      } else if (mapaObj) {
-        // Ya iniciado: forzar recalculo de tamaño (resuelve mapa negro)
-        mapaObj.invalidateSize(true);
-        renderMapa();
-      }
-    }, 150);
-    // Segundo invalidate por si acaso (algunos browsers necesitan dos pasadas)
-    setTimeout(function() {
-      if (mapaObj) { mapaObj.invalidateSize(true); }
-    }, 500);
+    // La sección ya es visible en este punto — esperar un frame para que el
+    // browser calcule el layout y el div tenga dimensiones reales
+    setTimeout(iniciarMapa, 50);
+    setTimeout(iniciarMapa, 300);
   }
 }
 window.verTab = verTab;
@@ -2279,50 +2271,46 @@ var HEAT_PESO = {
 };
 
 function iniciarMapa() {
+  if (typeof L === 'undefined') { setTimeout(iniciarMapa, 300); return; }
+
+  var el = document.getElementById('mapa-leaflet');
+  var cont = document.getElementById('mapa-container');
+  if (!el || !cont) return;
+
+  // Forzar tamaño explícito en px antes de que Leaflet lo lea
+  var altoPx = window.innerHeight - 110;
+  if (altoPx < 300) altoPx = 300;
+  el.style.height = altoPx + 'px';
+  cont.style.height = altoPx + 'px';
+
   if (mapaIniciado) {
-    if (mapaObj) { mapaObj.invalidateSize(true); }
-    renderMapa();
+    if (mapaObj) {
+      mapaObj.invalidateSize(true);
+      setTimeout(function() { mapaObj.invalidateSize(true); renderMapa(); }, 200);
+    }
     return;
   }
-  if (typeof L === 'undefined') { setTimeout(iniciarMapa, 500); return; }
-  // Verificar que el contenedor tiene altura antes de inicializar
-  var contenedor = document.getElementById('mapa-leaflet');
-  if (!contenedor || contenedor.offsetHeight === 0) {
-    setTimeout(iniciarMapa, 200);
-    return;
-  }
+
   mapaIniciado = true;
+
   mapaObj = L.map('mapa-leaflet', {
     center: [20.6795, -101.3540],
     zoom: 12,
     zoomControl: true,
-    preferCanvas: true
+    preferCanvas: true,
+    renderer: L.canvas()
   });
-  // Tile server OSM estándar — más confiable que CartoDB en móviles
-  var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap',
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
     maxZoom: 19,
-    subdomains: 'abc',
-    crossOrigin: true
-  });
-  tileLayer.addTo(mapaObj);
-  // Si OSM falla después de 5s, intentar CartoDB
-  var tilesOK = false;
-  tileLayer.on('tileload', function() { tilesOK = true; });
-  setTimeout(function() {
-    if (!tilesOK && mapaObj) {
-      mapaObj.removeLayer(tileLayer);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; CARTO',
-        maxZoom: 19,
-        subdomains: 'abcd'
-      }).addTo(mapaObj);
-    }
-  }, 5000);
-  // Múltiples invalidateSize para asegurar render correcto en Android
-  setTimeout(function() { mapaObj.invalidateSize(true); }, 100);
-  setTimeout(function() { mapaObj.invalidateSize(true); renderMapa(); }, 400);
-  setTimeout(function() { mapaObj.invalidateSize(true); }, 1000);
+    subdomains: 'abc'
+  }).addTo(mapaObj);
+
+  // Secuencia de invalidaciones para Android
+  setTimeout(function() { if (mapaObj) mapaObj.invalidateSize(true); }, 50);
+  setTimeout(function() { if (mapaObj) mapaObj.invalidateSize(true); }, 250);
+  setTimeout(function() { if (mapaObj) { mapaObj.invalidateSize(true); renderMapa(); } }, 600);
 }
 window.iniciarMapa = iniciarMapa;
 
