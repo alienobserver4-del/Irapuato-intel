@@ -1535,25 +1535,20 @@ function llamarGemini(prompt, callback) {
           var msg = (data.error && data.error.message) || '';
           var retryMatch = msg.match(/retry in ([0-9.]+)s/i);
           var baseWait = retryMatch ? Math.ceil(parseFloat(retryMatch[1]) * 1000) + 500 : 10000;
-          keyIdx++;
-          if (keyIdx % pool.length === _geminiKeyIdx % pool.length) {
-            // Dimos la vuelta completa — todas tienen rate limit, hay que esperar
-            var segs = Math.ceil(baseWait / 1000);
-            toast('⏳ Rate limit en todas las keys — esperando ' + segs + 's', 'warn');
-            var statusEl = document.getElementById('gemini-status');
-            if (statusEl) {
-              var t0 = Date.now();
-              var cd = setInterval(function() {
-                var r2 = segs - Math.floor((Date.now()-t0)/1000);
-                if (r2 <= 0) { clearInterval(cd); if(typeof actualizarStatusGemini==='function') actualizarStatusGemini(); return; }
-                if (statusEl) statusEl.textContent = '⏳ ' + r2 + 's';
-              }, 500);
-            }
-            setTimeout(siguiente, baseWait);
-          } else {
-            console.log('[Gemini] 429 en key ' + (keyIdx % pool.length) + ' — rotando a key ' + ((keyIdx+1) % pool.length + 1));
-            setTimeout(siguiente, 300); // pequeño delay al rotar
+          // Esperar el tiempo sugerido por Google, luego rotar a siguiente key
+          var segs = Math.ceil(baseWait / 1000);
+          toast('⏳ Rate limit — esperando ' + segs + 's...', 'warn');
+          var statusEl = document.getElementById('gemini-status');
+          if (statusEl) {
+            var t0 = Date.now();
+            var cd = setInterval(function() {
+              var r2 = segs - Math.floor((Date.now()-t0)/1000);
+              if (r2 <= 0) { clearInterval(cd); if(typeof actualizarStatusGemini==='function') actualizarStatusGemini(); return; }
+              if (statusEl) statusEl.textContent = '⏳ ' + r2 + 's';
+            }, 500);
           }
+          keyIdx++; // rotar key después de esperar
+          setTimeout(siguiente, baseWait);
 
         } else if (status === 404) {
           // Modelo no existe — probar el siguiente modelo
@@ -2010,6 +2005,14 @@ function crearTarjetaRSS(item) {
   h += '</div>';
   h += '<div class="nc-nombres" id="' + id + '-nombres" style="display:none"></div>';
   h += '<div class="nc-resumen" id="' + id + '-res">' + (item.desc||'') + '</div>';
+  h += '<div style="margin:6px 0;padding:6px;background:#020810;border:1px solid #0d2040;border-radius:3px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+    '<span style="font-family:var(--title);font-size:6px;color:#2a5a7a;letter-spacing:1px;">📋 PEGA TEXTO COMPLETO — análisis más preciso</span>' +
+    '<button onclick="limpiarTextoCard(\'' + id + '\')" style="font-family:var(--title);font-size:6px;padding:2px 7px;background:rgba(0,200,255,.08);color:var(--cyan);border:1px solid #00ccff44;border-radius:3px;cursor:pointer;">✦ LIMPIAR</button>' +
+    '</div>' +
+    '<textarea id="' + id + '-texto-manual" oninput="actualizarStatsCard(\'' + id + '\')" style="width:100%;min-height:60px;max-height:150px;resize:vertical;background:#030810;border:1px dashed #1a3a5a;color:#7aaabb;font-family:var(--mono);font-size:8px;padding:6px;border-radius:3px;box-sizing:border-box;" placeholder="Abre la nota → copia todo (Ctrl+A, Ctrl+C) → pega aquí → LIMPIAR → ANALIZAR"></textarea>' +
+    '<div id="' + id + '-txt-stats" style="font-size:6px;color:#1a4a6a;height:11px;margin-top:1px;"></div>' +
+    '</div>';
   h += '<div class="nc-procesando" id="' + id + '-proc"><div class="mini-spin"></div> Analizando...</div>';
   h += '<div class="nc-edit" id="' + id + '-edit">';
   h += '<div class="nc-campo"><div class="nc-label">TITULO</div>';
@@ -2078,30 +2081,13 @@ function analizarDesdeCard(id) {
   var card = document.getElementById(id);
   if (!card) return;
   var link = card.dataset.link || '';
-  var texto = card.dataset.texto || '';
   var fuente = card.dataset.fuente || '';
-  // Si ya se cargó el texto completo en auto-fetch, usar directamente
-  if (card.dataset.textoCargado === '1' && texto.length > 120) {
-    analizarConIA(id, texto, fuente, link);
-    return;
-  }
-  // Si hay URL, intentar obtener el texto completo del articulo
-  if (link && link.indexOf('http') === 0) {
-    var proc = document.getElementById(id + '-proc');
-    if (proc) proc.className = 'nc-procesando visible';
-    fetchContenidoArticulo(link, function(textoCompleto) {
-      var textoFinal = textoCompleto || texto;
-      // Actualizar el texto guardado en la card para tener contexto completo
-      if (textoCompleto) {
-        card.dataset.texto = textoCompleto;
-        var palabras = textoCompleto.split(' ').length;
-        toast('Articulo completo: ~' + palabras + ' palabras', 'ok');
-      }
-      analizarConIA(id, textoFinal, fuente, link);
-    });
-  } else {
-    analizarConIA(id, texto, fuente, link);
-  }
+  // Preferir texto pegado manualmente en la tarjeta
+  var textoManualEl = document.getElementById(id + '-texto-manual');
+  var textoManual = textoManualEl ? textoManualEl.value.trim() : '';
+  var texto = textoManual || card.dataset.texto || '';
+  if (!texto) { toast('Sin texto para analizar', 'warn'); return; }
+  analizarConIA(id, texto, fuente, link);
 }
 window.analizarDesdeCard = analizarDesdeCard;
 
