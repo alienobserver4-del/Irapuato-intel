@@ -84,6 +84,7 @@ header {
 .tab.active.bd { color:var(--yellow); border-bottom-color:var(--yellow); background:rgba(255,204,0,.04); }
 .tab.active.mapa { color:var(--green); border-bottom-color:var(--green); background:rgba(0,255,136,.04); }
 .tab.active.gob { color:#00ccff; border-bottom-color:#00ccff; background:rgba(0,204,255,.04); }
+.tab.active.intel { color:var(--red); border-bottom-color:var(--red); background:rgba(255,34,85,.04); }
 
 /* ── SECCIÓN GOBIERNO ── */
 #sec-gob { padding:0; display:flex; flex-direction:column; height:100%; }
@@ -128,6 +129,8 @@ header {
 /* Mapa: fuera del flujo de #panel, posición fija cuando activo */
 #sec-mapa { display:none; padding:0; margin:0; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:100; background:var(--bg); }
 #sec-mapa.activa { display:block; }
+#sec-intel { display:none; padding:0; margin:0; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:100; background:var(--bg); }
+#sec-intel.activa { display:block; }
 #mapa-container { width:100%; height:100%; display:flex; flex-direction:column; }
 
 /* ── RSS ── */
@@ -479,7 +482,7 @@ header {
     <button class="tab manual" onclick="verTab('manual')">✍ ENTRADA MANUAL</button>
     <button class="tab bd" onclick="verTab('bd')">🗄 BD <span id="badge-bd" class="badge" style="display:none">0</span></button>
     <button class="tab mapa" onclick="verTab('mapa')">🗺 MAPA</button>
-    <button class="tab gob" onclick="verTab('gob')">🏛 GOB</button>
+    <button class="tab intel" onclick="verTab('intel')">📡 INTEL</button>
   </div>
 
   <!-- PANEL -->
@@ -773,22 +776,27 @@ header {
     </div>
 
     <!-- ═══════════ GOBIERNO ═══════════ -->
-    <div id="sec-gob" class="seccion">
-      <div class="gob-header sec-header">// GOBIERNO — <span>DEPENDENCIAS MUNICIPALES</span></div>
-      <div class="gob-filtros" id="gob-filtros">
-        <button class="gob-filtro activo" onclick="filtrarGob('todos',this)">TODOS</button>
-        <button class="gob-filtro" onclick="filtrarGob('administracion',this)">🏛️ ADMIN</button>
-        <button class="gob-filtro" onclick="filtrarGob('finanzas',this)">💰 FINANZAS</button>
-        <button class="gob-filtro" onclick="filtrarGob('seguridad',this)">🚔 SEGURIDAD</button>
-        <button class="gob-filtro" onclick="filtrarGob('obras',this)">🏗️ OBRAS</button>
-        <button class="gob-filtro" onclick="filtrarGob('salud',this)">🏥 SALUD</button>
-        <button class="gob-filtro" onclick="filtrarGob('educacion',this)">🎓 EDUCACIÓN</button>
-        <button class="gob-filtro" onclick="filtrarGob('servicios',this)">💧 SERVICIOS</button>
-        <button class="gob-filtro" onclick="filtrarGob('movilidad',this)">🚌 MOVILIDAD</button>
-        <button class="gob-filtro" onclick="filtrarGob('deporte',this)">⚽ DEPORTE</button>
-        <button class="gob-filtro" onclick="filtrarGob('planeacion',this)">📋 PLANEACIÓN</button>
+    <div id="sec-intel" class="seccion">
+      <div id="intel-container" style="width:100%;height:100%;display:flex;flex-direction:column;">
+        <div class="mapa-filtros" id="intel-filtros">
+          <button class="mapa-filtro-btn todos activo" onclick="filtrarIntel('todos',this)">TODOS</button>
+          <button class="mapa-filtro-btn seg activo" onclick="filtrarIntel('seguridad',this)">SEG</button>
+          <button class="mapa-filtro-btn acc activo" onclick="filtrarIntel('accidente',this)">ACC</button>
+          <button class="mapa-filtro-btn eve activo" onclick="filtrarIntel('evento',this)">EVE</button>
+          <button class="mapa-filtro-btn gob activo" onclick="filtrarIntel('gobierno',this)">GOB</button>
+          <button class="mapa-filtro-btn rum activo" onclick="filtrarIntel('rumor',this)">RUMOR</button>
+          <button class="mapa-heat-btn" id="intel-btn-heat" onclick="toggleIntelHeat(this)">&#x1F525; CALOR</button>
+        </div>
+        <div id="intel-leaflet" style="flex:1;width:100%;background:#060d18;"></div>
+        <div class="mapa-info-bar">
+          <div class="mapa-stat"><div class="mapa-dot" style="background:var(--red)"></div><span id="intel-cnt-seg">0</span> SEG</div>
+          <div class="mapa-stat"><div class="mapa-dot" style="background:var(--orange)"></div><span id="intel-cnt-acc">0</span> ACC</div>
+          <div class="mapa-stat"><div class="mapa-dot" style="background:#00ccff"></div><span id="intel-cnt-eve">0</span> EVE</div>
+          <div class="mapa-stat"><div class="mapa-dot" style="background:#0096ff"></div><span id="intel-cnt-gob">0</span> GOB</div>
+          <div class="mapa-stat"><div class="mapa-dot" style="background:var(--muted)"></div><span id="intel-cnt-rum">0</span> RUM</div>
+          <span style="margin-left:auto;color:var(--cyan);" id="intel-cnt-tot">0 noticias</span>
+        </div>
       </div>
-      <div class="gob-lista" id="gob-lista"></div>
     </div>
 
   </div>
@@ -798,22 +806,21 @@ header {
     <div id="sec-mapa">
       <div id="mapa-container">
         <div class="mapa-filtros">
-          <button class="mapa-filtro-btn todos activo" onclick="filtrarMapa('todos',this)">TODOS</button>
-          <button class="mapa-filtro-btn seg activo" onclick="filtrarMapa('seguridad',this)">SEG</button>
-          <button class="mapa-filtro-btn acc activo" onclick="filtrarMapa('accidente',this)">ACC</button>
-          <button class="mapa-filtro-btn eve activo" onclick="filtrarMapa('evento',this)">EVE</button>
-          <button class="mapa-filtro-btn gob activo" onclick="filtrarMapa('gobierno',this)">GOB</button>
-          <button class="mapa-filtro-btn rum activo" onclick="filtrarMapa('rumor',this)">RUMOR</button>
-          <button class="mapa-heat-btn" id="btn-heatmap" onclick="toggleHeatmap(this)">&#x1F525; CALOR</button>
+          <button class="mapa-filtro-btn todos activo" onclick="filtrarMapaFijo('todos',this)">TODOS</button>
+          <button class="mapa-filtro-btn seg activo" onclick="filtrarMapaFijo('gobierno',this)">🏛 GOB</button>
+          <button class="mapa-filtro-btn acc" onclick="filtrarMapaFijo('hospital',this)">🏥 HOSP</button>
+          <button class="mapa-filtro-btn eve" onclick="filtrarMapaFijo('escuela',this)">🎓 ESC</button>
+          <button class="mapa-filtro-btn gob" onclick="filtrarMapaFijo('politico',this)">🏅 POL</button>
+          <button class="mapa-filtro-btn" style="color:#ffaa00;border-color:#ffaa00;" onclick="filtrarMapaFijo('transporte',this)">🚌 TRANS</button>
+          <button class="mapa-heat-btn" id="btn-editar-mapa" onclick="toggleEditarMapa()">✏️ EDITAR</button>
         </div>
         <div id="mapa-leaflet"></div>
         <div class="mapa-info-bar">
-          <div class="mapa-stat"><div class="mapa-dot" style="background:var(--red)"></div><span id="mapa-cnt-seg">0</span> SEG</div>
-          <div class="mapa-stat"><div class="mapa-dot" style="background:var(--orange)"></div><span id="mapa-cnt-acc">0</span> ACC</div>
-          <div class="mapa-stat"><div class="mapa-dot" style="background:#00ccff"></div><span id="mapa-cnt-eve">0</span> EVE</div>
-          <div class="mapa-stat"><div class="mapa-dot" style="background:#0096ff"></div><span id="mapa-cnt-gob">0</span> GOB</div>
-          <div class="mapa-stat"><div class="mapa-dot" style="background:var(--muted)"></div><span id="mapa-cnt-rum">0</span> RUM</div>
-          <span style="margin-left:auto;color:var(--cyan);" id="mapa-cnt-tot">0 noticias</span>
+          <div class="mapa-stat"><div class="mapa-dot" style="background:#00ccff"></div><span id="mapa-cnt-gob">0</span> GOB</div>
+          <div class="mapa-stat"><div class="mapa-dot" style="background:#ff4444"></div><span id="mapa-cnt-hosp">0</span> HOSP</div>
+          <div class="mapa-stat"><div class="mapa-dot" style="background:#cc88ff"></div><span id="mapa-cnt-esc">0</span> ESC</div>
+          <div class="mapa-stat"><div class="mapa-dot" style="background:#ffcc00"></div><span id="mapa-cnt-pol">0</span> POL</div>
+          <span style="margin-left:auto;color:var(--cyan);" id="mapa-cnt-fijo">0 puntos</span>
         </div>
       </div>
     </div>
@@ -958,11 +965,16 @@ function verTab(cual) {
     secs[i].classList.remove('activa');
     secs[i].style.display = 'none';
   }
-  // Ocultar mapa si vamos a otra sección
+  // Ocultar mapa y intel si vamos a otra sección
   var secMapa = document.getElementById('sec-mapa');
   if (cual !== 'mapa' && secMapa) {
     secMapa.style.display = 'none';
     secMapa.classList.remove('activa');
+  }
+  var secIntel = document.getElementById('sec-intel');
+  if (cual !== 'intel' && secIntel) {
+    secIntel.style.display = 'none';
+    secIntel.classList.remove('activa');
   }
   var tabEl = document.querySelector('.tab.' + cual);
   if (tabEl) tabEl.classList.add('active');
@@ -971,10 +983,24 @@ function verTab(cual) {
     secEl.classList.add('activa');
     secEl.style.display = 'block';
   }
-  if (cual === 'gob') {
-    var gobSec = document.getElementById('sec-gob');
-    if (gobSec) gobSec.style.display = 'flex';
-    renderGobLista(gobFiltroActivo);
+  if (cual === 'intel') {
+    // INTEL: mapa de incidentes — se maneja como sec-mapa (position:fixed)
+    var secIntelEl = document.getElementById('sec-intel');
+    if (secIntelEl) {
+      var headerH = document.querySelector('header') ? document.querySelector('header').offsetHeight : 44;
+      var tabsH = document.getElementById('tabs') ? document.getElementById('tabs').offsetHeight : 40;
+      var topOffset = headerH + tabsH;
+      var altoReal = window.innerHeight - topOffset;
+      secIntelEl.style.display = 'block';
+      secIntelEl.style.top = topOffset + 'px';
+      secIntelEl.style.height = altoReal + 'px';
+      var contEl = document.getElementById('intel-container');
+      if (contEl) { contEl.style.height = altoReal + 'px'; contEl.style.display = 'flex'; }
+      var mapaEl = document.getElementById('intel-leaflet');
+      if (mapaEl) mapaEl.style.height = (altoReal - 40) + 'px';
+    }
+    if (intelObj) { intelObj.remove(); intelObj = null; intelIniciado = false; }
+    setTimeout(iniciarIntel, 200);
   }
   if (cual === 'mapa') {
     // Calcular y forzar altura AHORA, antes de que Leaflet intente leer el DOM
@@ -2589,8 +2615,13 @@ function iniciarMapa() {
       mapaObj.invalidateSize(true);
       mapaObj.invalidateSize({animate:false});
       mapaObj.setView([20.6795, -101.3540], 12, {animate:false});
-      renderMapa();
+      // MAPA FIJO: renderizar dependencias de gobierno
       renderGobMapa();
+      // Actualizar contadores del mapa fijo
+      var cntGob = document.getElementById('mapa-cnt-gob');
+      if (cntGob) cntGob.textContent = DEPENDENCIAS_GOB.length;
+      var cntFijo = document.getElementById('mapa-cnt-fijo');
+      if (cntFijo) cntFijo.textContent = DEPENDENCIAS_GOB.length + ' puntos';
           }, 800);
 
   } catch(err) {
@@ -2942,6 +2973,194 @@ document.getElementById('rss-estado').textContent = 'Sistema listo. Elige una fu
 document.getElementById('rss-estado').className = 'rss-estado ok';
 
 
+
+
+// ══════════════════════════════════════════════════
+// MAPA INTEL — Mapa de incidentes/noticias
+// ══════════════════════════════════════════════════
+var intelObj = null;
+var intelIniciado = false;
+var intelMarkers = [];
+var intelHeatLayer = null;
+var intelHeatActivo = false;
+var intelFiltros = {seguridad:true, accidente:true, evento:true, gobierno:true, rumor:true};
+
+function iniciarIntel() {
+  try {
+    var el = document.getElementById('intel-leaflet');
+    var cont = document.getElementById('intel-container');
+    var secEl = document.getElementById('sec-intel');
+    if (!el || typeof L === 'undefined') return;
+
+    if (intelIniciado && intelObj) {
+      intelObj.invalidateSize(true);
+      setTimeout(function() {
+        intelObj.invalidateSize({animate:false});
+        intelObj.setView([20.6795, -101.3540], 12, {animate:false});
+        renderIntel();
+      }, 300);
+      return;
+    }
+
+    intelIniciado = true;
+    intelObj = L.map('intel-leaflet', { center:[20.6795,-101.3540], zoom:12, zoomControl:true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution:'&copy; OSM', maxZoom:18
+    }).addTo(intelObj);
+
+    setTimeout(function() { intelObj.invalidateSize(true); }, 100);
+    setTimeout(function() {
+      intelObj.invalidateSize({animate:false});
+      intelObj.setView([20.6795,-101.3540], 12, {animate:false});
+      renderIntel();
+    }, 600);
+  } catch(e) {}
+}
+window.iniciarIntel = iniciarIntel;
+
+function renderIntel() {
+  if (!intelObj) return;
+  // Limpiar markers anteriores
+  for (var i = 0; i < intelMarkers.length; i++) {
+    intelObj.removeLayer(intelMarkers[i]);
+  }
+  intelMarkers = [];
+  var cuentas = {seguridad:0, accidente:0, evento:0, gobierno:0, rumor:0};
+  var heatData = [];
+
+  for (var i = 0; i < noticiasCache.length; i++) {
+    var n = noticiasCache[i];
+    if (!n.lat || !n.lng) continue;
+    var tipo = n.tipo || 'rumor';
+    if (!intelFiltros[tipo]) continue;
+    cuentas[tipo] = (cuentas[tipo] || 0) + 1;
+
+    var marker = crearIconoMapa ? L.marker([n.lat, n.lng], {icon: crearIconoMapa(tipo)}) : L.marker([n.lat, n.lng]);
+    var popup = '<div style="font-family:monospace;font-size:9px;max-width:220px;background:#0d1b2a;color:#c8d8e8;padding:8px;border-radius:4px;">' +
+      '<div style="color:' + (COLORES_TIPO[tipo]||'#fff') + ';font-size:7px;letter-spacing:1px;margin-bottom:3px;">' + tipo.toUpperCase() + '</div>' +
+      '<div style="font-weight:bold;margin-bottom:4px;font-size:9px;">' + (n.titulo||'').substring(0,60) + '</div>' +
+      '<div style="color:#7a9ab8;font-size:7px;margin-bottom:2px;">📍 ' + (n.colonia||'') + (n.calle1?' · '+n.calle1:'') + '</div>' +
+      '<div style="color:#3a5a7a;font-size:7px;">' + (n.fecha||'') + '</div>' +
+      '</div>';
+    marker.bindPopup(popup, {maxWidth:240});
+    marker.addTo(intelObj);
+    intelMarkers.push(marker);
+    heatData.push([n.lat, n.lng, 1]);
+  }
+
+  // Heatmap
+  if (intelHeatLayer) { try { intelObj.removeLayer(intelHeatLayer); } catch(e){} intelHeatLayer = null; }
+  if (intelHeatActivo && heatData.length > 0 && typeof L.heatLayer !== 'undefined') {
+    intelHeatLayer = L.heatLayer(heatData, {radius:30, blur:20, maxZoom:14});
+    intelHeatLayer.addTo(intelObj);
+  }
+
+  // Contadores
+  var tot = 0;
+  for (var k in cuentas) {
+    var el = document.getElementById('intel-cnt-' + k.substring(0,3));
+    if (el) el.textContent = cuentas[k] || 0;
+    tot += cuentas[k] || 0;
+  }
+  var totEl = document.getElementById('intel-cnt-tot');
+  if (totEl) totEl.textContent = tot + ' noticias';
+}
+window.renderIntel = renderIntel;
+
+function filtrarIntel(tipo, btn) {
+  if (tipo === 'todos') {
+    for (var k in intelFiltros) intelFiltros[k] = true;
+    var btns = document.querySelectorAll('#intel-filtros .mapa-filtro-btn');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.add('activo');
+  } else {
+    intelFiltros[tipo] = !intelFiltros[tipo];
+    if (btn) btn.classList.toggle('activo', intelFiltros[tipo]);
+    btn.classList.toggle('inactivo', !intelFiltros[tipo]);
+  }
+  renderIntel();
+}
+window.filtrarIntel = filtrarIntel;
+
+function toggleIntelHeat(btn) {
+  intelHeatActivo = !intelHeatActivo;
+  if (btn) btn.classList.toggle('activo', intelHeatActivo);
+  renderIntel();
+}
+window.toggleIntelHeat = toggleIntelHeat;
+
+// ══════════════════════════════════════════════════
+// MAPA FIJO — Puntos de interés ciudadano
+// Edición con contraseña
+// ══════════════════════════════════════════════════
+var mapaFijoFiltro = 'todos';
+var editandoMapa = false;
+var PASS_MAPA = 'ira2024';  // Contraseña de edición
+
+function filtrarMapaFijo(tipo, btn) {
+  mapaFijoFiltro = tipo;
+  var btns = document.querySelectorAll('#sec-mapa .mapa-filtro-btn');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.remove('activo');
+    btns[i].classList.add('inactivo');
+  }
+  if (btn) { btn.classList.add('activo'); btn.classList.remove('inactivo'); }
+  actualizarGobMapa(tipo === 'todos' ? 'todos' : (tipo === 'gobierno' ? 'todos' : '__ninguno__'));
+  // Actualizar contador
+  var cnt = document.getElementById('mapa-cnt-gob');
+  if (cnt) cnt.textContent = tipo === 'todos' || tipo === 'gobierno' ? DEPENDENCIAS_GOB.length : 0;
+  var tot = document.getElementById('mapa-cnt-fijo');
+  if (tot) tot.textContent = (tipo === 'todos' || tipo === 'gobierno' ? DEPENDENCIAS_GOB.length : 0) + ' puntos';
+}
+window.filtrarMapaFijo = filtrarMapaFijo;
+
+function toggleEditarMapa() {
+  if (!editandoMapa) {
+    var pass = prompt('Contraseña de edición:');
+    if (pass !== PASS_MAPA) { mostrarToast('Contraseña incorrecta', 'error'); return; }
+    editandoMapa = true;
+    var btn = document.getElementById('btn-editar-mapa');
+    if (btn) { btn.textContent = '🔒 SALIR'; btn.style.color = '#ffcc00'; btn.style.borderColor = '#ffcc00'; }
+    mostrarToast('Modo edición activado — toca un punto para editarlo', 'ok');
+    activarEdicionMapa();
+  } else {
+    editandoMapa = false;
+    var btn = document.getElementById('btn-editar-mapa');
+    if (btn) { btn.textContent = '✏️ EDITAR'; btn.style.color = ''; btn.style.borderColor = ''; }
+    desactivarEdicionMapa();
+    mostrarToast('Modo edición desactivado', 'ok');
+  }
+}
+window.toggleEditarMapa = toggleEditarMapa;
+
+function activarEdicionMapa() {
+  if (!mapaObj) return;
+  // Clic en el mapa para agregar punto nuevo
+  mapaObj.on('click', onMapaFijoClick);
+}
+function desactivarEdicionMapa() {
+  if (!mapaObj) return;
+  mapaObj.off('click', onMapaFijoClick);
+}
+function onMapaFijoClick(e) {
+  if (!editandoMapa) return;
+  var lat = e.latlng.lat.toFixed(6);
+  var lng = e.latlng.lng.toFixed(6);
+  var nombre = prompt('Nombre del punto:\nCoords: ' + lat + ', ' + lng);
+  if (!nombre) return;
+  var tipo = prompt('Tipo (gobierno/hospital/escuela/politico/transporte):') || 'gobierno';
+  var tel = prompt('Teléfono (opcional):') || '';
+  var desc = prompt('Descripción breve:') || '';
+  // Agregar temporalmente como punto GOB custom
+  var nuevo = {
+    id: 'custom_' + Date.now(),
+    nombre: nombre, titular: '', dir: '', tel: tel, ext: '',
+    funcion: tipo, funcionLabel: tipo.charAt(0).toUpperCase() + tipo.slice(1),
+    desc: desc, lat: parseFloat(lat), lng: parseFloat(lng), web: ''
+  };
+  DEPENDENCIAS_GOB.push(nuevo);
+  renderGobMapa();
+  mostrarToast('Punto agregado: ' + nombre, 'ok');
+}
 
 }); // fin DOMContentLoaded
 </script>
