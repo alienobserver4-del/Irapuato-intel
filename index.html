@@ -2581,8 +2581,7 @@ function limpiarTextoCard(id) {
   var ta = document.getElementById(id + '-texto-manual');
   if (!ta || !ta.value.trim()) { toast('Primero pega el texto en la tarjeta', 'warn'); return; }
   var texto = ta.value;
-  var lineas = texto.split('
-');
+  var lineas = texto.split('\n');
   var buenas = [];
   var patronesLinea = [
     /^(inicio|home|noticias|pol[ií]tica|policia|seguridad|local|estado|deportes|espect[aá]culos|opinion|opinión|contacto|aviso de privacidad|t[eé]rminos|buscar|suscri|subscribe|newsletter|compartir|share|twitter|facebook|instagram|whatsapp|telegram|copiar enlace|copy link|publicidad|anuncio|patrocinado|sponsored)\s*$/i,
@@ -2614,8 +2613,7 @@ function limpiarTextoCard(id) {
       resultado.push(buenas[j]);
     }
   }
-  var textoLimpio = resultado.join('
-').trim();
+  var textoLimpio = resultado.join('\n').trim();
   ta.value = textoLimpio;
   var palabras = textoLimpio.split(/\s+/).filter(function(w){ return w.length > 0; }).length;
   var statsEl = document.getElementById(id + '-txt-stats');
