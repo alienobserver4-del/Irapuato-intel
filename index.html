@@ -45,6 +45,7 @@ header {
   display:flex;
   align-items:center;
   gap:10px;
+  position:relative; z-index:60;
 }
 .logo { display:flex; align-items:center; gap:8px; }
 .diamond {
@@ -64,6 +65,7 @@ header {
   border-bottom:1px solid var(--border);
   flex-shrink:0;
   overflow-x:auto;
+  position:relative; z-index:60;
 }
 #tabs::-webkit-scrollbar { display:none; }
 .tab {
@@ -94,9 +96,10 @@ header {
 .seccion { display:none; padding:12px; }
 .seccion.activa { display:block; }
 /* El mapa necesita display:block siempre para que Leaflet calcule dimensiones */
-#sec-mapa { display:block !important; padding:0 !important; }
-#sec-mapa:not(.activa) { position:fixed !important; top:-9999px !important; left:-9999px !important; width:1px !important; height:1px !important; overflow:hidden !important; }
-#sec-mapa.activa { position:relative !important; top:auto !important; left:auto !important; width:100% !important; height:auto !important; overflow:visible !important; }
+/* Mapa: oculto = fuera de pantalla, visible = fixed cubriendo todo */
+#sec-mapa { display:block !important; padding:0 !important; margin:0 !important; }
+#sec-mapa:not(.activa) { position:fixed !important; top:-9999px !important; left:-9999px !important; width:1px !important; height:1px !important; overflow:hidden !important; z-index:-1 !important; }
+#sec-mapa.activa { position:fixed !important; top:0 !important; left:0 !important; width:100vw !important; height:100vh !important; z-index:50 !important; background:var(--bg); }
 
 /* ── RSS ── */
 .rss-controles {
@@ -372,8 +375,8 @@ header {
 .nc-link { font-size:7px; color:var(--cyan); text-decoration:none; display:inline-block; margin-top:2px; }
 
 /* ── MAPA ── */
-#mapa-container { width:100%; height:calc(100dvh - 110px); min-height:400px; position:relative; display:flex; flex-direction:column; }
-#mapa-leaflet { flex:1; width:100%; min-height:300px; background:#060d18; display:block; }
+#mapa-container { position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; }
+#mapa-leaflet { flex:1; width:100%; background:#060d18; display:block; min-height:0; }
 .leaflet-tile-pane { filter: brightness(0.7) invert(1) contrast(1.2) hue-rotate(190deg) saturate(0.4) brightness(0.7); }
 .mapa-filtros {
   position:absolute; top:8px; left:50%; transform:translateX(-50%);
@@ -2305,12 +2308,11 @@ function iniciarMapa() {
   }
   if (!el || !cont) { dbg('ERROR: div no encontrado'); return; }
 
-  // Forzar tamaño explícito en píxeles
-  var alto = window.innerHeight - 155;
-  if (alto < 250) alto = 250;
+  // Con position:fixed en sec-mapa, el div ya tiene altura real
+  // Solo aseguramos que el leaflet-container llene el espacio
   el.style.width = '100%';
-  el.style.height = alto + 'px';
-  dbg('altura forzada: ' + alto + 'px, offsetH ahora: ' + el.offsetHeight);
+  el.style.height = '100%';
+  dbg('offsetH del contenedor: ' + el.offsetHeight + ' offsetW: ' + el.offsetWidth);
 
   if (mapaIniciado && mapaObj) {
     dbg('ya iniciado, invalidando...');
