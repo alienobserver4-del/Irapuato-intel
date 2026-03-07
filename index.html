@@ -991,6 +991,7 @@ window.addEventListener('DOMContentLoaded', function() {
 // ── POOL DE API KEYS GEMINI ──
 // Agrega aquí todas las keys que tengas (una por cuenta Google en aistudio.google.com)
 // El sistema rota automáticamente cuando una alcanza su límite diario
+var OPENROUTER_KEY = ''; // Opcional — openrouter.ai (gratis con registro)
 var GEMINI_KEYS = [
   // Agrega tus keys aquí o usa el gestor visual (toca 🤖 en el header)
   // Obtén keys gratis en: aistudio.google.com → Get API Key
@@ -1469,31 +1470,37 @@ function toast(msg, tipo) {
 // GEMINI
 // ═══════════════════════════════════════════════════════════════
 function llamarGemini(prompt, callback) {
-  // Modelos free tier con nombres exactos del API v1beta (verificados marzo 2026)
-  var modelos = [
-    'gemini-2.0-flash-lite',
-    'gemini-2.0-flash-lite-001',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-flash-002',
-    'gemini-1.5-flash-001'
-  ];
+  // Intenta Gemini primero. Si falla, usa OpenRouter (gratis con registro)
   var pool = (window._appGeminiKeys && window._appGeminiKeys.length) ? window._appGeminiKeys : GEMINI_KEYS;
-  var keyIdx = _geminiKeyIdx;
+  var orKey = window._openRouterKey || (typeof OPENROUTER_KEY !== 'undefined' ? OPENROUTER_KEY : '');
+
+  // Si no hay keys de Gemini, ir directo a OpenRouter
+  if (!pool || pool.length === 0) {
+    if (orKey) { llamarOpenRouter(prompt, orKey, callback); return; }
+    toast('⚠ Agrega una API Key — toca 🤖 en el header', 'err');
+    callback(null, 'sin keys');
+    return;
+  }
+
+  var modelos = ['gemini-2.0-flash-lite', 'gemini-1.5-flash-latest'];
+  var keyIdx = _geminiKeyIdx % pool.length;
   var modelIdx = 0;
   var intentos = 0;
-  var maxIntentos = modelos.length * Math.max(pool.length, 1) * 2;
+  var maxRondas = pool.length * modelos.length;
 
   function siguiente() {
-    if (intentos++ > maxIntentos) {
-      toast('IA no disponible — usando clasificación local', 'warn');
-      callback(null, 'agotado');
+    if (intentos++ > maxRondas) {
+      // Gemini agotado — intentar OpenRouter antes de clasificación local
+      if (orKey) {
+        toast('Gemini no disponible — usando OpenRouter...', 'warn');
+        llamarOpenRouter(prompt, orKey, callback);
+      } else {
+        toast('IA no disponible — clasificación local', 'warn');
+        callback(null, 'agotado');
+      }
       return;
     }
-    if (!pool || pool.length === 0) {
-      toast('⚠ Agrega una API Key — toca 🤖 en el header', 'err');
-      callback(null, 'sin keys');
-      return;
-    }
+
     var key = pool[keyIdx % pool.length];
     var modelo = modelos[modelIdx % modelos.length];
     var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelo + ':generateContent?key=' + key;
@@ -1524,59 +1531,106 @@ function llamarGemini(prompt, callback) {
           if (!match) { modelIdx++; siguiente(); return; }
           try {
             var r = JSON.parse(match[0]);
-            console.log('[Gemini] OK — modelo: ' + modelo + ' key: ' + (keyIdx % pool.length + 1));
+            console.log('[Gemini] OK — ' + modelo + ' key' + (keyIdx % pool.length + 1));
             _geminiKeyIdx = keyIdx % pool.length;
-            actualizarStatusGemini && actualizarStatusGemini();
+            if (typeof actualizarStatusGemini === 'function') actualizarStatusGemini();
             callback(r, null);
           } catch(e) { modelIdx++; siguiente(); }
 
         } else if (status === 429) {
-          // Rate limit — rotar a otra key primero, si todas tienen rate limit esperar
           var msg = (data.error && data.error.message) || '';
           var retryMatch = msg.match(/retry in ([0-9.]+)s/i);
-          var baseWait = retryMatch ? Math.ceil(parseFloat(retryMatch[1]) * 1000) + 500 : 10000;
-          // Esperar el tiempo sugerido por Google, luego rotar a siguiente key
-          var segs = Math.ceil(baseWait / 1000);
-          toast('⏳ Rate limit — esperando ' + segs + 's...', 'warn');
-          var statusEl = document.getElementById('gemini-status');
-          if (statusEl) {
-            var t0 = Date.now();
-            var cd = setInterval(function() {
-              var r2 = segs - Math.floor((Date.now()-t0)/1000);
-              if (r2 <= 0) { clearInterval(cd); if(typeof actualizarStatusGemini==='function') actualizarStatusGemini(); return; }
-              if (statusEl) statusEl.textContent = '⏳ ' + r2 + 's';
-            }, 500);
+          var waitMs = retryMatch ? Math.ceil(parseFloat(retryMatch[1]) * 1000) + 500 : 12000;
+          var segs = Math.ceil(waitMs / 1000);
+          // Rotar key inmediatamente, si completamos una vuelta esperamos
+          keyIdx++;
+          if ((keyIdx % pool.length) === (_geminiKeyIdx % pool.length)) {
+            // Vuelta completa — todas tienen rate limit, esperar
+            var statusEl = document.getElementById('gemini-status');
+            if (statusEl) {
+              var t0 = Date.now();
+              var cd = setInterval(function() {
+                var rem = segs - Math.floor((Date.now()-t0)/1000);
+                if (rem <= 0) { clearInterval(cd); if(typeof actualizarStatusGemini==='function') actualizarStatusGemini(); return; }
+                statusEl.textContent = '⏳ ' + rem + 's';
+              }, 500);
+            }
+            toast('⏳ Rate limit — esperando ' + segs + 's...', 'warn');
+            setTimeout(siguiente, waitMs);
+          } else {
+            // Hay otra key — rotar sin esperar
+            console.log('[Gemini] 429 key' + ((keyIdx-1) % pool.length + 1) + ' → rotando a key' + (keyIdx % pool.length + 1));
+            setTimeout(siguiente, 500);
           }
-          keyIdx++; // rotar key después de esperar
-          setTimeout(siguiente, baseWait);
 
         } else if (status === 404) {
-          // Modelo no existe — probar el siguiente modelo
-          console.warn('[Gemini] 404 — ' + modelo + ' no disponible, probando siguiente modelo');
           modelIdx++;
           siguiente();
 
         } else if (status === 403) {
           var msg2 = (data.error && data.error.message) || '';
-          console.warn('[Gemini] 403 en key ' + (keyIdx % pool.length + 1) + ': ' + msg2.slice(0,80));
-          keyIdx++; // rotar a la siguiente key
+          console.warn('[Gemini] 403 key' + (keyIdx % pool.length + 1) + ': ' + msg2.slice(0,60));
+          keyIdx++;
           siguiente();
 
         } else {
-          console.warn('[Gemini] Error ' + status + ' — intentando siguiente');
           modelIdx++;
           siguiente();
         }
       });
     })
-    .catch(function(e) {
-      console.warn('[Gemini] fetch error:', e);
-      modelIdx++;
-      siguiente();
-    });
+    .catch(function() { modelIdx++; siguiente(); });
   }
   siguiente();
 }
+
+// ── OpenRouter — modelos gratuitos sin límites agresivos ──
+// Registro gratis en openrouter.ai — da crédito inicial gratuito
+// Modelos FREE marcados con :free en openrouter
+function llamarOpenRouter(prompt, apiKey, callback) {
+  var modelos = [
+    'meta-llama/llama-3.1-8b-instruct:free',
+    'mistralai/mistral-7b-instruct:free',
+    'google/gemma-3-4b-it:free'
+  ];
+  var idx = 0;
+  function intentar() {
+    if (idx >= modelos.length) { callback(null, 'openrouter agotado'); return; }
+    var modelo = modelos[idx];
+    fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+        'HTTP-Referer': 'https://alienobserver4-del.github.io',
+        'X-Title': 'Irapuato Intel'
+      },
+      body: JSON.stringify({
+        model: modelo,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 800,
+        temperature: 0.05
+      })
+    })
+    .then(function(res) { return res.json().then(function(d) { return { status: res.status, data: d }; }); })
+    .then(function(rd) {
+      if (rd.status !== 200) { console.warn('[OpenRouter] ' + rd.status + ' en ' + modelo); idx++; intentar(); return; }
+      var txt = rd.data.choices && rd.data.choices[0] && rd.data.choices[0].message && rd.data.choices[0].message.content;
+      if (!txt) { idx++; intentar(); return; }
+      var match = txt.match(/\{[\s\S]*\}/);
+      if (!match) { idx++; intentar(); return; }
+      try {
+        var r = JSON.parse(match[0]);
+        console.log('[OpenRouter] OK — ' + modelo);
+        callback(r, null);
+      } catch(e) { idx++; intentar(); }
+    })
+    .catch(function() { idx++; intentar(); });
+  }
+  intentar();
+}
+window.llamarOpenRouter = llamarOpenRouter;
+
 
 
 function clasificarLocal(txt) {
@@ -4390,9 +4444,22 @@ window.verTextoCompleto = verTextoCompleto;
         style="flex:1;background:#030810;border:1px solid #1a3a5a;color:#c0e8ff;font-family:'Share Tech Mono',monospace;font-size:9px;padding:7px 10px;border-radius:3px;outline:none;">
       <button onclick="agregarKeyDesdeModal()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 12px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff8844;border-radius:3px;cursor:pointer;white-space:nowrap;letter-spacing:1px;">+ AGREGAR</button>
     </div>
-    <div style="font-size:7px;color:#2a5a4a;margin-bottom:16px;line-height:1.8;">
-      💡 Crear key gratis: ve a <strong style="color:#00ccff">aistudio.google.com</strong> → Get API Key → Create API Key<br>
+    <div style="font-size:7px;color:#2a5a4a;margin-bottom:10px;line-height:1.8;">
+      💡 Crear key Gemini gratis: <strong style="color:#00ccff">aistudio.google.com</strong> → Get API Key<br>
       Las keys se guardan en tu navegador. Cada cuenta Google = 1 key con cuota propia.
+    </div>
+    <div style="border-top:1px solid #0d2040;padding-top:10px;margin-bottom:10px;">
+      <div style="font-family:'Orbitron',monospace;font-size:8px;color:#ff8800;letter-spacing:1px;margin-bottom:6px;">🔀 OPENROUTER — alternativa gratuita (recomendado)</div>
+      <div style="font-size:7px;color:#5a6a4a;margin-bottom:6px;line-height:1.7;">
+        Si Gemini falla, usa OpenRouter automáticamente. Registro gratis en <strong style="color:#ffaa44">openrouter.ai</strong><br>
+        Modelos gratuitos: Llama 3.1, Mistral 7B, Gemma 3. Sin límites agresivos de cuota.
+      </div>
+      <div style="display:flex;gap:6px;">
+        <input id="or-key-input" placeholder="sk-or-v1-..." type="password"
+          style="flex:1;background:#030810;border:1px solid #2a3a1a;color:#c0e8ff;font-family:'Share Tech Mono',monospace;font-size:9px;padding:7px 10px;border-radius:3px;outline:none;">
+        <button onclick="guardarORKey()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 12px;background:rgba(255,136,0,.1);color:#ff8800;border:1px solid #ff880044;border-radius:3px;cursor:pointer;white-space:nowrap;letter-spacing:1px;">GUARDAR</button>
+      </div>
+      <div id="or-key-status" style="font-size:7px;color:#3a5a3a;margin-top:4px;height:12px;"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
       <button onclick="probarKeys()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 14px;background:rgba(0,200,255,.08);color:#00f5ff;border:1px solid #00ccff44;border-radius:3px;cursor:pointer;letter-spacing:1px;">🧪 PROBAR</button>
@@ -4526,6 +4593,22 @@ function actualizarStatusGemini() {
 }
 window.actualizarStatusGemini = actualizarStatusGemini;
 
+function guardarORKey() {
+  var input = document.getElementById('or-key-input');
+  var key = input ? input.value.trim() : '';
+  if (!key || !key.startsWith('sk-or')) {
+    alert('Pega una key de OpenRouter válida (empieza con sk-or-v1-)');
+    return;
+  }
+  window._openRouterKey = key;
+  try { localStorage.setItem('openrouter_key', key); } catch(e) {}
+  if (input) input.value = '';
+  var st = document.getElementById('or-key-status');
+  if (st) { st.textContent = '✓ Key guardada'; st.style.color = '#00ff88'; }
+  toast('✓ OpenRouter configurado — se usará como fallback de Gemini', 'ok');
+}
+window.guardarORKey = guardarORKey;
+
 // Cargar keys guardadas del localStorage al iniciar
 (function() {
   try {
@@ -4540,6 +4623,18 @@ window.actualizarStatusGemini = actualizarStatusGemini;
         }
         console.log('[Gemini] ' + arr.length + ' keys cargadas del localStorage');
       }
+    }
+  } catch(e) {}
+  // Cargar key de OpenRouter si existe
+  try {
+    var orSaved = localStorage.getItem('openrouter_key');
+    if (orSaved) {
+      window._openRouterKey = orSaved;
+      console.log('[OpenRouter] Key cargada');
+      setTimeout(function() {
+        var orEl = document.getElementById('or-key-status');
+        if (orEl) { orEl.textContent = '✓ Key configurada'; orEl.style.color = '#00ff88'; }
+      }, 800);
     }
   } catch(e) {}
   // Inicializar _appGeminiKeys desde GEMINI_KEYS hardcoded
