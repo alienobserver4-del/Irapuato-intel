@@ -97,10 +97,8 @@ header {
 .seccion { display:none; padding:12px; }
 .seccion.activa { display:block; }
 /* El mapa necesita display:block siempre para que Leaflet calcule dimensiones */
-/* Mapa: oculto = fuera de pantalla, visible = fixed cubriendo todo */
-#sec-mapa { display:block !important; padding:0 !important; margin:0 !important; }
-#sec-mapa:not(.activa) { position:fixed !important; top:-9999px !important; left:-9999px !important; width:1px !important; height:1px !important; overflow:hidden !important; z-index:-1 !important; }
-#sec-mapa.activa { position:fixed !important; top:0 !important; left:0 !important; width:100vw !important; height:100vh !important; z-index:50 !important; background:var(--bg); }
+/* Mapa: gestionado 100% por JS, sin CSS especial */
+#sec-mapa { padding:0 !important; margin:0 !important; }
 
 /* ── RSS ── */
 .rss-controles {
@@ -376,7 +374,7 @@ header {
 .nc-link { font-size:7px; color:var(--cyan); text-decoration:none; display:inline-block; margin-top:2px; }
 
 /* ── MAPA ── */
-#mapa-container { position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; }
+#mapa-container { width:100%; display:flex; flex-direction:column; }
 #mapa-leaflet { flex:1; width:100%; background:#060d18; display:block; min-height:0; }
 .leaflet-tile-pane { filter: brightness(0.7) invert(1) contrast(1.2) hue-rotate(190deg) saturate(0.4) brightness(0.7); }
 .mapa-filtros {
@@ -904,20 +902,33 @@ function verTab(cual) {
   for (var i = 0; i < tabs.length; i++) {
     tabs[i].classList.remove('active');
   }
+  // Ocultar todas las secciones
   var secs = document.querySelectorAll('.seccion');
   for (var i = 0; i < secs.length; i++) {
     secs[i].classList.remove('activa');
+    secs[i].style.display = 'none';
   }
   var tabEl = document.querySelector('.tab.' + cual);
   if (tabEl) tabEl.classList.add('active');
   var secEl = document.getElementById('sec-' + cual);
-  if (secEl) secEl.classList.add('activa');
-  // Iniciar mapa al entrar a esa pestaña
+  if (secEl) {
+    secEl.classList.add('activa');
+    secEl.style.display = 'block';
+  }
   if (cual === 'mapa') {
-    // La sección ya es visible en este punto — esperar un frame para que el
-    // browser calcule el layout y el div tenga dimensiones reales
+    // Calcular y forzar altura AHORA, antes de que Leaflet intente leer el DOM
+    var headerH = document.querySelector('header') ? document.querySelector('header').offsetHeight : 45;
+    var tabsH   = document.getElementById('tabs')  ? document.getElementById('tabs').offsetHeight  : 38;
+    var alto    = window.innerHeight - headerH - tabsH;
+    if (alto < 200) alto = 500;
+    var mapaEl  = document.getElementById('mapa-leaflet');
+    var contEl  = document.getElementById('mapa-container');
+    if (secEl)  { secEl.style.display = 'block'; secEl.style.height = alto + 'px'; }
+    if (contEl) { contEl.style.display = 'flex'; contEl.style.height = alto + 'px'; }
+    if (mapaEl) { mapaEl.style.display = 'block'; mapaEl.style.height = alto + 'px'; }
+    console.log("verTab mapa: alto=" + alto + " offsetH=" + (mapaEl ? mapaEl.offsetHeight : 'null'));
     setTimeout(iniciarMapa, 50);
-    setTimeout(iniciarMapa, 300);
+    setTimeout(iniciarMapa, 400);
   }
 }
 window.verTab = verTab;
