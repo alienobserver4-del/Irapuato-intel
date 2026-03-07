@@ -991,17 +991,19 @@ var firebaseConfig = {
 // Proxies alternativos para mayor confiabilidad
 var PROXY1 = 'https://api.allorigins.win/raw?url=';
 var PROXY2 = 'https://corsproxy.io/?';
+var PROXY_OEM = 'https://corsproxy.io/?'; // OEM bloquea allorigins
+var PROXY2 = 'https://corsproxy.io/?';
 
 var FUENTES_RSS = {
   sol_local: {
     nombre: 'El Sol — Local',
     tipo: 'scraping_oem',
-    proxy: PROXY1 + encodeURIComponent('https://oem.com.mx/elsoldeirapuato/local/')
+    proxy: PROXY_OEM + encodeURIComponent('https://oem.com.mx/elsoldeirapuato/local/')
   },
   sol_policiaca: {
     nombre: 'El Sol — Policiaca',
     tipo: 'scraping_oem',
-    proxy: PROXY1 + encodeURIComponent('https://oem.com.mx/elsoldeirapuato/policiaca/')
+    proxy: PROXY_OEM + encodeURIComponent('https://oem.com.mx/elsoldeirapuato/policiaca/')
   },
   am_irapuato: {
     nombre: 'AM Irapuato',
@@ -1067,7 +1069,7 @@ var cardCounter = 0;
 // ── Cola de auto-fetch de artículos ──
 var fetchQueue = [];       // [{id, url, reintentos}]
 var fetchActivo = false;   // ¿hay un fetch corriendo?
-var FETCH_DELAY = 1200;    // ms entre fetches (respetar proxies)
+var FETCH_DELAY = 1800;    // ms entre fetches (respetar proxies — OEM necesita más tiempo)
 var FETCH_MAX_REINTENTOS = 2;
 
 function encolarFetch(id, url) {
@@ -1121,7 +1123,8 @@ function procesarColaFetch() {
       // Indicador verde pequeño en la card
       var confEl = document.getElementById(item.id + '-conf');
       if (confEl && !confEl.textContent) {
-        confEl.textContent = '✓ texto';
+        var proxyNombre = ['allorigins','corsproxy','allorigins/get','codetabs','thingproxy'];
+        confEl.textContent = '✓ texto (' + (proxyNombre[proxyIdx] || 'p' + proxyIdx) + ')';
         confEl.style.color = '#2a6a4a';
         confEl.style.fontSize = '7px';
       }
@@ -1417,7 +1420,7 @@ function toast(msg, tipo) {
 // GEMINI
 // ═══════════════════════════════════════════════════════════════
 function llamarGemini(prompt, callback) {
-  var modelos = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-8b'];
+  var modelos = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash-latest'];
   var intentar = function(idx) {
     if (idx >= modelos.length) {
       callback(null, 'Gemini no disponible');
@@ -1786,8 +1789,13 @@ function cargarTodas() {
       var src = FUENTES_RSS[f];
       if (!src) { siguiente(); return; }
       setEstadoRSS('⏳ Cargando ' + src.nombre + ' (' + idx + '/' + fuentes.length + ')...', 'cargando');
+      var proxyFallbackUrl = src.proxy.indexOf('corsproxy.io') >= 0
+        ? src.proxy.replace('https://corsproxy.io/?', 'https://api.allorigins.win/raw?url=')
+        : src.proxy.replace('https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?');
       fetch(src.proxy)
-      .then(function(res) { return res.text(); })
+      .then(function(res) { if (!res.ok) throw new Error('status ' + res.status); return res.text(); })
+      .catch(function() { return fetch(proxyFallbackUrl).then(function(r) { return r.text(); }); })
+      .then(function(res) { return Promise.resolve(res); })
       .then(function(txt) {
         if (src.tipo === 'rss') { procesarRSSAcumulado(txt, src.nombre); }
         else { procesarScrapingAcumulado(txt, src.nombre, src.proxy); }
@@ -1987,26 +1995,49 @@ window.analizarDesdeCard = analizarDesdeCard;
 
 // Descarga y extrae el texto limpio de un articulo periodistico
 function fetchContenidoArticulo(url, callback) {
-  var proxies = [
-    'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
-    'https://corsproxy.io/?' + encodeURIComponent(url)
-  ];
+  // Orden de proxies según el dominio — OEM bloquea allorigins, usar corsproxy primero
+  var esOEM = url.indexOf('oem.com.mx') >= 0;
+  var proxies;
+  if (esOEM) {
+    proxies = [
+      'https://corsproxy.io/?' + encodeURIComponent(url),
+      'https://api.allorigins.win/get?url=' + encodeURIComponent(url) + '&callback=',
+      'https://thingproxy.freeboard.io/fetch/' + url,
+      'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url)
+    ];
+  } else {
+    proxies = [
+      'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+      'https://corsproxy.io/?' + encodeURIComponent(url),
+      'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url),
+      'https://thingproxy.freeboard.io/fetch/' + url
+    ];
+  }
+
   function intentar(idx) {
     if (idx >= proxies.length) { callback(null); return; }
-    fetch(proxies[idx])
+    var proxyUrl = proxies[idx];
+    var timeoutId = setTimeout(function() { intentar(idx + 1); }, 8000); // timeout 8s
+    fetch(proxyUrl)
     .then(function(res) {
+      clearTimeout(timeoutId);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.text();
     })
-    .then(function(html) {
+    .then(function(raw) {
+      // allorigins /get devuelve JSON con {contents: "..."}
+      var html = raw;
+      if (raw && raw.indexOf('"contents"') >= 0) {
+        try { var j = JSON.parse(raw); html = j.contents || raw; } catch(e) {}
+      }
       var texto = extraerTextoArticulo(html);
-      if (texto && texto.length > 100) {
-        callback(texto);
+      if (texto && texto.length > 120) {
+        callback(texto, idx); // pasar idx del proxy que funcionó
       } else {
         intentar(idx + 1);
       }
     })
-    .catch(function() { intentar(idx + 1); });
+    .catch(function() { clearTimeout(timeoutId); intentar(idx + 1); });
   }
   intentar(0);
 }
