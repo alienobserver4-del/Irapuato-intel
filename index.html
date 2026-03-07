@@ -985,7 +985,7 @@ window.addEventListener('DOMContentLoaded', function() {
 // ═══════════════════════════════════════════════════════════════
 // CONFIGURACIÓN
 // ═══════════════════════════════════════════════════════════════
-var GEMINI_KEY = 'AIzaSyCCjfKqqAY9NCtMHE2mJhlkEBFRb6HDBJI';
+var GEMINI_KEY = 'AIzaSyAfe_lNoHA6pckySvyxTdeaPNZcdyOpkwc';
 
 var firebaseConfig = {
   apiKey: "AIzaSyDQ0DDscWK0HR5nNkhMyzOVk_sxYZ0pGg4",
@@ -1428,7 +1428,7 @@ function toast(msg, tipo) {
 // GEMINI
 // ═══════════════════════════════════════════════════════════════
 function llamarGemini(prompt, callback) {
-  var modelos = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
+  var modelos = ['gemini-2.0-flash-lite', 'gemini-1.5-flash-8b', 'gemini-1.5-pro', 'gemini-pro'];
   var intentar = function(idx) {
     if (idx >= modelos.length) {
       callback(null, 'Gemini no disponible');
@@ -1450,7 +1450,16 @@ function llamarGemini(prompt, callback) {
       })
     })
     .then(function(res) {
-      if (!res.ok) { intentar(idx + 1); return Promise.reject('status ' + res.status); }
+      if (!res.ok) {
+        var status = res.status;
+        res.json().then(function(errBody) {
+          var msg = (errBody && errBody.error && errBody.error.message) ? errBody.error.message : JSON.stringify(errBody);
+          console.warn('[Gemini] ' + modelos[idx] + ' → ' + status + ': ' + msg);
+          if (status === 403) toast('API Key sin acceso a Gemini 2.0 — probando modelos anteriores...', 'warn');
+        }).catch(function(){ console.warn('[Gemini] ' + modelos[idx] + ' → ' + status); });
+        intentar(idx + 1);
+        return Promise.reject('status ' + status);
+      }
       return res.json();
     })
     .then(function(data) {
