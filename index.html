@@ -491,9 +491,9 @@ header {
 }
 .mapa-heat-btn.activo { background:rgba(255,102,0,.2); color:#ffaa44; border-color:#ffaa44; }
 .intel-t-btn {
-  padding:3px 7px; font-family:var(--title); font-size:6px; letter-spacing:.5px;
+  padding:3px 6px; font-family:var(--title); font-size:6px; letter-spacing:.3px;
   border-radius:3px; cursor:pointer; border:1px solid #1a3a5a;
-  background:transparent; color:#3a6a9a; white-space:nowrap;
+  background:transparent; color:#3a6a9a; white-space:nowrap; flex-shrink:0;
 }
 .intel-t-btn.activo { border-color:#00ccff; color:#00ccff; background:rgba(0,204,255,.08); }
 /* Mini mapa en modal BD */
@@ -826,7 +826,7 @@ header {
 <!-- INTEL: fuera de #panel para tener altura real -->
     <div id="sec-intel">
       <div id="intel-container" style="width:100%;height:100%;display:flex;flex-direction:column;">
-        <div class="mapa-filtros" id="intel-filtros">
+        <div class="mapa-filtros" id="intel-filtros" style="flex-wrap:nowrap;overflow-x:auto;">
           <button class="mapa-filtro-btn todos activo" onclick="filtrarIntel('todos',this)">TODOS</button>
           <button class="mapa-filtro-btn seg activo" onclick="filtrarIntel('seguridad',this)">SEG</button>
           <button class="mapa-filtro-btn acc activo" onclick="filtrarIntel('accidente',this)">ACC</button>
@@ -835,7 +835,7 @@ header {
           <button class="mapa-filtro-btn rum activo" onclick="filtrarIntel('rumor',this)">RUMOR</button>
           <button class="mapa-heat-btn" id="intel-btn-heat" onclick="toggleIntelHeat(this)">&#x1F525; CALOR</button>
         </div>
-        <div class="mapa-filtros" id="intel-tiempo-bar" style="background:rgba(0,0,0,.3);border-top:1px solid #0d2040;gap:4px;">
+        <div class="mapa-filtros" id="intel-tiempo-bar" style="background:rgba(0,0,0,.4);border-top:1px solid #0d2040;gap:3px;padding:3px 6px;flex-wrap:nowrap;overflow-x:auto;">
           <span style="color:#3a5a7a;font-family:var(--title);font-size:6px;letter-spacing:1px;white-space:nowrap;padding:2px 0;">🕐</span>
           <button class="intel-t-btn" onclick="filtrarIntelTiempo(7,this)">7D</button>
           <button class="intel-t-btn activo" onclick="filtrarIntelTiempo(14,this)">2SEM</button>
@@ -1024,12 +1024,12 @@ var FUENTES_RSS = {
   },
   silla_rota: {
     nombre: 'La Silla Rota — Irapuato',
-    tipo: 'scraping',
+    tipo: 'scraping_silla',
     proxy: PROXY1 + encodeURIComponent('https://lasillarota.com/temas/irapuato-1082.html')
   },
   zona_franca: {
     nombre: 'Zona Franca — Irapuato',
-    tipo: 'scraping',
+    tipo: 'scraping_zf',
     proxy: PROXY1 + encodeURIComponent('https://zonafranca.mx/location/irapuato/')
   },
   make_webhook: {
@@ -1410,8 +1410,13 @@ function buildPrompt(texto) {
   p += '5. tiempo_dia: manana=6-12h o dice "manana". tarde=12-19h. noche=19-24h. madrugada=0-6h. desconocido=sin hora.\n';
   p += '6. tipo: seguridad=violencia/robos/disparos. accidente=choques/volcaduras/caidas. gobierno=autoridades/obras/programas.\n';
   p += '7. comunidad: rancho, ejido, comunidad rural (NO colonias urbanas).\n';
-  p += '8. titulo: MAXIMO 80 caracteres. NUNCA copies el resumen como titulo. El titulo es un encabezado corto y directo (ej: "Volcadura en Canal de Coria"). El resumen explica QUE paso con mas detalle.\n';
-  p += '9. resumen: 1-3 oraciones concisas. DIFERENTE al titulo. Incluye detalles: quienes, como, consecuencias.\n\n';
+  p += '8. titulo: MAXIMO 80 caracteres. Es el TITULAR periodistico: corto, accionable, sin repetir detalles del resumen. INCORRECTO: "Localizan cuerpo en el Trebol del Libramiento Sur a metros del reten de la GN". CORRECTO: "Hallan cuerpo de mujer en Avenida Insurgentes". NUNCA empieces el titulo igual que el resumen.\n';
+  p += '9. resumen: 2-3 oraciones. Comienza diferente al titulo. Amplifica detalles: donde exactamente, quienes intervinieron, que encontraron. Ej: "El cuerpo de una mujer fue localizado en un baldio de Av. Insurgentes, a la altura del Trebol del Libramiento Sur. Personal de la FGE inicio investigacion por huellas de violencia."\n';
+  p += '10. TEXTO BASURA: Si el texto parece ser menu de navegacion, footer o publicidad (repite el nombre del sitio, dice "Aviso de Privacidad", "Contacto", "Siguenos", "Lo mas leido") => pon titulo="SIN CONTENIDO" y tipo="rumor".\n\n';
+  p += 'TEXTO: "Zona Franca Zona Franca es un producto de Fabrica de Contenidos. Aviso de PrivacidadContacto Siguenos"\n';
+  p += 'JSON: {"titulo":"SIN CONTENIDO","tipo":"rumor","calle1":"","calle2":"","colonia":"","comunidad":"","nombres":"","resumen":"El texto capturado no contiene una noticia valida.","fecha_evento":"","tiempo_dia":"desconocido","lat":20.6795,"lng":-101.354,"confianza":"baja"}\n\n';
+  p += 'TEXTO: "Localizan cuerpo en el Trebol del Libramiento Sur. Irapuato, Gto. El cuerpo de una mujer sin vida fue localizado en la avenida Insurgentes, a la altura del Trebol del Libramiento Sur, a metros del reten de la Guardia Nacional, la tarde del martes 3 de marzo."\n';
+  p += 'JSON: {"titulo":"Hallan cuerpo de mujer con huellas de violencia en Av. Insurgentes","tipo":"seguridad","calle1":"Avenida Insurgentes","calle2":"Trebol del Libramiento Sur","colonia":"","comunidad":"","nombres":"","resumen":"El cuerpo de una mujer sin vida fue encontrado en un baldio de Av. Insurgentes, a metros del reten de la Guardia Nacional. Paramédicos confirmaron ausencia de signos vitales y el cuerpo presentaba huellas de violencia. La FGE inicio investigacion.","fecha_evento":"03/03/2026","tiempo_dia":"tarde","lat":20.65,"lng":-101.37,"confianza":"alta"}\n\n';
   p += 'TEXTO A ANALIZAR:\n' + frag + '\n\nJSON:';
   return p;
 }
@@ -1448,6 +1453,10 @@ function cargarRSS(fuente) {
     .then(function(txt) {
       if (src.tipo === 'rss') {
         procesarRSS(txt, src.nombre);
+      } else if (src.tipo === 'scraping_zf') {
+        procesarScrapingZF(txt, src.nombre, src.proxy);
+      } else if (src.tipo === 'scraping_silla') {
+        procesarScrapingSilla(txt, src.nombre, src.proxy);
       } else {
         procesarScraping(txt, src.nombre, src.proxy);
       }
@@ -1462,6 +1471,83 @@ function cargarRSS(fuente) {
     });
   }
   intentarFetch(url1, false);
+}
+
+function procesarScrapingZF(html, nombreFuente, proxyUrl) {
+  // Zona Franca — WordPress. Artículos en <article> o h2/h3 con links a /seguridad/ o /local/
+  var urlMatch = proxyUrl.match(/url=([^&]+)/);
+  var baseUrl = urlMatch ? decodeURIComponent(urlMatch[1]) : '';
+  var base = 'https://zonafranca.mx';
+
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, 'text/html');
+  var arr = [];
+
+  // Buscar artículos en contenedores principales (evitar nav, footer, sidebar)
+  var contenedores = doc.querySelectorAll('article, .post, .entry, main a[href], .td-module-title a, h2 a, h3 a');
+  var seen = {};
+  for (var i = 0; i < contenedores.length && arr.length < 18; i++) {
+    var el = contenedores[i];
+    var a = (el.tagName === 'A') ? el : el.querySelector('a');
+    if (!a) continue;
+    var titulo = (a.textContent || '').trim().replace(/\s+/g, ' ');
+    var href = a.getAttribute('href') || '';
+    // Filtrar rutas de navegación (muy cortas o de sección)
+    if (titulo.length < 20 || titulo.length > 200) continue;
+    if (href.indexOf('#') >= 0) continue;
+    // Excluir links de menú/nav
+    var parent = a.parentElement;
+    var enNav = false;
+    while (parent) {
+      var tag = parent.tagName ? parent.tagName.toLowerCase() : '';
+      if (tag === 'nav' || tag === 'footer' || tag === 'header') { enNav = true; break; }
+      var cls = parent.className || '';
+      if (cls.indexOf('menu') >= 0 || cls.indexOf('widget') >= 0 || cls.indexOf('sidebar') >= 0) { enNav = true; break; }
+      parent = parent.parentElement;
+    }
+    if (enNav) continue;
+    var urlCompleta = href.indexOf('http') === 0 ? href : base + (href.indexOf('/') === 0 ? href : '/' + href);
+    if (seen[titulo]) continue;
+    seen[titulo] = true;
+    arr.push({ titulo: titulo, desc: '', link: urlCompleta, fecha: 'Hoy', fuente: nombreFuente });
+  }
+
+  if (arr.length === 0) {
+    // Fallback: scraping genérico
+    procesarScraping(html, nombreFuente, proxyUrl);
+    return;
+  }
+  setEstadoRSS(arr.length + ' noticias extraídas de ' + nombreFuente, 'ok');
+  renderTarjetasRSS(arr, nombreFuente);
+}
+
+function procesarScrapingSilla(html, nombreFuente, proxyUrl) {
+  // La Silla Rota — buscar artículos evitando footer/menú
+  var base = 'https://lasillarota.com';
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, 'text/html');
+  var arr = [];
+  var seen = {};
+
+  var candidatos = doc.querySelectorAll('.news-card a, .article-card a, .nota a, h2 a, h3 a, .title a, [class*="title"] a, article a');
+  for (var i = 0; i < candidatos.length && arr.length < 18; i++) {
+    var a = candidatos[i];
+    var titulo = (a.textContent || '').trim().replace(/\s+/g, ' ');
+    var href = a.getAttribute('href') || '';
+    if (titulo.length < 20 || titulo.length > 200) continue;
+    if (href.indexOf('#') >= 0) continue;
+    var urlCompleta = href.indexOf('http') === 0 ? href : base + (href.indexOf('/') === 0 ? href : '/' + href);
+    if (seen[titulo]) continue;
+    seen[titulo] = true;
+    arr.push({ titulo: titulo, desc: '', link: urlCompleta, fecha: 'Hoy', fuente: nombreFuente });
+  }
+
+  if (arr.length === 0) {
+    procesarScraping(html, nombreFuente, proxyUrl);
+    return;
+  }
+  setEstadoRSS(arr.length + ' noticias extraídas de ' + nombreFuente, 'ok');
+  renderTarjetasRSS(arr, nombreFuente);
 }
 
 function procesarRSS(txt, nombreFuente) {
@@ -1682,6 +1768,9 @@ function crearTarjetaRSS(item) {
   h += '<input class="nc-input" id="' + id + '-com" value=""></div>';
   h += '<div class="nc-campo"><div class="nc-label">NOMBRES</div>';
   h += '<input class="nc-input" id="' + id + '-nom" value="" placeholder="Nombres implicados..."></div>';
+  h += '<div class="nc-campo"><div class="nc-label">COORDENADAS (lat, lng) — opcional</div>';
+  h += '<input class="nc-input" id="' + id + '-coords" placeholder="Ej: 20.6721, -101.3475" style="font-size:8px;">';
+  h += '</div>';
   h += '<div class="nc-campo"><div class="nc-label">FECHA DEL EVENTO</div>';
   h += '<input class="nc-input" id="' + id + '-fev" value="" placeholder="DD/MM/YYYY segun la noticia..."></div>';
   h += '<div class="nc-campo"><div class="nc-label">MOMENTO DEL DIA</div>';
@@ -1698,7 +1787,7 @@ function crearTarjetaRSS(item) {
   h += '<div class="nc-acciones">';
   h += '<button class="btn-ia" onclick="analizarDesdeCard(\'' + id + '\')">ANALIZAR</button>';
   h += '<button class="btn-editar" onclick="toggleEdit(\'' + id + '\')">EDITAR</button>';
-  h += '<button class="btn-posicionar" id="' + id + '-btn-pos" onclick="posicionarEnIntel(\'' + id + '\')">📍 MAPA</button>';
+
   h += '<button class="btn-aprobar" id="' + id + '-btn-apr" onclick="aprobarCard(\'' + id + '\',\'' + fuenteSeg + '\',\'' + linkSeg + '\')">APROBAR</button>';
   h += '<button class="btn-descartar" onclick="descartarCard(\'' + id + '\')">X</button>';
   h += '</div>';
@@ -1996,10 +2085,16 @@ function analizarConIA(id, texto, fuente, link) {
     // Rellenar campos editables
     var titEl = document.getElementById(id + '-tit');
     if (titEl) {
-      if (r.titulo && r.titulo.length < 120) {
+      if (r.titulo === 'SIN CONTENIDO') {
+        // El texto era basura (footer/menú) — avisar al usuario
+        var card = document.getElementById(id);
+        if (card) card.style.opacity = '0.5';
+        var confEl2 = document.getElementById(id + '-conf');
+        if (confEl2) { confEl2.textContent = '⚠ TEXTO NO VÁLIDO'; confEl2.style.color = '#ff8800'; }
+        titEl.value = 'SIN CONTENIDO — descarta esta tarjeta';
+      } else if (r.titulo && r.titulo.length < 120) {
         titEl.value = r.titulo;
       } else if (r.resumen) {
-        // Si título muy largo o vacío, generar desde resumen
         titEl.value = r.resumen.split('.')[0].slice(0,80).trim();
       }
     }
@@ -2203,8 +2298,15 @@ function analizarManual() {
     var card = document.createElement('div');
     card.className = 'noticia-card';
     card.id = id;
-    card.dataset.lat = r.lat || 20.6795;
-    card.dataset.lng = r.lng || -101.3540;
+    // Prioridad: campo manual > IA
+    var coordInput = document.getElementById(id + '-coords');
+    var manualLat = null, manualLng = null;
+    if (coordInput && coordInput.value.trim()) {
+      var cp = coordInput.value.split(',');
+      if (cp.length === 2) { manualLat = parseFloat(cp[0]); manualLng = parseFloat(cp[1]); }
+    }
+    card.dataset.lat = (manualLat && !isNaN(manualLat)) ? manualLat : (r.lat || 20.6795);
+    card.dataset.lng = (manualLng && !isNaN(manualLng)) ? manualLng : (r.lng || -101.3540);
     card.dataset.colonia = r.colonia || '';
     card.dataset.confianza = r.confianza || 'baja';
     card.style.marginTop = '10px';
@@ -2234,7 +2336,6 @@ function analizarManual() {
         '<div class="nc-campo"><div class="nc-label">RESUMEN</div><textarea class="nc-input" id="' + id + '-sum" style="min-height:60px;resize:vertical;">' + (r.resumen||'').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea></div>' +
       '</div>' +
       '<div class="nc-acciones">' +
-        '<button class="btn-posicionar" onclick="posicionarEnIntel(\'' + id + '\')">📍 MAPA</button>' +
         '<button class="btn-aprobar" onclick="aprobarCard(\'' + id + '\',\'' + fuenteManual + '\',\'' + url + '\')">✓ APROBAR Y GUARDAR</button>' +
         '<button class="btn-descartar" onclick="descartarCard(\'' + id + '\')">✕ DESCARTAR</button>' +
       '</div>';
@@ -2559,8 +2660,15 @@ function analizarFB() {
     var card = document.createElement('div');
     card.className = 'noticia-card';
     card.id = id;
-    card.dataset.lat = r.lat || 20.6795;
-    card.dataset.lng = r.lng || -101.3540;
+    // Prioridad: campo manual > IA
+    var coordInput = document.getElementById(id + '-coords');
+    var manualLat = null, manualLng = null;
+    if (coordInput && coordInput.value.trim()) {
+      var cp = coordInput.value.split(',');
+      if (cp.length === 2) { manualLat = parseFloat(cp[0]); manualLng = parseFloat(cp[1]); }
+    }
+    card.dataset.lat = (manualLat && !isNaN(manualLat)) ? manualLat : (r.lat || 20.6795);
+    card.dataset.lng = (manualLng && !isNaN(manualLng)) ? manualLng : (r.lng || -101.3540);
     card.dataset.colonia = r.colonia || '';
     card.dataset.confianza = r.confianza || 'baja';
     card.dataset.texto = texto;
@@ -3196,7 +3304,7 @@ function renderIntel() {
       '<div style="color:#7a9ab8;font-size:7px;margin-bottom:2px;">📍 ' + (n.colonia||'') + (n.calle1?' · '+n.calle1:'') + '</div>' +
       '<div style="color:#3a5a7a;font-size:7px;">' + (n.fecha||'') + '</div>' +
       '</div>';
-    marker.noticiaId = n.id || null;
+    marker.noticiaId = id || null;
     marker.bindPopup(popup, {maxWidth:240});
     marker.addTo(intelObj);
     intelMarkers.push(marker);
@@ -3550,7 +3658,7 @@ function _colocarEnIntel(id, titulo, tipo, calle1, colonia, resumen, fecha, lat,
       (resumen ? '<div style="color:#3a5a7a;font-size:7px;margin-top:3px;">' + resumen.substring(0,100) + '</div>' : '') +
       (fecha ? '<div style="color:#3a5a7a;font-size:7px;margin-top:2px;">' + fecha + '</div>' : '') +
       '</div>';
-    marker.noticiaId = n.id || null;
+    marker.noticiaId = id || null;
     marker.bindPopup(popup, {maxWidth:240});
     marker.addTo(intelObj);
     intelMarkers.push(marker);
