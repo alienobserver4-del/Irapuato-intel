@@ -1428,13 +1428,25 @@ function toast(msg, tipo) {
 // GEMINI
 // ═══════════════════════════════════════════════════════════════
 function llamarGemini(prompt, callback) {
-  var modelos = ['gemini-2.0-flash-lite', 'gemini-1.5-flash-8b', 'gemini-1.5-pro', 'gemini-pro'];
+  // Modelos en orden — nombres exactos del API v1beta actual (marzo 2026)
+  var modelos = [
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-2.5-flash-preview-04-17',
+    'gemini-1.5-flash-001',
+    'gemini-1.5-flash-002'
+  ];
+  var intentado = {};  // evitar reintentos del mismo modelo por el doble-catch
   var intentar = function(idx) {
     if (idx >= modelos.length) {
       callback(null, 'Gemini no disponible');
       return;
     }
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelos[idx] + ':generateContent?key=' + GEMINI_KEY;
+    var modelo = modelos[idx];
+    if (intentado[modelo]) { intentar(idx + 1); return; }
+    intentado[modelo] = true;
+
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelo + ':generateContent?key=' + GEMINI_KEY;
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1452,32 +1464,45 @@ function llamarGemini(prompt, callback) {
     .then(function(res) {
       if (!res.ok) {
         var status = res.status;
-        res.json().then(function(errBody) {
-          var msg = (errBody && errBody.error && errBody.error.message) ? errBody.error.message : JSON.stringify(errBody);
-          console.warn('[Gemini] ' + modelos[idx] + ' → ' + status + ': ' + msg);
-          if (status === 403) toast('API Key sin acceso a Gemini 2.0 — probando modelos anteriores...', 'warn');
-        }).catch(function(){ console.warn('[Gemini] ' + modelos[idx] + ' → ' + status); });
-        intentar(idx + 1);
-        return Promise.reject('status ' + status);
+        return res.json().then(function(errBody) {
+          var msg = (errBody && errBody.error && errBody.error.message) ? errBody.error.message : '';
+          console.warn('[Gemini] ' + modelo + ' → ' + status + ': ' + msg.slice(0,120));
+          if (status === 429) {
+            // Rate limit — esperar el tiempo sugerido y reintentar este mismo modelo
+            var retryMatch = msg.match(/retry in ([0-9.]+)s/i);
+            var waitMs = retryMatch ? Math.ceil(parseFloat(retryMatch[1]) * 1000) + 500 : 22000;
+            toast('⏳ Límite de cuota — reintentando en ' + Math.ceil(waitMs/1000) + 's...', 'warn');
+            delete intentado[modelo]; // permitir reintento
+            setTimeout(function() { intentar(idx); }, waitMs);
+          } else if (status === 403) {
+            toast('🔑 API Key sin acceso — probando modelo alternativo...', 'warn');
+            intentar(idx + 1);
+          } else {
+            intentar(idx + 1);
+          }
+        }).catch(function() { intentar(idx + 1); });
       }
-      return res.json();
+      return res.json().then(function(data) {
+        if (!data) { intentar(idx + 1); return; }
+        var cand = data.candidates && data.candidates[0];
+        if (!cand) { intentar(idx + 1); return; }
+        var txt = cand.content && cand.content.parts && cand.content.parts[0] && cand.content.parts[0].text;
+        if (!txt) { intentar(idx + 1); return; }
+        var match = txt.match(/\{[\s\S]*\}/);
+        if (!match) { intentar(idx + 1); return; }
+        try {
+          var r = JSON.parse(match[0]);
+          console.log('[Gemini] OK con ' + modelo);
+          callback(r, null);
+        } catch(e) {
+          intentar(idx + 1);
+        }
+      });
     })
-    .then(function(data) {
-      if (!data) return;
-      var cand = data && data.candidates && data.candidates[0];
-      if (!cand) { intentar(idx + 1); return; }
-      var txt = cand.content && cand.content.parts && cand.content.parts[0] && cand.content.parts[0].text;
-      if (!txt) { intentar(idx + 1); return; }
-      var match = txt.match(/\{[\s\S]*\}/);
-      if (!match) { intentar(idx + 1); return; }
-      try {
-        var r = JSON.parse(match[0]);
-        callback(r, null);
-      } catch(e) {
-        intentar(idx + 1);
-      }
-    })
-    .catch(function() { intentar(idx + 1); });
+    .catch(function(e) {
+      console.warn('[Gemini] fetch error en ' + modelo + ':', e);
+      intentar(idx + 1);
+    });
   };
   intentar(0);
 }
