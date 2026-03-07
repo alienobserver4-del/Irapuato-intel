@@ -1470,11 +1470,11 @@ function toast(msg, tipo) {
 // ═══════════════════════════════════════════════════════════════
 function llamarGemini(prompt, callback) {
   // Modelos en orden — nombres exactos del API v1beta actual (marzo 2026)
+  // Modelos disponibles en free tier (sin billing) — orden de preferencia
   var modelos = [
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-8b'
+    'gemini-2.0-flash-lite',   // free tier — más rápido
+    'gemini-1.5-flash-8b-001', // free tier — fallback
+    'gemini-1.5-flash-latest'  // free tier — último recurso
   ];
   var intentado = {};  // evitar reintentos del mismo modelo por el doble-catch
   var intentar = function(idx) {
@@ -4467,12 +4467,9 @@ function probarKeys() {
   var resultados = [];
   var pendientes = keys.length;
   keys.forEach(function(k, i) {
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + k;
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: 'Responde solo: OK' }] }], generationConfig: { maxOutputTokens: 5 } })
-    })
+    // Usar solo listModels (GET, sin costo de tokens) para verificar que la key es válida
+    var urlCheck = 'https://generativelanguage.googleapis.com/v1beta/models?key=' + k + '&pageSize=1';
+    fetch(urlCheck)
     .then(function(res) { resultados[i] = res.status; })
     .catch(function() { resultados[i] = 'error'; })
     .finally(function() {
@@ -4483,7 +4480,7 @@ function probarKeys() {
         var msg = 'Resultados:\n';
         keys.forEach(function(k2, j) {
           var st = resultados[j];
-          msg += 'Key ' + (j+1) + ': ' + (st === 200 ? '✓ OK' : st === 429 ? '⚠ Cuota agotada' : st === 403 ? '✗ Sin permiso' : '? ' + st) + '\n';
+          msg += 'Key ' + (j+1) + ': ' + (st === 200 ? '✓ Válida' : st === 429 ? '⚠ Rate limit temporal' : st === 403 ? '✗ Bloqueada/sin permiso' : st === 400 ? '✗ Key inválida' : '? ' + st) + '\n';
         });
         alert(msg);
         renderKeysList();
