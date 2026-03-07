@@ -3028,8 +3028,8 @@ function renderIntel() {
   var cuentas = {seguridad:0, accidente:0, evento:0, gobierno:0, rumor:0};
   var heatData = [];
 
-  for (var i = 0; i < noticiasCache.length; i++) {
-    var n = noticiasCache[i];
+  for (var i = 0; i < noticias.length; i++) {
+    var n = noticias[i];
     if (!n.lat || !n.lng) continue;
     var tipo = n.tipo || 'rumor';
     if (!intelFiltros[tipo]) continue;
