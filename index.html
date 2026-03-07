@@ -995,12 +995,12 @@ var PROXY2 = 'https://corsproxy.io/?';
 var FUENTES_RSS = {
   sol_local: {
     nombre: 'El Sol — Local',
-    tipo: 'scraping',
+    tipo: 'scraping_oem',
     proxy: PROXY1 + encodeURIComponent('https://oem.com.mx/elsoldeirapuato/local/')
   },
   sol_policiaca: {
     nombre: 'El Sol — Policiaca',
-    tipo: 'scraping',
+    tipo: 'scraping_oem',
     proxy: PROXY1 + encodeURIComponent('https://oem.com.mx/elsoldeirapuato/policiaca/')
   },
   am_irapuato: {
@@ -1062,7 +1062,84 @@ var db = null;
 var noticias = [];         // aprobadas en Firebase
 var fuenteManual = 'El Sol de Irapuato';
 var filtroBD = 'todos';
-var cardCounter = 0;       // ID único para cada tarjeta
+var cardCounter = 0;
+
+// ── Cola de auto-fetch de artículos ──
+var fetchQueue = [];       // [{id, url, reintentos}]
+var fetchActivo = false;   // ¿hay un fetch corriendo?
+var FETCH_DELAY = 1200;    // ms entre fetches (respetar proxies)
+var FETCH_MAX_REINTENTOS = 2;
+
+function encolarFetch(id, url) {
+  if (!url || url.indexOf('http') < 0) return;
+  fetchQueue.push({ id: id, url: url, reintentos: 0 });
+  if (!fetchActivo) procesarColaFetch();
+}
+
+function procesarColaFetch() {
+  // Actualizar estado de la cola
+  var estadoEl = document.getElementById('rss-estado');
+  if (estadoEl && fetchQueue.length > 0) {
+    var spanCola = document.getElementById('fetch-queue-badge');
+    if (!spanCola) {
+      spanCola = document.createElement('span');
+      spanCola.id = 'fetch-queue-badge';
+      spanCola.style.cssText = 'margin-left:8px;color:#3a7ab8;font-size:7px;font-family:var(--mono);';
+      estadoEl.appendChild(spanCola);
+    }
+    spanCola.textContent = '⏳ cargando textos: ' + fetchQueue.length + ' pendientes';
+  } else {
+    var badge = document.getElementById('fetch-queue-badge');
+    if (badge) badge.textContent = '';
+  }
+  if (fetchQueue.length === 0) { fetchActivo = false; return; }
+  fetchActivo = true;
+  var item = fetchQueue.shift();
+  var card = document.getElementById(item.id);
+  if (!card) { procesarColaFetch(); return; } // card ya descartada
+
+  // Indicador sutil de carga en la card
+  var resEl = document.getElementById(item.id + '-res');
+  if (resEl && !resEl.dataset.cargado) {
+    resEl.style.color = '#2a4a6a';
+    resEl.textContent = '⏳ Cargando texto del artículo...';
+  }
+
+  fetchContenidoArticulo(item.url, function(texto) {
+    var cardViva = document.getElementById(item.id);
+    if (!cardViva) { setTimeout(procesarColaFetch, 200); return; }
+
+    if (texto && texto.length > 120) {
+      cardViva.dataset.texto = texto;
+      cardViva.dataset.textoCargado = '1';
+      var resEl2 = document.getElementById(item.id + '-res');
+      if (resEl2) {
+        resEl2.style.color = '';
+        // Mostrar primeros 400 chars como preview
+        resEl2.textContent = texto.slice(0, 400) + (texto.length > 400 ? '...' : '');
+      }
+      // Indicador verde pequeño en la card
+      var confEl = document.getElementById(item.id + '-conf');
+      if (confEl && !confEl.textContent) {
+        confEl.textContent = '✓ texto';
+        confEl.style.color = '#2a6a4a';
+        confEl.style.fontSize = '7px';
+      }
+    } else if (item.reintentos < FETCH_MAX_REINTENTOS) {
+      item.reintentos++;
+      fetchQueue.push(item); // reintentar al final
+      var resEl3 = document.getElementById(item.id + '-res');
+      if (resEl3) resEl3.textContent = '⚠ Sin texto aún (reintento ' + item.reintentos + ')...';
+    } else {
+      var resEl4 = document.getElementById(item.id + '-res');
+      if (resEl4) {
+        resEl4.style.color = '#4a2a2a';
+        resEl4.textContent = '(No se pudo obtener el texto completo — usa ANALIZAR o escribe en ENTRADA MANUAL)';
+      }
+    }
+    setTimeout(procesarColaFetch, FETCH_DELAY);
+  });
+}       // ID único para cada tarjeta
 
 // ═══════════════════════════════════════════════════════════════
 // INIT FIREBASE
@@ -1469,6 +1546,8 @@ function cargarRSS(fuente) {
     .then(function(txt) {
       if (src.tipo === 'rss') {
         procesarRSS(txt, src.nombre);
+      } else if (src.tipo === 'scraping_oem') {
+        procesarScrapingOEM(txt, src.nombre, src.proxy);
       } else if (src.tipo === 'scraping_zf') {
         procesarScrapingZF(txt, src.nombre, src.proxy);
       } else if (src.tipo === 'scraping_silla') {
@@ -1487,6 +1566,64 @@ function cargarRSS(fuente) {
     });
   }
   intentarFetch(url1, false);
+}
+
+function procesarScrapingOEM(html, nombreFuente, proxyUrl) {
+  // OEM / El Sol de Irapuato — CMS propio
+  // Portada: artículos en <article class="note"> o <div class="note">
+  // con <h2 class="note-title"><a href="..."> o <a class="note-link">
+  var base = 'https://oem.com.mx';
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, 'text/html');
+  var arr = [];
+  var seen = {};
+
+  // Limpiar basura primero
+  var basura = doc.querySelectorAll('nav, footer, header, aside, script, style, .widget, [class*="publicidad"], [class*="banner"], [class*="social"]');
+  for (var b = 0; b < basura.length; b++) {
+    if (basura[b].parentNode) basura[b].parentNode.removeChild(basura[b]);
+  }
+
+  // Estrategia 1: artículos OEM — nota con título
+  var noteTitles = doc.querySelectorAll('.note-title a, .note-link, h2 a, h3 a, article a, .article-title a');
+  for (var i = 0; i < noteTitles.length && arr.length < 20; i++) {
+    var a = noteTitles[i];
+    var titulo = (a.textContent || '').trim().replace(/\s+/g, ' ');
+    var href = a.getAttribute('href') || '';
+    if (titulo.length < 20 || titulo.length > 200) continue;
+    if (href.indexOf('#') >= 0 || href === '' || href === '/') continue;
+    // Excluir links de categoría/sección (sin guiones en la ruta)
+    var ruta = href.replace(/https?:\/\/[^/]+/, '');
+    if (ruta.split('/').filter(Boolean).length < 2) continue;
+    var urlCompleta = href.indexOf('http') === 0 ? href : base + (href.indexOf('/') === 0 ? href : '/' + href);
+    if (seen[titulo]) continue;
+    seen[titulo] = true;
+    arr.push({ titulo: titulo, desc: '', link: urlCompleta, fecha: 'Hoy', fuente: nombreFuente });
+  }
+
+  // Estrategia 2: todos los links con texto de titular (fallback)
+  if (arr.length < 5) {
+    var links = doc.querySelectorAll('a[href]');
+    for (var j = 0; j < links.length && arr.length < 20; j++) {
+      var a2 = links[j];
+      var titulo2 = (a2.textContent || '').trim().replace(/\s+/g, ' ');
+      var href2 = a2.getAttribute('href') || '';
+      if (titulo2.length < 25 || titulo2.length > 180) continue;
+      if (href2.indexOf('#') >= 0) continue;
+      if (href2.indexOf('oem.com.mx') < 0 && href2.indexOf('/') !== 0) continue;
+      var urlC = href2.indexOf('http') === 0 ? href2 : base + (href2.indexOf('/') === 0 ? href2 : '/' + href2);
+      if (seen[titulo2]) continue;
+      seen[titulo2] = true;
+      arr.push({ titulo: titulo2, desc: '', link: urlC, fecha: 'Hoy', fuente: nombreFuente });
+    }
+  }
+
+  if (arr.length === 0) {
+    procesarScraping(html, nombreFuente, proxyUrl);
+    return;
+  }
+  setEstadoRSS(arr.length + ' noticias de ' + nombreFuente, 'ok');
+  renderTarjetasRSS(arr, nombreFuente);
 }
 
 function procesarScrapingZF(html, nombreFuente, proxyUrl) {
@@ -1725,6 +1862,10 @@ function crearTarjetaRSS(item) {
   card.dataset.texto = texto;
   card.dataset.fuente = item.fuente || '';
   card.dataset.link = item.link || '';
+  // Encolar fetch automático del artículo completo
+  if (item.link && item.link.indexOf('http') === 0) {
+    setTimeout(function(cid, curl) { encolarFetch(cid, curl); }, 50, id, item.link);
+  }
 
   var tituloSeg = (item.titulo||'').replace(/['"]/g, '');
   var descSeg = (item.desc||'').slice(0,100).replace(/['"]/g, '');
@@ -1817,6 +1958,11 @@ function analizarDesdeCard(id) {
   var link = card.dataset.link || '';
   var texto = card.dataset.texto || '';
   var fuente = card.dataset.fuente || '';
+  // Si ya se cargó el texto completo en auto-fetch, usar directamente
+  if (card.dataset.textoCargado === '1' && texto.length > 120) {
+    analizarConIA(id, texto, fuente, link);
+    return;
+  }
   // Si hay URL, intentar obtener el texto completo del articulo
   if (link && link.indexOf('http') === 0) {
     var proc = document.getElementById(id + '-proc');
@@ -1827,6 +1973,8 @@ function analizarDesdeCard(id) {
       if (textoCompleto) {
         card.dataset.texto = textoCompleto;
         var palabras = textoCompleto.split(' ').length;
+        var resEl = document.getElementById(id + '-res');
+        if (resEl) resEl.textContent = textoCompleto.slice(0, 500) + (textoCompleto.length > 500 ? '...' : '');
         toast('Articulo completo: ~' + palabras + ' palabras', 'ok');
       }
       analizarConIA(id, textoFinal, fuente, link);
@@ -1897,16 +2045,73 @@ function extraerTextoArticulo(html) {
 
   // ── PASO 2: Selectores específicos por periódico + genéricos ──
   // OEM/El Sol de Irapuato, AM, Correo, Tinta Negra, genéricos
-  var selectoresContenido = [
-    // El Sol de Irapuato / OEM
+  // Detectar el periódico por URL para usar selectores precisos primero
+  var urlDoc = (doc.location && doc.location.href) ? doc.location.href : '';
+  // Buscar en links canonicos
+  var canonical = doc.querySelector('link[rel="canonical"]');
+  if (canonical) urlDoc = canonical.getAttribute('href') || urlDoc;
+  var metaOg = doc.querySelector('meta[property="og:url"]');
+  if (metaOg) urlDoc = metaOg.getAttribute('content') || urlDoc;
+
+  var selectoresContenido = [];
+
+  // ── Selectores por periódico (orden: más específico primero) ──
+  if (urlDoc.indexOf('zonafranca.mx') >= 0) {
+    // Zona Franca — WordPress con Newspaper theme
+    selectoresContenido = [
+      '.entry-content', '.td-post-content', '.post-content',
+      'article .entry-content', '.tdb-block-inner p', '.td-pb-span8 .entry-content'
+    ];
+  } else if (urlDoc.indexOf('lasillarota.com') >= 0) {
+    // La Silla Rota
+    selectoresContenido = [
+      '.nota-container', '.article-body', '.content-nota',
+      '.nota-content', 'article .content', '.singular-content'
+    ];
+  } else if (urlDoc.indexOf('am.com.mx') >= 0) {
+    // AM Guanajuato
+    selectoresContenido = [
+      '.news-single-content', '.news-content', '.nota-content',
+      '.article-body', '.news-detail-text', 'article .text-content',
+      '[class*="single-content"]', '[itemprop="articleBody"]'
+    ];
+  } else if (urlDoc.indexOf('oem.com.mx') >= 0 || urlDoc.indexOf('elsoldeirapuato') >= 0) {
+    // El Sol de Irapuato / OEM — CMS propio con clases note-*
+    selectoresContenido = [
+      '.note-body',          // contenedor principal OEM
+      '.note-paragraph',     // cada párrafo individual
+      '.article-note-content',
+      '.note-content',
+      '.note-text',
+      '[itemprop="articleBody"]',
+      '.article-body-content',
+      '.story-content',
+      '.nota-cuerpo',
+      '.nota-interior',
+      'article .content',
+      '.article-content'
+    ];
+  } else if (urlDoc.indexOf('periodicocorreo.com.mx') >= 0) {
+    // Periodico Correo
+    selectoresContenido = [
+      '.entry-content', '.post-content', '.article-content',
+      '.nota-content', '[itemprop="articleBody"]', 'article .content'
+    ];
+  } else if (urlDoc.indexOf('entintanegra.com') >= 0) {
+    // Tinta Negra
+    selectoresContenido = [
+      '.entry-content', '.post-content', 'article .content'
+    ];
+  }
+
+  // Siempre agregar selectores genéricos al final como fallback
+  selectoresContenido = selectoresContenido.concat([
+    '[itemprop="articleBody"]',
     '.note-paragraph','.note-body','.nota-cuerpo','.nota-interior',
     '.article-body-content','.story-content',
-    // AM.com.mx
     '.news-content','.nota-content','.contenido-articulo',
-    // Periodico Correo / Tinta Negra / WordPress
     '.entry-content','.post-content','.td-post-content',
     '.single-content','.article-content',
-    // Genéricos
     'article .content','article .body','article .texto','article .cuerpo',
     '[class*="article-body"]','[class*="nota-body"]',
     '[class*="article-content"]','[class*="nota-content"]',
@@ -1917,7 +2122,7 @@ function extraerTextoArticulo(html) {
     'article','main article','main .content',
     '#article-body','#nota-body','#content-body','#cuerpo',
     'main'
-  ];
+  ]);
 
   var mejor = '';
   for (var s = 0; s < selectoresContenido.length; s++) {
@@ -1925,15 +2130,16 @@ function extraerTextoArticulo(html) {
       var el = doc.querySelector(selectoresContenido[s]);
       if (el) {
         // Extraer párrafos del elemento para evitar capturar títulos relacionados
-        var pElems = el.querySelectorAll('p');
+        // Para OEM: párrafos con clase note-paragraph además de <p>
+        var pElems = el.querySelectorAll('p, .note-paragraph, [class*="paragraph"]');
         var txts = [];
-        if (pElems.length >= 2) {
+        if (pElems.length >= 1) {
           for (var pi = 0; pi < pElems.length; pi++) {
             var tp = limpiarTexto(pElems[pi].textContent || '');
             if (tp.length > 40) txts.push(tp);
           }
         }
-        var txt = txts.length >= 2 ? txts.join(' ') : limpiarTexto(el.textContent || '');
+        var txt = txts.length >= 1 ? txts.join(' ') : limpiarTexto(el.textContent || '');
         if (txt.length > mejor.length && txt.length > 100) { mejor = txt; }
       }
     } catch(ex) {}
@@ -3829,6 +4035,72 @@ function quitarDeIntel(id) {
   toast('Punto quitado del mapa', 'ok');
 }
 window.quitarDeIntel = quitarDeIntel;
+
+
+// ── VER TEXTO COMPLETO — para verificar qué extrae el scraper antes de analizar ──
+function verTextoCompleto(id) {
+  var card = document.getElementById(id);
+  if (!card) return;
+  var link = card.dataset.link || '';
+  var textoActual = card.dataset.texto || '';
+
+  var modal = document.getElementById('modal-texto-debug');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-texto-debug';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = '<div style="background:#0d1b2a;border:1px solid #1a3a5a;border-radius:6px;width:90vw;max-width:700px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #1a3a5a;">' +
+        '<span style="font-family:var(--title);font-size:8px;letter-spacing:1px;color:#00ccff;">📄 TEXTO EXTRAÍDO DEL ARTÍCULO</span>' +
+        '<button onclick="document.getElementById(\'modal-texto-debug\').remove()" style="background:none;border:1px solid #ff2255;color:#ff2255;padding:2px 8px;cursor:pointer;font-size:8px;border-radius:3px;">X CERRAR</button>' +
+      '</div>' +
+      '<div id="debug-texto-status" style="padding:6px 14px;font-family:var(--mono);font-size:8px;color:#3a7ab8;border-bottom:1px solid #0d2040;"></div>' +
+      '<div id="debug-texto-body" style="padding:12px 14px;overflow-y:auto;font-family:var(--mono);font-size:8px;line-height:1.6;color:#c8d8e8;white-space:pre-wrap;flex:1;"></div>' +
+      '<div style="padding:8px 14px;border-top:1px solid #0d2040;display:flex;gap:6px;">' +
+        '<button id="debug-btn-usar" style="flex:1;padding:6px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88;font-family:var(--title);font-size:7px;cursor:pointer;border-radius:3px;">✓ USAR ESTE TEXTO Y ANALIZAR</button>' +
+      '</div>' +
+    '</div>';
+    modal.onclick = function(e) { if (e.target === modal) { modal.remove(); } };
+    document.body.appendChild(modal);
+  }
+
+  var statusEl = document.getElementById('debug-texto-status');
+  var bodyEl = document.getElementById('debug-texto-body');
+  var btnUsar = document.getElementById('debug-btn-usar');
+
+  // Mostrar texto actual mientras carga
+  if (textoActual && textoActual.length > 50) {
+    statusEl.textContent = 'Texto en caché (' + textoActual.length + ' chars). Recargando del artículo...';
+    bodyEl.textContent = textoActual;
+  } else {
+    statusEl.textContent = '⏳ Obteniendo texto del artículo...';
+    bodyEl.textContent = '';
+  }
+
+  btnUsar.onclick = function() {
+    var textoFinal = bodyEl.textContent;
+    if (card && textoFinal) card.dataset.texto = textoFinal;
+    modal.remove();
+    analizarConIA(id, textoFinal, card.dataset.fuente || '', link);
+  };
+
+  if (!link) {
+    statusEl.textContent = '⚠ Esta tarjeta no tiene URL de artículo';
+    return;
+  }
+
+  fetchContenidoArticulo(link, function(texto) {
+    if (texto && texto.length > 80) {
+      if (card) card.dataset.texto = texto;
+      statusEl.textContent = '✅ Texto extraído: ' + texto.length + ' chars · ' + texto.split(' ').length + ' palabras · fuente: ' + (link.split('/')[2] || '');
+      bodyEl.textContent = texto;
+    } else {
+      statusEl.textContent = '⚠ No se pudo extraer texto limpio. Revisa el selector CSS para este periódico.';
+      bodyEl.textContent = textoActual || '(sin texto disponible)';
+    }
+  });
+}
+window.verTextoCompleto = verTextoCompleto;
 
 }); // fin DOMContentLoaded
 </script>
