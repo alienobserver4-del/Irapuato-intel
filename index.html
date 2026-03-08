@@ -5038,50 +5038,81 @@ window.probarOpenRouter = probarOpenRouter;
 
 // ── Sincronización de keys con Firebase ──
 function syncKeysFirebase() {
-  if (!db) return; // Firebase aún no listo, se intentará después
+  if (!db) return;
   var data = {
     gemini: window._appGeminiKeys || [],
     openrouter: window._appORKeys || [],
     updatedAt: new Date().toISOString()
   };
   db.collection('config').doc('keys').set(data)
-    .catch(function(e) { console.warn('[Keys] Error guardando en Firebase:', e.message); });
+    .then(function() { console.log('[Keys] Keys guardadas en Firebase ✓'); })
+    .catch(function(e) {
+      console.error('[Keys] Error guardando en Firebase:', e.code, e.message);
+      if (e.code === 'permission-denied') {
+        toast('⚠️ Firestore: sin permiso de escritura en config/keys. Revisa las reglas.', 'err');
+      }
+    });
 }
 window.syncKeysFirebase = syncKeysFirebase;
 
 function cargarKeysFirebase(callback) {
-  if (!db) { if (callback) callback(); return; }
+  if (!db) {
+    console.warn('[Keys] Firebase no listo al cargar keys');
+    if (callback) callback();
+    return;
+  }
+  console.log('[Keys] Buscando keys en Firebase...');
   db.collection('config').doc('keys').get()
     .then(function(doc) {
-      if (doc.exists) {
-        var data = doc.data();
-        var changed = false;
-        if (Array.isArray(data.gemini) && data.gemini.length) {
-          // Fusionar: agregar keys de Firebase que no estén en local
-          var local = window._appGeminiKeys || [];
-          data.gemini.forEach(function(k) { if (local.indexOf(k) < 0) { local.push(k); changed = true; } });
-          window._appGeminiKeys = local;
-          try { localStorage.setItem('gemini_keys_pool', JSON.stringify(local)); } catch(e) {}
-          if (typeof GEMINI_KEYS !== 'undefined') { GEMINI_KEYS.length = 0; local.forEach(function(k){ GEMINI_KEYS.push(k); }); }
-        }
-        if (Array.isArray(data.openrouter) && data.openrouter.length) {
-          var localOR = window._appORKeys || [];
-          data.openrouter.forEach(function(k) { if (localOR.indexOf(k) < 0) { localOR.push(k); changed = true; } });
-          window._appORKeys = localOR;
-          try { localStorage.setItem('or_keys_pool', JSON.stringify(localOR)); } catch(e) {}
-          if (typeof OPENROUTER_KEYS !== 'undefined') { OPENROUTER_KEYS.length = 0; localOR.forEach(function(k){ OPENROUTER_KEYS.push(k); }); }
-        }
-        if (changed) {
-          console.log('[Keys] Keys sincronizadas desde Firebase ✓');
-          if (typeof actualizarStatusGemini === 'function') actualizarStatusGemini();
-          if (typeof renderKeysList === 'function') renderKeysList();
-          if (typeof renderORKeysList === 'function') renderORKeysList();
-          toast('🔑 Keys sincronizadas desde Firebase', 'ok');
-        }
+      if (!doc.exists) {
+        console.log('[Keys] No hay keys guardadas en Firebase aún');
+        if (callback) callback();
+        return;
       }
+      var data = doc.data();
+      var totalCargadas = 0;
+
+      if (Array.isArray(data.gemini) && data.gemini.length) {
+        window._appGeminiKeys = data.gemini.slice(); // reemplazar completo, no solo fusionar
+        try { localStorage.setItem('gemini_keys_pool', JSON.stringify(window._appGeminiKeys)); } catch(e) {}
+        if (typeof GEMINI_KEYS !== 'undefined') {
+          GEMINI_KEYS.length = 0;
+          window._appGeminiKeys.forEach(function(k){ GEMINI_KEYS.push(k); });
+        }
+        totalCargadas += data.gemini.length;
+      }
+
+      if (Array.isArray(data.openrouter) && data.openrouter.length) {
+        window._appORKeys = data.openrouter.slice(); // reemplazar completo
+        try { localStorage.setItem('or_keys_pool', JSON.stringify(window._appORKeys)); } catch(e) {}
+        if (typeof OPENROUTER_KEYS !== 'undefined') {
+          OPENROUTER_KEYS.length = 0;
+          window._appORKeys.forEach(function(k){ OPENROUTER_KEYS.push(k); });
+        }
+        totalCargadas += data.openrouter.length;
+      }
+
+      console.log('[Keys] ' + totalCargadas + ' keys cargadas desde Firebase ✓');
+
+      // Siempre actualizar UI aunque ya tuviera keys
+      if (typeof actualizarStatusGemini === 'function') actualizarStatusGemini();
+      if (typeof renderKeysList === 'function') renderKeysList();
+      if (typeof renderORKeysList === 'function') renderORKeysList();
+
+      if (totalCargadas > 0) {
+        toast('🔑 ' + totalCargadas + ' keys cargadas desde Firebase', 'ok');
+      }
+
       if (callback) callback();
     })
-    .catch(function(e) { console.warn('[Keys] Error cargando desde Firebase:', e.message); if (callback) callback(); });
+    .catch(function(e) {
+      console.error('[Keys] Error leyendo config/keys de Firebase:', e.code, e.message);
+      // Si es error de permisos, mostrar alerta útil
+      if (e.code === 'permission-denied') {
+        toast('⚠️ Firebase: sin permiso para leer keys. Revisa reglas Firestore.', 'err');
+      }
+      if (callback) callback();
+    });
 }
 window.cargarKeysFirebase = cargarKeysFirebase;
 
