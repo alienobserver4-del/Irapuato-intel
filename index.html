@@ -1719,7 +1719,7 @@ function llamarOpenRouterPool(prompt, callback, onAgotado) {
   // Modelos que NO soportan system role (requieren todo en user)
   var sinSystemRole = ['gemma'];
   // Modelos que NO soportan response_format json_object
-  var sinJsonFormat = ['gemma', 'hermes', 'llama-3.2-3b', 'gpt-oss'];
+  var sinJsonFormat = ['gemma', 'hermes', 'llama-3.2-3b', 'gpt-oss', 'openrouter/free'];
 
   var statusEl = document.getElementById('gemini-status');
 
