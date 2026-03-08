@@ -175,6 +175,13 @@ header {
 .rss-correo { color:var(--magenta); border-color:var(--magenta); background:rgba(255,0,170,.08); }
 .rss-btn:disabled { opacity:.4; cursor:default; }
 
+.rss-fecha-btn {
+  padding:4px 8px; font-family:var(--title); font-size:6px; font-weight:700;
+  border-radius:3px; cursor:pointer; letter-spacing:.5px; border:1px solid var(--border);
+  color:var(--muted); background:transparent; transition:all .2s; white-space:nowrap;
+}
+.rss-fecha-btn.activo { color:var(--cyan); border-color:var(--cyan); background:rgba(0,245,255,.08); }
+
 .rss-estado {
   font-size:8px; color:var(--muted); margin-bottom:10px;
   padding:6px 10px; border-left:2px solid var(--border);
@@ -339,6 +346,12 @@ header {
   transition:all .15s;
 }
 .filtro-btn.sel { color:var(--yellow); border-color:var(--yellow); background:rgba(255,204,0,.06); }
+.bd-orden-btn {
+  padding:4px 9px; font-family:var(--title); font-size:6px; font-weight:700;
+  border-radius:3px; cursor:pointer; letter-spacing:.5px; border:1px solid var(--border);
+  color:var(--muted); background:transparent; transition:all .2s; white-space:nowrap;
+}
+.bd-orden-btn.activo { color:var(--yellow); border-color:var(--yellow); background:rgba(255,204,0,.06); }
 
 .bd-stats {
   display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:10px;
@@ -568,8 +581,18 @@ header {
         <button class="rss-btn" style="color:var(--cyan);border-color:var(--cyan);background:transparent;" onclick="cargarTodas()">TODAS</button>
       </div>
 
+      <!-- Filtro de antigüedad -->
+      <div id="rss-filtro-fecha" style="display:flex;align-items:center;gap:6px;padding:6px 0 2px;flex-wrap:wrap;">
+        <span style="font-family:var(--title);font-size:6px;color:var(--muted);letter-spacing:1px;white-space:nowrap;">🗓 ANTIGÜEDAD MÁX:</span>
+        <button class="rss-fecha-btn activo" onclick="setRssMaxDias(7,this)">7 DÍAS</button>
+        <button class="rss-fecha-btn" onclick="setRssMaxDias(30,this)">1 MES</button>
+        <button class="rss-fecha-btn" onclick="setRssMaxDias(60,this)">2 MESES</button>
+        <button class="rss-fecha-btn" onclick="setRssMaxDias(90,this)">3 MESES</button>
+        <span id="rss-fecha-label" style="margin-left:auto;font-size:7px;color:#3a7ab8;font-family:var(--mono);">máx 7 días</span>
+      </div>
+
       <div id="rss-estado" class="rss-estado">
-        Elige una fuente para cargar noticias automáticamente.
+        Elige una fuente para cargar noticias.
       </div>
 
       <div id="lista-rss"></div>
@@ -647,6 +670,15 @@ header {
         <button class="filtro-btn" onclick="filtrarBD('gobierno',this)">GOBIERNO</button>
         <button class="filtro-btn" onclick="filtrarBD('salud',this)">SALUD</button>
         <button class="filtro-btn" onclick="filtrarBD('transporte',this)">TRANSPORTE</button>
+      </div>
+
+      <!-- Controles de ordenamiento -->
+      <div style="display:flex;align-items:center;gap:6px;padding:6px 0 4px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:4px;">
+        <span style="font-family:var(--title);font-size:6px;color:var(--muted);letter-spacing:1px;white-space:nowrap;">&#9650; ORDENAR:</span>
+        <button class="bd-orden-btn activo" id="orden-captura" onclick="ordenarBD('captura',this)">&#128197; CAPTURA</button>
+        <button class="bd-orden-btn" id="orden-suceso" onclick="ordenarBD('suceso',this)">&#9201; SUCESO</button>
+        <button class="bd-orden-btn" id="orden-confianza" onclick="ordenarBD('confianza',this)">&#9650; CONFIANZA</button>
+        <span id="bd-orden-label" style="margin-left:auto;font-size:7px;color:#3a7ab8;font-family:var(--mono);">fecha captura &#8595;</span>
       </div>
 
       <div id="lista-bd">
@@ -1004,6 +1036,14 @@ var GEMINI_KEYS = [
 var _geminiKeyIdx = 0;
 var _geminiKeyAgotadas = {};
 
+// Fusionar keys guardadas en localStorage con el pool activo
+if (window._appGeminiKeys && window._appGeminiKeys.length) {
+  window._appGeminiKeys.forEach(function(k) { if (GEMINI_KEYS.indexOf(k) < 0) GEMINI_KEYS.push(k); });
+}
+if (window._appORKeys && window._appORKeys.length) {
+  window._appORKeys.forEach(function(k) { if (OPENROUTER_KEYS.indexOf(k) < 0) OPENROUTER_KEYS.push(k); });
+}
+
 function getGeminiKey() {
   // Usar siempre el array más actualizado (puede incluir keys del localStorage)
   var pool = (window._appGeminiKeys && window._appGeminiKeys.length) ? window._appGeminiKeys : GEMINI_KEYS;
@@ -1117,7 +1157,50 @@ var db = null;
 var noticias = [];         // aprobadas en Firebase
 var fuenteManual = 'El Sol de Irapuato';
 var filtroBD = 'todos';
+var ordenBD = 'captura';   // 'captura' | 'suceso' | 'confianza'
 var cardCounter = 0;
+
+function ordenarBD(modo, btn) {
+  ordenBD = modo;
+  var btns = document.querySelectorAll('.bd-orden-btn');
+  for (var i = 0; i < btns.length; i++) btns[i].classList.remove('activo');
+  if (btn) btn.classList.add('activo');
+  var label = document.getElementById('bd-orden-label');
+  if (label) {
+    if (modo === 'captura')   label.textContent = 'fecha captura ↓';
+    if (modo === 'suceso')    label.textContent = 'fecha suceso ↓';
+    if (modo === 'confianza') label.textContent = 'confianza ↓';
+  }
+  renderBD();
+}
+window.ordenarBD = ordenarBD;
+
+function comparadorBD(a, b) {
+  if (ordenBD === 'captura') {
+    // Fecha de captura (Firestore timestamp o string)
+    var ta = 0, tb = 0;
+    if (a.fechaGuardado && a.fechaGuardado.toDate) ta = a.fechaGuardado.toDate().getTime();
+    else if (a.fechaCaptura) ta = new Date(a.fechaCaptura).getTime() || 0;
+    if (b.fechaGuardado && b.fechaGuardado.toDate) tb = b.fechaGuardado.toDate().getTime();
+    else if (b.fechaCaptura) tb = new Date(b.fechaCaptura).getTime() || 0;
+    return tb - ta; // más reciente primero
+  }
+  if (ordenBD === 'suceso') {
+    // Fecha del suceso (DD/MM/YYYY)
+    function parseFecha(str) {
+      if (!str) return 0;
+      var p = str.split('/');
+      if (p.length === 3) { var d = new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0])); return isNaN(d.getTime()) ? 0 : d.getTime(); }
+      return new Date(str).getTime() || 0;
+    }
+    return parseFecha(b.fecha_evento) - parseFecha(a.fecha_evento);
+  }
+  if (ordenBD === 'confianza') {
+    var ord = { alta: 3, media: 2, baja: 1 };
+    return (ord[b.confianza] || 0) - (ord[a.confianza] || 0);
+  }
+  return 0;
+}
 
 // ── Cola de auto-fetch de artículos ──
 var fetchQueue = [];       // [{id, url, reintentos}]
@@ -1833,6 +1916,28 @@ function buildPrompt(texto) {
 // ═══════════════════════════════════════════════════════════════
 var rssActiva = '';
 var rssItems = {};
+var rssMaxDias = 7; // por defecto 7 días
+
+function setRssMaxDias(dias, btn) {
+  rssMaxDias = dias;
+  var btns = document.querySelectorAll('.rss-fecha-btn');
+  for (var i = 0; i < btns.length; i++) btns[i].classList.remove('activo');
+  if (btn) btn.classList.add('activo');
+  var label = document.getElementById('rss-fecha-label');
+  if (label) label.textContent = dias === 7 ? 'máx 7 días' : dias === 30 ? 'máx 1 mes' : dias === 60 ? 'máx 2 meses' : 'máx 3 meses';
+  // Si hay una fuente activa, recargar con el nuevo filtro
+  if (rssActiva) cargarRSS(rssActiva);
+}
+window.setRssMaxDias = setRssMaxDias;
+
+function noticiaDentroDeRango(fechaStr) {
+  if (!fechaStr || rssMaxDias === 0) return true; // sin fecha o sin límite: pasar
+  var d = new Date(fechaStr);
+  if (isNaN(d.getTime())) return true; // no se pudo parsear: pasar
+  var limite = new Date();
+  limite.setDate(limite.getDate() - rssMaxDias);
+  return d >= limite;
+}
 
 function setEstadoRSS(msg, tipo) {
   var el = document.getElementById('rss-estado');
@@ -2022,22 +2127,28 @@ function procesarRSS(txt, nombreFuente) {
   var xml = parser.parseFromString(txt, 'application/xml');
   var items = xml.querySelectorAll('item');
   var arr = [];
-  for (var i = 0; i < items.length && i < 30; i++) {
+  var filtradas = 0;
+  for (var i = 0; i < items.length && i < 60; i++) {
     var item = items[i];
     var titulo = (item.querySelector('title') ? item.querySelector('title').textContent : '').trim();
     var desc = (item.querySelector('description') ? item.querySelector('description').textContent : '').replace(/<[^>]*>/g, '').trim().slice(0, 400);
     var link = (item.querySelector('link') ? item.querySelector('link').textContent : '').trim();
     var fecha = (item.querySelector('pubDate') ? item.querySelector('pubDate').textContent : '').trim();
+    // Filtro de antigüedad
+    if (!noticiaDentroDeRango(fecha)) { filtradas++; continue; }
     var completo = (titulo + ' ' + desc).toLowerCase();
     if (completo.indexOf('irapuato') >= 0 || completo.indexOf('silao') >= 0 || completo.indexOf('salamanca') >= 0) {
       arr.push({ titulo: titulo, desc: desc, link: link, fecha: fecha, fuente: nombreFuente });
     }
   }
   if (arr.length === 0) {
-    setEstadoRSS('Sin noticias del Bajío en este feed. Prueba otra fuente.', 'error');
+    var msg = filtradas > 0
+      ? 'Sin noticias en los últimos ' + rssMaxDias + ' días (' + filtradas + ' artículos fuera de rango). Amplía el período.'
+      : 'Sin noticias del Bajío en este feed. Prueba otra fuente.';
+    setEstadoRSS(msg, 'error');
     return;
   }
-  setEstadoRSS(arr.length + ' noticias encontradas en ' + nombreFuente, 'ok');
+  setEstadoRSS(arr.length + ' noticias encontradas en ' + nombreFuente + (filtradas > 0 ? ' · ' + filtradas + ' fuera de rango' : ''), 'ok');
   renderTarjetasRSS(arr, nombreFuente);
 }
 
@@ -2125,14 +2236,16 @@ function procesarRSSAcumulado(txt, nombreFuente) {
   var xml = parser.parseFromString(txt, 'application/xml');
   var items = xml.querySelectorAll('item');
   var lista = document.getElementById('lista-rss');
-  for (var i = 0; i < items.length && i < 20; i++) {
+  for (var i = 0; i < items.length && i < 60; i++) {
     var item = items[i];
     var titulo = (item.querySelector('title') ? item.querySelector('title').textContent : '').trim();
     var desc = (item.querySelector('description') ? item.querySelector('description').textContent : '').replace(/<[^>]*>/g,'').trim().slice(0,400);
     var link = (item.querySelector('link') ? item.querySelector('link').textContent : '').trim();
+    var fecha = (item.querySelector('pubDate') ? item.querySelector('pubDate').textContent : '').trim();
+    if (!noticiaDentroDeRango(fecha)) continue;
     var completo = (titulo + ' ' + desc).toLowerCase();
     if (completo.indexOf('irapuato') >= 0 || completo.indexOf('silao') >= 0 || completo.indexOf('salamanca') >= 0) {
-      lista.appendChild(crearTarjetaRSS({ titulo:titulo, desc:desc, link:link, fecha:'', fuente:nombreFuente }));
+      lista.appendChild(crearTarjetaRSS({ titulo:titulo, desc:desc, link:link, fecha:fecha, fuente:nombreFuente }));
     }
   }
 }
@@ -3047,7 +3160,8 @@ window.filtrarBD = filtrarBD;
 
 function renderBD() {
   var lista = document.getElementById('lista-bd');
-  var mostrar = filtroBD === 'todos' ? noticias : noticias.filter(function(n) { return n.tipo === filtroBD; });
+  var mostrar = (filtroBD === 'todos' ? noticias.slice() : noticias.filter(function(n) { return n.tipo === filtroBD; }));
+  mostrar.sort(comparadorBD);
 
   // Stats
   document.getElementById('stat-tot').textContent = noticias.length;
@@ -3949,6 +4063,8 @@ escucharMake();
 // Indicador de que JS cargó correctamente
 document.getElementById('rss-estado').textContent = 'Sistema listo. Elige una fuente.';
 document.getElementById('rss-estado').className = 'rss-estado ok';
+// Actualizar indicador de IA con las keys ya cargadas del localStorage
+actualizarStatusGemini();
 
 
 
@@ -4687,14 +4803,14 @@ function agregarKeyDesdeModal() {
     return;
   }
   window._appGeminiKeys.push(key);
-  // Actualizar el array global y localStorage
-  if (typeof GEMINI_KEYS !== 'undefined') GEMINI_KEYS.push(key);
+  // Sincronizar con todos los arrays que usa llamarGemini
+  if (typeof GEMINI_KEYS !== 'undefined' && GEMINI_KEYS.indexOf(key) < 0) GEMINI_KEYS.push(key);
   try { localStorage.setItem('gemini_keys_pool', JSON.stringify(window._appGeminiKeys)); } catch(e) {}
   if (input) input.value = '';
   renderKeysList();
   actualizarStatusGemini();
   var n = window._appGeminiKeys.length;
-  alert('✓ Key agregada. Pool: ' + n + ' key' + (n > 1 ? 's' : '') + '.');
+  toast('✓ Key Gemini guardada. Pool: ' + n + ' key' + (n > 1 ? 's' : ''), 'ok');
 }
 window.agregarKeyDesdeModal = agregarKeyDesdeModal;
 
@@ -4744,10 +4860,13 @@ window.probarKeys = probarKeys;
 function actualizarStatusGemini() {
   var el = document.getElementById('gemini-status');
   if (!el) return;
-  var keys = window._appGeminiKeys || [];
+  // Leer del pool más actualizado (localStorage ya cargado + hardcoded)
+  var keys = (window._appGeminiKeys && window._appGeminiKeys.length) ? window._appGeminiKeys
+           : (typeof GEMINI_KEYS !== 'undefined' && GEMINI_KEYS.length ? GEMINI_KEYS : []);
   var agotadas = Object.keys(window._geminiKeyAgotadas || {}).length;
   var disponibles = keys.length - agotadas;
-  var orPool = window._appORKeys || [];
+  var orPool = (window._appORKeys && window._appORKeys.length) ? window._appORKeys
+             : (typeof OPENROUTER_KEYS !== 'undefined' && OPENROUTER_KEYS.length ? OPENROUTER_KEYS : []);
   var hasOR = orPool.length > 0;
   if (hasOR) {
     el.textContent = '🔀 OR ' + orPool.length + (keys.length ? ' + G' + disponibles : '') + ' keys';
@@ -4760,10 +4879,12 @@ function actualizarStatusGemini() {
     el.style.borderColor = '#00ff8844';
     el.style.background = 'rgba(0,255,136,.06)';
   } else {
-    el.textContent = '⚠ Sin IA';
+    el.textContent = '⚠ Sin IA — toca para agregar';
     el.style.color = '#ffcc00';
     el.style.borderColor = '#ffcc0044';
     el.style.background = 'rgba(255,204,0,.06)';
+    el.style.cursor = 'pointer';
+    el.onclick = function() { if(typeof abrirGestorKeys === 'function') abrirGestorKeys(); };
   }
 }
 window.actualizarStatusGemini = actualizarStatusGemini;
@@ -4813,6 +4934,8 @@ function agregarORKey() {
   if (pool.indexOf(key) >= 0) { alert('Esta key ya está en el pool.'); return; }
   pool.push(key);
   window._appORKeys = pool;
+  // Sincronizar con OPENROUTER_KEYS que usa llamarOpenRouterPool
+  if (typeof OPENROUTER_KEYS !== 'undefined' && OPENROUTER_KEYS.indexOf(key) < 0) OPENROUTER_KEYS.push(key);
   try { localStorage.setItem('or_keys_pool', JSON.stringify(pool)); } catch(e) {}
   if (input) input.value = '';
   renderORKeysList();
@@ -4865,45 +4988,46 @@ window.guardarORKey = guardarORKey;
 function probarOpenRouter(key) { probarORKey(key, 0); }
 window.probarOpenRouter = probarOpenRouter;
 
-// Cargar keys guardadas del localStorage al iniciar
-(function() {
+// ── Carga de keys desde localStorage — se ejecuta inmediatamente al cargar el script ──
+// Se llama dos veces: aquí (para tenerlas disponibles) y en DOMContentLoaded (para actualizar UI)
+(function cargarKeysGuardadas() {
   try {
     var saved = localStorage.getItem('gemini_keys_pool');
     if (saved) {
       var arr = JSON.parse(saved);
       if (Array.isArray(arr) && arr.length) {
         window._appGeminiKeys = arr;
-        if (typeof GEMINI_KEYS !== 'undefined') {
-          // Fusionar con las hardcoded
-          arr.forEach(function(k) { if (GEMINI_KEYS.indexOf(k) < 0) GEMINI_KEYS.push(k); });
-        }
-        console.log('[Gemini] ' + arr.length + ' keys cargadas del localStorage');
+        console.log('[Gemini] ' + arr.length + ' keys pre-cargadas del localStorage');
       }
     }
   } catch(e) {}
-  // Cargar pool OR del localStorage
   try {
     var orPoolSaved = localStorage.getItem('or_keys_pool');
     if (orPoolSaved) {
       var orArr = JSON.parse(orPoolSaved);
       if (Array.isArray(orArr) && orArr.length) {
         window._appORKeys = orArr;
-        console.log('[OpenRouter] ' + orArr.length + ' keys cargadas del localStorage');
+        console.log('[OpenRouter] ' + orArr.length + ' keys pre-cargadas del localStorage');
       }
     }
-    // Legado: clave única
     if (!window._appORKeys || !window._appORKeys.length) {
       var orLegacy = localStorage.getItem('openrouter_key');
       if (orLegacy) { window._appORKeys = [orLegacy]; }
     }
   } catch(e) {}
-  setTimeout(function() { if (typeof renderORKeysList === 'function') renderORKeysList(); }, 900);
-  // Inicializar _appGeminiKeys desde GEMINI_KEYS hardcoded
-  if (!window._appGeminiKeys && typeof GEMINI_KEYS !== 'undefined') {
-    window._appGeminiKeys = GEMINI_KEYS.slice();
-  }
-  setTimeout(actualizarStatusGemini, 1000);
+  // Actualizar UI del indicador si el DOM ya está listo
+  setTimeout(function() {
+    if (typeof actualizarStatusGemini === 'function') actualizarStatusGemini();
+    if (typeof renderORKeysList === 'function') renderORKeysList();
+  }, 200);
 })();
+
+// Asegurar que al completar DOMContentLoaded también actualice el indicador
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    if (typeof actualizarStatusGemini === 'function') actualizarStatusGemini();
+  }, 300);
+});
 </script>
 
 </body>
