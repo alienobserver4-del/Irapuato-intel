@@ -3590,89 +3590,27 @@ function analizarFB() {
   var texto = document.getElementById('fb-texto').value.trim();
   if (!texto) { toast('Pega el texto de la publicacion primero', 'err'); return; }
   var url = document.getElementById('fb-url').value.trim();
-  var resultado = document.getElementById('fb-resultado');
-  resultado.innerHTML = '<div style="color:#00f5ff;font-size:8px;padding:10px 0;">Analizando con IA...</div>';
+  var fuente = fuenteFB;
 
-  llamarIA(buildPrompt(texto), function(r, err) {
-    if (!r) {
-      r = clasificarLocal(texto);
-      toast('IA no disponible — clasificacion local', 'warn');
-    }
-    var id = 'fb-' + (++cardCounter);
-    var card = document.createElement('div');
-    card.className = 'noticia-card';
-    card.id = id;
-    // Prioridad: campo manual > IA
-    var coordInput = document.getElementById(id + '-coords');
-    var manualLat = null, manualLng = null;
-    if (coordInput && coordInput.value.trim()) {
-      var cp = coordInput.value.split(',');
-      if (cp.length === 2) { manualLat = parseFloat(cp[0]); manualLng = parseFloat(cp[1]); }
-    }
-    card.dataset.url = url || '';
-    card.dataset.lat = (manualLat && !isNaN(manualLat)) ? manualLat : (r.lat || 20.6795);
-    card.dataset.lng = (manualLng && !isNaN(manualLng)) ? manualLng : (r.lng || -101.3540);
-    card.dataset.colonia = r.colonia || '';
-    card.dataset.confianza = r.confianza || 'baja';
-    card.dataset.texto = texto;
-    card.style.marginTop = '10px';
+  // Cerrar modal y mandar al feed RSS igual que las demás noticias
+  cerrarFB();
+  verTab('noticias');
 
-    var tipoOpts = '';
-    var tipos = ['seguridad','accidente','evento','rumor','desaparecido','gobierno','salud','transporte'];
-    var labels = ['Seguridad','Accidente','Evento','Rumor','Desaparecido','Gobierno','Salud','Transporte/Vialidad'];
-    for (var ti = 0; ti < tipos.length; ti++) {
-      tipoOpts += '<option value="' + tipos[ti] + '"' + (r.tipo===tipos[ti]?' selected':'') + '>' + labels[ti] + '</option>';
-    }
+  // Crear tarjeta en el feed igual que RSS
+  var item = {
+    titulo: texto.slice(0, 100),
+    desc: texto,
+    link: url || '',
+    fecha: new Date().toLocaleDateString('es-MX'),
+    fuente: fuente
+  };
+  var lista = document.getElementById('lista-rss');
+  var card = crearTarjetaRSS(item);
+  lista.insertBefore(card, lista.firstChild);
 
-    var tipoOpts2 = '<option value="">-- Ninguno --</option>';
-    for (var ti2 = 0; ti2 < tipos.length; ti2++) {
-      tipoOpts2 += '<option value="' + tipos[ti2] + '">' + labels[ti2] + '</option>';
-    }
-
-    card.innerHTML =
-      '<div class="nc-header">' +
-        '<span class="nc-tipo ' + (r.tipo||'rumor') + '" id="' + id + '-tipo-badge">' + (r.tipo||'rumor').toUpperCase() + '</span>' +
-        '<div class="nc-titulo">' + (r.titulo||texto.slice(0,80)) + '</div>' +
-      '</div>' +
-      '<div class="nc-meta">' +
-        '<span class="nc-fuente">' + fuenteFB + '</span>' +
-        '<span class="nc-conf-' + (r.confianza||'baja') + '">▲ ' + (r.confianza||'baja').toUpperCase() + '</span>' +
-      '</div>' +
-      '<div class="nc-resumen">' + (r.resumen||texto.slice(0,300)) + '</div>' +
-      '<div class="nc-edit visible">' +
-        '<div class="nc-campo"><div class="nc-label">TITULO</div><input class="nc-input" id="' + id + '-tit" value="' + (r.titulo||'').replace(/"/g,'') + '"></div>' +
-        '<div class="nc-campo"><div class="nc-label">TIPO PRINCIPAL</div>' +
-          '<select class="nc-select" id="' + id + '-tipo">' + tipoOpts + '</select>' +
-        '</div>' +
-        '<div class="nc-campo"><div class="nc-label">TIPO SECUNDARIO (opcional)</div>' +
-          '<select class="nc-select" id="' + id + '-tipo2">' + tipoOpts2 + '</select>' +
-        '</div>' +
-        '<div class="nc-campo"><div class="nc-label">CALLE 1</div><input class="nc-input" id="' + id + '-cal1" value="' + (r.calle1||'').replace(/"/g,'') + '" placeholder="Primera calle..." onblur="autoColonia(\'' + id + '\')"></div>' +
-        '<div class="nc-campo"><div class="nc-label">CALLE 2</div><input class="nc-input" id="' + id + '-cal2" value="' + (r.calle2||'').replace(/"/g,'') + '" placeholder="Segunda calle / esquina..." onblur="autoColoniaCalle2(\'' + id + '\')"></div>' +
-        '<div class="nc-campo"><div class="nc-label">COLONIA</div><input class="nc-input" id="' + id + '-col" value="' + (r.colonia||'').replace(/"/g,'') + '" placeholder="Se auto-completa por calles..."></div>' +
-        '<div class="nc-campo"><div class="nc-label">COMUNIDAD</div><input class="nc-input" id="' + id + '-com" value="' + (r.comunidad||'').replace(/"/g,'') + '"></div>' +
-        '<div class="nc-campo"><div class="nc-label">NOMBRES</div><input class="nc-input" id="' + id + '-nom" value="' + (r.nombres||'').replace(/"/g,'') + '" placeholder="Nombres implicados..."></div>' +
-        '<div class="nc-campo"><div class="nc-label">FECHA DEL EVENTO</div><input class="nc-input" id="' + id + '-fev" value="' + (r.fecha_evento||'').replace(/"/g,'') + '" placeholder="DD/MM/YYYY..."></div>' +
-        '<div class="nc-campo"><div class="nc-label">MOMENTO DEL DIA</div>' +
-          '<select class="nc-select" id="' + id + '-tdia">' +
-            '<option value="desconocido"' + (!r.tiempo_dia||r.tiempo_dia==='desconocido'?' selected':'') + '>Desconocido</option>' +
-            '<option value="manana"' + (r.tiempo_dia==='manana'?' selected':'') + '>Manana (6-12h)</option>' +
-            '<option value="tarde"' + (r.tiempo_dia==='tarde'?' selected':'') + '>Tarde (12-19h)</option>' +
-            '<option value="noche"' + (r.tiempo_dia==='noche'?' selected':'') + '>Noche (19-24h)</option>' +
-            '<option value="madrugada"' + (r.tiempo_dia==='madrugada'?' selected':'') + '>Madrugada (0-6h)</option>' +
-          '</select>' +
-        '</div>' +
-        '<div class="nc-campo"><div class="nc-label">RESUMEN</div><textarea class="nc-input" id="' + id + '-sum" style="min-height:60px;resize:vertical;">' + (r.resumen||'').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea></div>' +
-      '</div>' +
-      '<div class="nc-acciones">' +
-        '<button class="btn-aprobar" onclick="aprobarFB(\'' + id + '\',\'' + fuenteFB + '\', this)">APROBAR</button>' +
-        '<button class="btn-descartar" onclick="descartarCard(\'' + id + '\')">DESCARTAR</button>' +
-      '</div>';
-
-    resultado.innerHTML = '';
-    resultado.appendChild(card);
-    toast('Analisis completo — revisa y aprueba', 'ok');
-  });
+  // Analizar con IA exactamente igual que las demás tarjetas
+  toast('Analizando con IA...', 'ok');
+  analizarConIA(card.id, texto, fuente, url);
 }
 window.analizarFB = analizarFB;
 
@@ -5135,4 +5073,3 @@ document.addEventListener('DOMContentLoaded', function() {
 
 </body>
 </html>
- 
