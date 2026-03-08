@@ -1620,15 +1620,17 @@ function llamarOpenRouterPool(prompt, callback, onAgotado) {
   var pool = (window._appORKeys && window._appORKeys.length) ? window._appORKeys : OPENROUTER_KEYS;
   if (!pool || pool.length === 0) { onAgotado && onAgotado(); return; }
 
-  // Modelos gratuitos verificados en OpenRouter — marzo 2026
+  // Estrategia: openrouter/free primero (router automático que siempre funciona),
+  // luego modelos específicos conocidos como respaldo.
   var modelos = [
-    'google/gemma-3-12b-it:free',              // Mejor español, multimodal
-    'meta-llama/llama-3.3-70b-instruct:free',  // Llama 3.3 70B — reemplaza llama-3.1-8b
-    'mistralai/mistral-small-3.1-24b-instruct:free', // Reemplaza mistral-7b
-    'deepseek/deepseek-chat-v3-0324:free',     // DeepSeek V3 — muy capaz
-    'deepseek/deepseek-r1-distill-llama-70b:free', // Razonamiento
-    'meta-llama/llama-4-scout:free',           // Llama 4 Scout — nuevo
-    'nvidia/llama-3.1-nemotron-nano-8b-v1:free' // Liviano, rápido
+    'openrouter/auto',                         // Router automático — elige el mejor disponible
+    'google/gemma-3-12b-it:free',              // Gemma 3 12B — buen español
+    'meta-llama/llama-3.3-70b-instruct:free',  // Llama 3.3 70B
+    'mistralai/mistral-small-3.1-24b-instruct:free', // Mistral Small 3.1
+    'qwen/qwen3-8b:free',                      // Qwen3 8B — disponible mar 2026
+    'qwen/qwen3-14b:free',                     // Qwen3 14B
+    'tngtech/deepseek-r1t-chimera:free',       // DeepSeek chimera
+    'google/gemma-3-4b-it:free'                // Gemma 3 4B liviano
   ];
 
   var statusEl = document.getElementById('gemini-status');
@@ -1715,10 +1717,13 @@ function llamarOpenRouterPool(prompt, callback, onAgotado) {
       var jsonStr = match[1] || match[0];
       try {
         var r = JSON.parse(jsonStr.trim());
-        console.log('[OpenRouter] OK — ' + modelo + ' key' + (keyIdx+1));
+        // Si usamos openrouter/auto, mostrar el modelo real elegido
+        var modeloReal = (rd.data.model || modelo);
+        var modeloCorto = (modeloReal.split('/')[1] || modeloReal).split(':')[0].slice(0,16);
+        console.log('[OpenRouter] OK — ' + modeloReal + ' key' + (keyIdx+1));
         window._orKeyIdx = keyIdx;
         if (typeof _orKeyIdx !== 'undefined') _orKeyIdx = keyIdx;
-        if (statusEl) { statusEl.textContent = '🤖 OR OK'; statusEl.style.color = '#00ff88'; }
+        if (statusEl) { statusEl.textContent = '🤖 ' + modeloCorto; statusEl.style.color = '#00ff88'; }
         _orModelosAgotados = {}; // limpiar para próxima llamada
         callback(r, null);
       } catch(e) {
