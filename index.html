@@ -531,7 +531,7 @@ header {
       <div class="diamond"></div>
       <span class="logo-txt">IRA INTEL</span>
     </div>
-    <span class="logo-sub">// CAPTURA DE NOTICIAS v4.0</span>
+    <span class="logo-sub">// CAPTURA DE NOTICIAS v4.1</span>
     <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
       <span id="gemini-status" onclick="abrirGestorKeys()" style="font-family:var(--title);font-size:6px;padding:3px 8px;border-radius:3px;border:1px solid #1a4a2a;background:rgba(0,255,136,.06);color:#00ff88;cursor:pointer;letter-spacing:1px;" title="Gestionar API Keys">🤖 IA OK</span>
     </div>
@@ -3670,7 +3670,7 @@ function renderMapa() {
         '<button onclick="verDetallesBD(\'' + nId + '\')" style="font-family:\'Orbitron\',monospace;font-size:7px;padding:4px 8px;background:rgba(0,245,255,.1);color:#00f5ff;border:1px solid #00f5ff44;border-radius:2px;cursor:pointer;letter-spacing:1px;">DETALLE &#9654;</button>' +
       '</div>';
 
-    marker.bindPopup(popupHtml, { maxWidth: 270, className: 'mapa-popup-custom' });
+    marker.bindPopup(popupHtml, { maxWidth: 300, minWidth: 200, className: 'mapa-popup-custom' });
     marker.addTo(mapaObj);
     mapaMarkers.push(marker);
 
@@ -4887,4 +4887,3 @@ window.probarOpenRouter = probarOpenRouter;
 
 </body>
 </html>
- 
