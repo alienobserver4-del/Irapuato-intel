@@ -1702,61 +1702,80 @@ function llamarOpenRouterPool(prompt, callback, onAgotado) {
   var pool = (window._appORKeys && window._appORKeys.length) ? window._appORKeys : OPENROUTER_KEYS;
   if (!pool || pool.length === 0) { onAgotado && onAgotado(); return; }
 
-  // Modelos verificados en OpenRouter free — lista oficial marzo 2026
-  // openrouter/free = router automático oficial que elige entre TODOS los modelos gratis
-  // disponibles según la solicitud. Es el más robusto porque no depende de un modelo fijo.
+  // Lista de modelos free verificada — marzo 2026
+  // openrouter/free = router automático de OR que elige el mejor disponible
   var modelos = [
-    'openrouter/free',                                    // Router automático — siempre disponible
-    'meta-llama/llama-3.3-70b-instruct:free',             // Llama 3.3 70B — excelente JSON/español
-    'mistralai/mistral-small-3.1-24b-instruct:free',      // Mistral Small 3.1 — JSON confiable
-    'nousresearch/hermes-3-llama-3.1-405b:free',          // Hermes 3 405B — instrucciones complejas
-    'openai/gpt-oss-20b:free',                            // GPT OSS 20B — OpenAI open weight
-    'meta-llama/llama-3.2-3b-instruct:free',              // Llama 3.2 3B — ligero y rápido
-    'google/gemma-3-27b-it:free',                         // Gemma 3 27B — mejor Gemma disponible
-    'google/gemma-3-12b-it:free',                         // Gemma 3 12B
-    'google/gemma-3-4b-it:free'                           // Gemma 3 4B — último recurso
+    'openrouter/free',                                // Router automático — primer intento siempre
+    'meta-llama/llama-3.3-70b-instruct:free',         // Llama 3.3 70B
+    'mistralai/mistral-small-3.1-24b-instruct:free',  // Mistral Small 3.1
+    'nousresearch/hermes-3-llama-3.1-405b:free',      // Hermes 3 405B
+    'openai/gpt-oss-20b:free',                        // GPT OSS 20B
+    'meta-llama/llama-3.2-3b-instruct:free',          // Llama 3.2 3B
+    'google/gemma-3-27b-it:free',                     // Gemma 3 27B
+    'google/gemma-3-12b-it:free',                     // Gemma 3 12B
+    'google/gemma-3-4b-it:free'                       // Gemma 3 4B
   ];
 
-  var statusEl = document.getElementById('gemini-status');
-  var keyIdx = (window._orKeyIdx || 0) % pool.length;
-  var modelIdx = 0;
-  var intentos = 0;
-  var maxIntentos = pool.length * modelos.length + 2;
+  // Modelos que NO soportan system role (requieren todo en user)
+  var sinSystemRole = ['gemma'];
+  // Modelos que NO soportan response_format json_object
+  var sinJsonFormat = ['gemma', 'hermes', 'llama-3.2-3b', 'gpt-oss'];
 
-  // Encontrar el primer modelo no agotado
-  while (modelIdx < modelos.length && _orModelosAgotados[modelos[modelIdx]]) modelIdx++;
+  var statusEl = document.getElementById('gemini-status');
+
+  // Estado de intentos: recorre keys×modelos en orden lógico
+  // Estrategia: primero probar openrouter/free con TODAS las keys antes de pasar a modelos fijos
+  var secuencia = [];
+  modelos.forEach(function(m) {
+    pool.forEach(function(k, ki) {
+      // Para openrouter/free probar todas las keys primero
+      secuencia.push({ modelo: m, keyIdx: ki });
+    });
+  });
+
+  var intentoIdx = 0;
+  var errores404Permanentes = {}; // modelos con 404 nunca se recuperan → saltar siempre
 
   function siguiente() {
-    if (intentos++ > maxIntentos) {
-      console.warn('[OpenRouter] Todos los modelos y keys agotados');
+    // Saltar entradas con 404 permanente
+    while (intentoIdx < secuencia.length && errores404Permanentes[secuencia[intentoIdx].modelo]) {
+      intentoIdx++;
+    }
+    if (intentoIdx >= secuencia.length) {
+      console.warn('[OpenRouter] Todos los intentos agotados');
       if (statusEl) { statusEl.textContent = '⚠ OR agotado'; statusEl.style.color = '#ff4466'; }
       onAgotado && onAgotado();
       return;
     }
 
-    // Si agotamos modelos con esta key, rotar key y reiniciar modelos
-    if (modelIdx >= modelos.length) {
-      keyIdx = (keyIdx + 1) % pool.length;
-      modelIdx = 0;
-      // Limpiar agotados para la nueva key (el rate limit es por key+modelo)
-      _orModelosAgotados = {};
-      console.log('[OpenRouter] Todos los modelos con rate limit en esta key → rotando a key' + (keyIdx + 1));
-    }
-
-    var key = pool[keyIdx];
-    var modelo = modelos[modelIdx];
-    var nombreCorto = (modelo.split('/')[1] || modelo).split(':')[0].slice(0, 14);
+    var item    = secuencia[intentoIdx];
+    var key     = pool[item.keyIdx];
+    var modelo  = item.modelo;
+    var nombreCorto = (modelo.split('/')[1] || modelo).split(':')[0].slice(0, 16);
     if (statusEl) { statusEl.textContent = '🔀 ' + nombreCorto; statusEl.style.color = '#ff8800'; }
 
-    // System prompt base
     var sysPrompt = 'Eres un extractor de datos de noticias locales de Irapuato, Mexico. Respondes UNICAMENTE con JSON valido, sin texto adicional ni markdown.';
-    // Limitar prompt a 6000 chars para modelos con contexto reducido
     var promptCorto = prompt.length > 6000 ? prompt.slice(0, 6000) + '\n\nJSON:' : prompt;
-    // Gemma NO soporta system role → fusionar en user
-    var esGemma = modelo.indexOf('gemma') !== -1;
-    var messages = esGemma
+
+    // Adaptar messages según soporte de system role
+    var esModSinSys = sinSystemRole.some(function(s) { return modelo.indexOf(s) !== -1; });
+    var messages = esModSinSys
       ? [{ role: 'user', content: sysPrompt + '\n\n' + promptCorto }]
       : [{ role: 'system', content: sysPrompt }, { role: 'user', content: promptCorto }];
+
+    // Adaptar body según soporte de response_format
+    var esModSinJson = sinJsonFormat.some(function(s) { return modelo.indexOf(s) !== -1; });
+    var body = {
+      model: modelo,
+      messages: messages,
+      max_tokens: 800,
+      temperature: 0.05
+    };
+    if (!esModSinJson) {
+      body.response_format = { type: 'json_object' };
+    }
+
+    console.log('[OpenRouter] Intentando ' + modelo + ' key' + (item.keyIdx+1));
 
     fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -1766,75 +1785,112 @@ function llamarOpenRouterPool(prompt, callback, onAgotado) {
         'HTTP-Referer': 'https://alienobserver4-del.github.io',
         'X-Title': 'Irapuato Intel'
       },
-      body: JSON.stringify(Object.assign({
-        model: modelo,
-        messages: messages,
-        max_tokens: 800,
-        temperature: 0.05,
-        response_format: { type: 'json_object' }  // fuerza JSON en todos los modelos que lo soporten
-      }, modelo === 'openrouter/free' ? {
-        // Para el router automático: preferir modelos con tool-calling que manejan JSON mejor
-        provider: { sort: 'throughput', allow_fallbacks: true }
-      } : {}))
+      body: JSON.stringify(body)
     })
     .then(function(res) { return res.json().then(function(d) { return { status: res.status, data: d }; }); })
     .then(function(rd) {
+
       if (rd.status === 429) {
-        console.log('[OpenRouter] 429 en ' + nombreCorto + ' (key' + (keyIdx+1) + ') → probando siguiente modelo');
-        _orModelosAgotados[modelo] = true;
-        modelIdx++;
-        while (modelIdx < modelos.length && _orModelosAgotados[modelos[modelIdx]]) modelIdx++;
-        setTimeout(siguiente, 300);
+        // Rate limit — este modelo+key está saturado, saltar a siguiente
+        console.log('[OpenRouter] 429 — ' + nombreCorto + ' key' + (item.keyIdx+1) + ' → siguiente');
+        intentoIdx++;
+        setTimeout(siguiente, 200);
         return;
       }
+
+      if (rd.status === 404) {
+        // Modelo no existe en free — marcarlo permanente para no reintentar nunca
+        var errMsg = (rd.data && rd.data.error && rd.data.error.message) ? rd.data.error.message.slice(0,60) : '404';
+        console.warn('[OpenRouter] 404 permanente — ' + modelo + ': ' + errMsg);
+        errores404Permanentes[modelo] = true;
+        intentoIdx++;
+        siguiente();
+        return;
+      }
+
       if (rd.status === 400) {
-        // Bad request — puede ser prompt muy largo o modelo no soporta system role
         var errMsg = (rd.data && rd.data.error && rd.data.error.message) ? rd.data.error.message.slice(0,80) : 'bad request';
-        console.warn('[OpenRouter] 400 en ' + nombreCorto + ': ' + errMsg + ' → siguiente modelo');
-        modelIdx++; siguiente(); return;
-      }
-      if (rd.status === 401 || rd.status === 403) {
-        console.warn('[OpenRouter] Key' + (keyIdx+1) + ' inválida (' + rd.status + ') → rotando key');
-        keyIdx = (keyIdx + 1) % pool.length;
-        modelIdx = 0;
-        _orModelosAgotados = {};
-        setTimeout(siguiente, 300);
+        console.warn('[OpenRouter] 400 — ' + nombreCorto + ': ' + errMsg);
+        // Si el error menciona response_format, reintentar sin él
+        if (errMsg.indexOf('response_format') !== -1 || errMsg.indexOf('json') !== -1) {
+          console.log('[OpenRouter] Reintentando ' + nombreCorto + ' sin response_format');
+          delete body.response_format;
+          fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + key,
+              'HTTP-Referer': 'https://alienobserver4-del.github.io',
+              'X-Title': 'Irapuato Intel'
+            },
+            body: JSON.stringify(body)
+          })
+          .then(function(r2) { return r2.json().then(function(d2) { return { status: r2.status, data: d2 }; }); })
+          .then(function(rd2) {
+            if (rd2.status === 200) {
+              procesarRespuesta(rd2, modelo, item.keyIdx);
+            } else {
+              intentoIdx++; siguiente();
+            }
+          }).catch(function() { intentoIdx++; siguiente(); });
+          return;
+        }
+        intentoIdx++;
+        siguiente();
         return;
       }
+
+      if (rd.status === 401 || rd.status === 403) {
+        console.warn('[OpenRouter] Key' + (item.keyIdx+1) + ' inválida (' + rd.status + ')');
+        // Saltar todas las entradas de esta key
+        intentoIdx++;
+        while (intentoIdx < secuencia.length && secuencia[intentoIdx].keyIdx === item.keyIdx) intentoIdx++;
+        siguiente();
+        return;
+      }
+
       if (rd.status !== 200) {
-        var errMsg2 = (rd.data && rd.data.error && rd.data.error.message) ? rd.data.error.message.slice(0,80) : '';
-        console.warn('[OpenRouter] ' + rd.status + ' en ' + modelo + (errMsg2 ? ': ' + errMsg2 : ''));
-        modelIdx++; siguiente(); return;
+        var e = (rd.data && rd.data.error && rd.data.error.message) ? rd.data.error.message.slice(0,60) : '';
+        console.warn('[OpenRouter] ' + rd.status + ' — ' + nombreCorto + (e ? ': '+e : ''));
+        intentoIdx++;
+        siguiente();
+        return;
       }
-      var txt = rd.data.choices && rd.data.choices[0] && rd.data.choices[0].message && rd.data.choices[0].message.content;
-      if (!txt) { modelIdx++; siguiente(); return; }
-      // Extraer JSON — puede venir con markdown o sin él
-      var match = txt.match(/```json\s*([\s\S]*?)```/) || txt.match(/```([\s\S]*?)```/) || txt.match(/(\{[\s\S]*\})/);
-      if (!match) {
-        console.warn('[OpenRouter] Sin JSON en ' + modelo + ' — probando siguiente');
-        modelIdx++; siguiente(); return;
-      }
-      var jsonStr = match[1] || match[0];
-      try {
-        var r = JSON.parse(jsonStr.trim());
-        // Si usamos openrouter/auto, mostrar el modelo real elegido
-        var modeloReal = (rd.data.model || modelo);
-        var modeloCorto = (modeloReal.split('/')[1] || modeloReal).split(':')[0].slice(0,16);
-        console.log('[OpenRouter] OK — ' + modeloReal + ' key' + (keyIdx+1));
-        window._orKeyIdx = keyIdx;
-        if (typeof _orKeyIdx !== 'undefined') _orKeyIdx = keyIdx;
-        if (statusEl) { statusEl.textContent = '🤖 ' + modeloCorto; statusEl.style.color = '#00ff88'; }
-        _orModelosAgotados = {}; // limpiar para próxima llamada
-        callback(r, null);
-      } catch(e) {
-        console.warn('[OpenRouter] JSON inválido en ' + modelo);
-        modelIdx++; siguiente();
-      }
+
+      procesarRespuesta(rd, modelo, item.keyIdx);
     })
-    .catch(function() {
-      console.warn('[OpenRouter] fetch error — ' + modelo);
-      modelIdx++; siguiente();
+    .catch(function(err) {
+      console.warn('[OpenRouter] fetch error — ' + nombreCorto + ':', err);
+      intentoIdx++;
+      setTimeout(siguiente, 500);
     });
+  }
+
+  function procesarRespuesta(rd, modelo, keyIdx) {
+    var txt = rd.data.choices && rd.data.choices[0] && rd.data.choices[0].message && rd.data.choices[0].message.content;
+    if (!txt) {
+      console.warn('[OpenRouter] Respuesta vacía — ' + modelo);
+      intentoIdx++; siguiente(); return;
+    }
+    // Extraer JSON de la respuesta
+    var match = txt.match(/```json\s*([\s\S]*?)```/) || txt.match(/```([\s\S]*?)```/) || txt.match(/(\{[\s\S]*\})/);
+    if (!match) {
+      console.warn('[OpenRouter] Sin JSON en ' + modelo + ' — texto: ' + txt.slice(0,100));
+      intentoIdx++; siguiente(); return;
+    }
+    var jsonStr = match[1] || match[0];
+    try {
+      var r = JSON.parse(jsonStr.trim());
+      var modeloReal  = (rd.data.model || modelo);
+      var modeloCorto = (modeloReal.split('/')[1] || modeloReal).split(':')[0].slice(0, 18);
+      console.log('[OpenRouter] ✓ OK — ' + modeloReal + ' key' + (keyIdx+1));
+      window._orKeyIdx = keyIdx;
+      if (statusEl) { statusEl.textContent = '🤖 ' + modeloCorto; statusEl.style.color = '#00ff88'; }
+      callback(r, null);
+    } catch(e) {
+      console.warn('[OpenRouter] JSON inválido en ' + modelo + ' — ' + jsonStr.slice(0,80));
+      intentoIdx++; siguiente();
+    }
   }
 
   siguiente();
@@ -1843,7 +1899,7 @@ window.llamarOpenRouterPool = llamarOpenRouterPool;
 
 // Wrapper para compatibilidad con llamadas directas
 function llamarOpenRouter(prompt, apiKey, callback) {
-  window._appORKeys = [apiKey]; // temporal para llamada directa
+  window._appORKeys = [apiKey];
   llamarOpenRouterPool(prompt, callback, function() { callback(null, 'agotado'); });
 }
 window.llamarOpenRouter = llamarOpenRouter;
@@ -1855,44 +1911,37 @@ function llamarIA(prompt, callback) {
   var gPool  = (window._appGeminiKeys && window._appGeminiKeys.length) ? window._appGeminiKeys : GEMINI_KEYS;
 
   if (orPool && orPool.length > 0) {
-    // ── OpenRouter es el motor principal ──
-    // Si todas las keys están en rate-limit, reintentamos hasta 2 veces
-    // esperando 30s entre intentos antes de caer a Gemini.
+    // OpenRouter es el motor principal
+    // Si todos los modelos+keys dan 429 simultáneamente (rate limit), esperar 60s y reintentar 1 vez
+    // antes de caer a Gemini (que es inferior para extracción de JSON)
     var reintentos = 0;
-    var maxReintentos = 2;
+    var maxReintentos = 1;
 
     function intentarOR() {
       llamarOpenRouterPool(prompt, callback, function() {
-        // OpenRouter agotó todos sus modelos/keys en este intento
         if (reintentos < maxReintentos) {
           reintentos++;
-          var esperaMs = 30000; // 30s para que los rate-limits se recuperen
-          var segs = 30;
           var statusEl = document.getElementById('gemini-status');
-          console.warn('[IA] OR agotado — reintento ' + reintentos + '/' + maxReintentos + ' en ' + segs + 's');
+          var segs = 60;
+          console.warn('[IA] OR rate-limit — esperando ' + segs + 's antes de reintentar');
           if (statusEl) {
             var t0 = Date.now();
             var cd = setInterval(function() {
               var rem = segs - Math.floor((Date.now() - t0) / 1000);
               if (rem <= 0) { clearInterval(cd); return; }
-              statusEl.textContent = '⏳ OR retry ' + reintentos + ' en ' + rem + 's';
+              statusEl.textContent = '⏳ OR espera ' + rem + 's';
               statusEl.style.color = '#ff8800';
-            }, 500);
+            }, 1000);
           }
-          setTimeout(function() {
-            // Limpiar estado de agotados para el reintento
-            window._orModelosAgotados = {}; _orModelosAgotados = window._orModelosAgotados;
-            intentarOR();
-          }, esperaMs);
+          setTimeout(intentarOR, segs * 1000);
         } else {
-          // Agotados todos los reintentos de OR — Gemini como último recurso
+          // Usar Gemini como último recurso
           if (gPool && gPool.length > 0) {
-            console.warn('[IA] OpenRouter agotado tras ' + maxReintentos + ' reintentos — usando Gemini como último recurso');
+            console.warn('[IA] OR agotado — usando Gemini como último recurso');
             var statusEl2 = document.getElementById('gemini-status');
             if (statusEl2) { statusEl2.textContent = '⚠ Gemini (último recurso)'; statusEl2.style.color = '#ffcc00'; }
             llamarGemini(prompt, callback);
           } else {
-            console.error('[IA] Sin IA disponible — OR agotado y sin keys Gemini');
             callback(null, 'sin IA disponible — revisa tus keys en 🤖');
           }
         }
@@ -1902,14 +1951,13 @@ function llamarIA(prompt, callback) {
     intentarOR();
 
   } else if (gPool && gPool.length > 0) {
-    // Sin OpenRouter configurado — usar Gemini directamente
     console.log('[IA] Sin OR configurado — usando Gemini');
     llamarGemini(prompt, callback);
   } else {
     callback(null, 'sin keys configuradas — abre 🤖 para agregar');
   }
 }
-window.llamarIA = llamarIA;
+winwindow.llamarIA = llamarIA;
 
 function clasificarLocal(txt) {
   var t = txt.toLowerCase();
