@@ -3655,6 +3655,8 @@ if (typeof firebase === 'undefined') {
 }
   db = firebase.firestore();
   escucharBD();
+  // Cargar keys desde Firebase (sincroniza entre dispositivos)
+  setTimeout(function() { cargarKeysFirebase(); }, 800);
   // Cargar base geo-interna
   setTimeout(function() {
     db.collection('geo-irapuato').limit(300).get()
@@ -4847,6 +4849,7 @@ function agregarKeyDesdeModal() {
   // Sincronizar con todos los arrays que usa llamarGemini
   if (typeof GEMINI_KEYS !== 'undefined' && GEMINI_KEYS.indexOf(key) < 0) GEMINI_KEYS.push(key);
   try { localStorage.setItem('gemini_keys_pool', JSON.stringify(window._appGeminiKeys)); } catch(e) {}
+  syncKeysFirebase();
   if (input) input.value = '';
   renderKeysList();
   actualizarStatusGemini();
@@ -4860,6 +4863,7 @@ function eliminarKey(idx) {
   window._appGeminiKeys.splice(idx, 1);
   if (typeof GEMINI_KEYS !== 'undefined') { GEMINI_KEYS.splice(idx, 1); }
   try { localStorage.setItem('gemini_keys_pool', JSON.stringify(window._appGeminiKeys)); } catch(e) {}
+  syncKeysFirebase();
   if (window._geminiKeyIdx >= window._appGeminiKeys.length) window._geminiKeyIdx = 0;
   renderKeysList();
   actualizarStatusGemini();
@@ -4978,6 +4982,7 @@ function agregarORKey() {
   // Sincronizar con OPENROUTER_KEYS que usa llamarOpenRouterPool
   if (typeof OPENROUTER_KEYS !== 'undefined' && OPENROUTER_KEYS.indexOf(key) < 0) OPENROUTER_KEYS.push(key);
   try { localStorage.setItem('or_keys_pool', JSON.stringify(pool)); } catch(e) {}
+  syncKeysFirebase();
   if (input) input.value = '';
   renderORKeysList();
   actualizarStatusGemini();
@@ -4994,6 +4999,7 @@ function eliminarORKey(i) {
   window._appORKeys = pool;
   if ((window._orKeyIdx||0) >= pool.length) { window._orKeyIdx = 0; }
   try { localStorage.setItem('or_keys_pool', JSON.stringify(pool)); } catch(e) {}
+  syncKeysFirebase();
   renderORKeysList();
   actualizarStatusGemini();
 }
@@ -5028,6 +5034,56 @@ function guardarORKey() { agregarORKey(); }
 window.guardarORKey = guardarORKey;
 function probarOpenRouter(key) { probarORKey(key, 0); }
 window.probarOpenRouter = probarOpenRouter;
+
+
+// ── Sincronización de keys con Firebase ──
+function syncKeysFirebase() {
+  if (!db) return; // Firebase aún no listo, se intentará después
+  var data = {
+    gemini: window._appGeminiKeys || [],
+    openrouter: window._appORKeys || [],
+    updatedAt: new Date().toISOString()
+  };
+  db.collection('config').doc('keys').set(data)
+    .catch(function(e) { console.warn('[Keys] Error guardando en Firebase:', e.message); });
+}
+window.syncKeysFirebase = syncKeysFirebase;
+
+function cargarKeysFirebase(callback) {
+  if (!db) { if (callback) callback(); return; }
+  db.collection('config').doc('keys').get()
+    .then(function(doc) {
+      if (doc.exists) {
+        var data = doc.data();
+        var changed = false;
+        if (Array.isArray(data.gemini) && data.gemini.length) {
+          // Fusionar: agregar keys de Firebase que no estén en local
+          var local = window._appGeminiKeys || [];
+          data.gemini.forEach(function(k) { if (local.indexOf(k) < 0) { local.push(k); changed = true; } });
+          window._appGeminiKeys = local;
+          try { localStorage.setItem('gemini_keys_pool', JSON.stringify(local)); } catch(e) {}
+          if (typeof GEMINI_KEYS !== 'undefined') { GEMINI_KEYS.length = 0; local.forEach(function(k){ GEMINI_KEYS.push(k); }); }
+        }
+        if (Array.isArray(data.openrouter) && data.openrouter.length) {
+          var localOR = window._appORKeys || [];
+          data.openrouter.forEach(function(k) { if (localOR.indexOf(k) < 0) { localOR.push(k); changed = true; } });
+          window._appORKeys = localOR;
+          try { localStorage.setItem('or_keys_pool', JSON.stringify(localOR)); } catch(e) {}
+          if (typeof OPENROUTER_KEYS !== 'undefined') { OPENROUTER_KEYS.length = 0; localOR.forEach(function(k){ OPENROUTER_KEYS.push(k); }); }
+        }
+        if (changed) {
+          console.log('[Keys] Keys sincronizadas desde Firebase ✓');
+          if (typeof actualizarStatusGemini === 'function') actualizarStatusGemini();
+          if (typeof renderKeysList === 'function') renderKeysList();
+          if (typeof renderORKeysList === 'function') renderORKeysList();
+          toast('🔑 Keys sincronizadas desde Firebase', 'ok');
+        }
+      }
+      if (callback) callback();
+    })
+    .catch(function(e) { console.warn('[Keys] Error cargando desde Firebase:', e.message); if (callback) callback(); });
+}
+window.cargarKeysFirebase = cargarKeysFirebase;
 
 // ── Carga de keys desde localStorage — se ejecuta inmediatamente al cargar el script ──
 // Se llama dos veces: aquí (para tenerlas disponibles) y en DOMContentLoaded (para actualizar UI)
