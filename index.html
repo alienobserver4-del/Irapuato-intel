@@ -3338,6 +3338,8 @@ function renderBD() {
           '<option value="noche"' + (n.tiempo_dia==='noche'?' selected':'') + '>Noche (19-24h)</option>' +
           '<option value="madrugada"' + (n.tiempo_dia==='madrugada'?' selected':'') + '>Madrugada (0-6h)</option>' +
         '</select>' +
+        '<div style="font-family:var(--mono);font-size:7px;color:#3a5a7a;padding:4px 0 2px;">ENLACE / URL</div>' +
+        '<input id="bde-url-' + n.id + '" class="nc-input" value="' + (n.url||n.link||'').replace(/"/g,\'&quot;\') + '" placeholder="https://..." style="margin-bottom:6px;font-size:8px;">' +
         '<div style="font-family:var(--mono);font-size:7px;color:#3a5a7a;padding:4px 0 2px;">COORDENADAS MANUALES (lat, lng) — sobreescribe autubicación</div>' +
         '<input id="bde-coords-' + n.id + '" class="nc-input" value="' + (n.lat && n.lat !== 20.6795 ? (n.lat + ', ' + n.lng) : '') + '" placeholder="Ej: 20.6510, -101.3780" style="margin-bottom:6px;font-size:8px;">' +
         '<button onclick="guardarEditBD(\'' + n.id + '\')" style="width:100%;padding:8px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88;font-family:var(--title);font-size:8px;cursor:pointer;margin-bottom:4px;">GUARDAR CAMBIOS</button>' +
