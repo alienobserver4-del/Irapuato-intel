@@ -1702,16 +1702,19 @@ function llamarOpenRouterPool(prompt, callback, onAgotado) {
   var pool = (window._appORKeys && window._appORKeys.length) ? window._appORKeys : OPENROUTER_KEYS;
   if (!pool || pool.length === 0) { onAgotado && onAgotado(); return; }
 
-  // Modelos verificados como funcionales en OpenRouter free (marzo 2026)
-  // Ordenados de mejor a peor para extracción de JSON estructurado en español
+  // Modelos verificados en OpenRouter free — lista oficial marzo 2026
+  // openrouter/free = router automático oficial que elige entre TODOS los modelos gratis
+  // disponibles según la solicitud. Es el más robusto porque no depende de un modelo fijo.
   var modelos = [
-    'meta-llama/llama-3.3-70b-instruct:free',         // Llama 3.3 70B — mejor JSON
-    'mistralai/mistral-small-3.1-24b-instruct:free',  // Mistral Small 3.1 — JSON confiable
-    'meta-llama/llama-3.1-8b-instruct:free',          // Llama 3.1 8B — rápido, ligero
-    'microsoft/phi-3-mini-128k-instruct:free',        // Phi-3 Mini — contexto largo
-    'google/gemma-3-12b-it:free',                     // Gemma 3 12B — respaldo
-    'google/gemma-3-4b-it:free',                      // Gemma 3 4B — último recurso
-    'nousresearch/hermes-3-llama-3.1-8b:free'         // Hermes 3 — bueno para JSON
+    'openrouter/free',                                    // Router automático — siempre disponible
+    'meta-llama/llama-3.3-70b-instruct:free',             // Llama 3.3 70B — excelente JSON/español
+    'mistralai/mistral-small-3.1-24b-instruct:free',      // Mistral Small 3.1 — JSON confiable
+    'nousresearch/hermes-3-llama-3.1-405b:free',          // Hermes 3 405B — instrucciones complejas
+    'openai/gpt-oss-20b:free',                            // GPT OSS 20B — OpenAI open weight
+    'meta-llama/llama-3.2-3b-instruct:free',              // Llama 3.2 3B — ligero y rápido
+    'google/gemma-3-27b-it:free',                         // Gemma 3 27B — mejor Gemma disponible
+    'google/gemma-3-12b-it:free',                         // Gemma 3 12B
+    'google/gemma-3-4b-it:free'                           // Gemma 3 4B — último recurso
   ];
 
   var statusEl = document.getElementById('gemini-status');
@@ -1745,10 +1748,15 @@ function llamarOpenRouterPool(prompt, callback, onAgotado) {
     var nombreCorto = (modelo.split('/')[1] || modelo).split(':')[0].slice(0, 14);
     if (statusEl) { statusEl.textContent = '🔀 ' + nombreCorto; statusEl.style.color = '#ff8800'; }
 
-    // Separar system prompt del user prompt para mayor compatibilidad
+    // System prompt base
     var sysPrompt = 'Eres un extractor de datos de noticias locales de Irapuato, Mexico. Respondes UNICAMENTE con JSON valido, sin texto adicional ni markdown.';
     // Limitar prompt a 6000 chars para modelos con contexto reducido
     var promptCorto = prompt.length > 6000 ? prompt.slice(0, 6000) + '\n\nJSON:' : prompt;
+    // Gemma NO soporta system role → fusionar en user
+    var esGemma = modelo.indexOf('gemma') !== -1;
+    var messages = esGemma
+      ? [{ role: 'user', content: sysPrompt + '\n\n' + promptCorto }]
+      : [{ role: 'system', content: sysPrompt }, { role: 'user', content: promptCorto }];
 
     fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -1758,15 +1766,16 @@ function llamarOpenRouterPool(prompt, callback, onAgotado) {
         'HTTP-Referer': 'https://alienobserver4-del.github.io',
         'X-Title': 'Irapuato Intel'
       },
-      body: JSON.stringify({
+      body: JSON.stringify(Object.assign({
         model: modelo,
-        messages: [
-          { role: 'system', content: sysPrompt },
-          { role: 'user', content: promptCorto }
-        ],
+        messages: messages,
         max_tokens: 800,
-        temperature: 0.05
-      })
+        temperature: 0.05,
+        response_format: { type: 'json_object' }  // fuerza JSON en todos los modelos que lo soporten
+      }, modelo === 'openrouter/free' ? {
+        // Para el router automático: preferir modelos con tool-calling que manejan JSON mejor
+        provider: { sort: 'throughput', allow_fallbacks: true }
+      } : {}))
     })
     .then(function(res) { return res.json().then(function(d) { return { status: res.status, data: d }; }); })
     .then(function(rd) {
