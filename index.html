@@ -531,7 +531,7 @@ header {
       <div class="diamond"></div>
       <span class="logo-txt">IRA INTEL</span>
     </div>
-    <span class="logo-sub">// CAPTURA DE NOTICIAS v4.1</span>
+    <span class="logo-sub">// CAPTURA DE NOTICIAS v4.2</span>
     <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
       <span id="gemini-status" onclick="abrirGestorKeys()" style="font-family:var(--title);font-size:6px;padding:3px 8px;border-radius:3px;border:1px solid #1a4a2a;background:rgba(0,255,136,.06);color:#00ff88;cursor:pointer;letter-spacing:1px;" title="Gestionar API Keys">🤖 IA OK</span>
     </div>
@@ -3653,22 +3653,22 @@ function renderMapa() {
     var nId = n.id;
 
     var popupHtml =
-      '<div class="mapa-popup-tipo" style="background:' + colorTipo + '22;color:' + colorTipo + ';border:1px solid ' + colorTipo + '44;">' + tipo.toUpperCase() + '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+        '<div class="mapa-popup-tipo" style="background:' + colorTipo + '22;color:' + colorTipo + ';border:1px solid ' + colorTipo + '44;margin-bottom:0;">' + tipo.toUpperCase() + '</div>' +
+        '<div style="display:flex;gap:4px;">' +
+          ((n.url||n.link) ? '<a href="' + (n.url||n.link) + '" target="_blank" rel="noopener" style="font-family:\'Orbitron\',monospace;font-size:7px;padding:3px 7px;background:rgba(255,200,0,.15);color:#ffc800;border:1px solid #ffc80066;border-radius:2px;text-decoration:none;letter-spacing:1px;">&#128279; VER</a>' : '') +
+          '<button onclick="verDetallesBD(\'' + nId + '\')" style="font-family:\'Orbitron\',monospace;font-size:7px;padding:3px 7px;background:rgba(0,245,255,.15);color:#00f5ff;border:1px solid #00f5ff66;border-radius:2px;cursor:pointer;letter-spacing:1px;">DETALLE &#9654;</button>' +
+        '</div>' +
+      '</div>' +
       '<div class="mapa-popup-tit">' + (n.titulo || 'Sin titulo') + '</div>' +
       '<div class="mapa-popup-meta">' +
         (n.fuente ? '&#128240; ' + n.fuente + '<br>' : '') +
         (n.calle ? '&#128205; ' + n.calle + (n.calle2 ? ' / ' + n.calle2 : '') + '<br>' : '') +
-        (n.colonia ? '&#127968; Col: ' + n.colonia + '<br>' : '') +
-        (n.comunidad ? '&#127981; Com: ' + n.comunidad + '<br>' : '') +
-        (n.nombres ? '&#128100; ' + n.nombres + '<br>' : '') +
+        (n.colonia ? '&#127968; ' + n.colonia + '<br>' : '') +
         (n.fecha_evento ? '&#128197; ' + n.fecha_evento : '') +
         (n.tiempo_dia && n.tiempo_dia !== 'desconocido' ? ' &#9200; ' + n.tiempo_dia : '') +
       '</div>' +
-      (n.resumen ? '<div class="mapa-popup-res">' + n.resumen + '</div>' : '') +
-      '<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end;align-items:center;">' +
-        ((n.url||n.link) ? '<a href="' + (n.url||n.link) + '" target="_blank" rel="noopener" style="font-family:\'Orbitron\',monospace;font-size:7px;padding:4px 8px;background:rgba(255,200,0,.1);color:#ffc800;border:1px solid #ffc80044;border-radius:2px;text-decoration:none;letter-spacing:1px;">&#128279; VER</a>' : '') +
-        '<button onclick="verDetallesBD(\'' + nId + '\')" style="font-family:\'Orbitron\',monospace;font-size:7px;padding:4px 8px;background:rgba(0,245,255,.1);color:#00f5ff;border:1px solid #00f5ff44;border-radius:2px;cursor:pointer;letter-spacing:1px;">DETALLE &#9654;</button>' +
-      '</div>';
+      (n.resumen ? '<div class="mapa-popup-res">' + n.resumen + '</div>' : '');
 
     marker.bindPopup(popupHtml, { maxWidth: 300, minWidth: 200, className: 'mapa-popup-custom' });
     marker.addTo(mapaObj);
