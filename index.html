@@ -1696,6 +1696,7 @@ function llamarGemini(prompt, callback) {
 // Así evitamos el loop donde todas las keys fallan en el mismo modelo.
 
 var _orModelosAgotados = {}; // modelo → true si dio 429 en esta sesión
+window._orModelosAgotados = _orModelosAgotados; // expuesto para reset desde llamarIA
 
 function llamarOpenRouterPool(prompt, callback, onAgotado) {
   var pool = (window._appORKeys && window._appORKeys.length) ? window._appORKeys : OPENROUTER_KEYS;
@@ -1842,26 +1843,61 @@ window.llamarOpenRouter = llamarOpenRouter;
 // ── Función central de IA — OpenRouter primero, Gemini como fallback ──
 function llamarIA(prompt, callback) {
   var orPool = (window._appORKeys && window._appORKeys.length) ? window._appORKeys : OPENROUTER_KEYS;
+  var gPool  = (window._appGeminiKeys && window._appGeminiKeys.length) ? window._appGeminiKeys : GEMINI_KEYS;
+
   if (orPool && orPool.length > 0) {
-    // OpenRouter disponible — usarlo como principal con pool
-    llamarOpenRouterPool(prompt, callback, function() {
-      // OR agotado — intentar Gemini como fallback
-      var gPool = (window._appGeminiKeys && window._appGeminiKeys.length) ? window._appGeminiKeys : GEMINI_KEYS;
-      if (gPool && gPool.length > 0) {
-        console.log('[IA] OpenRouter pool agotado — usando Gemini como fallback');
-        llamarGemini(prompt, callback);
-      } else {
-        callback(null, 'sin IA disponible');
-      }
-    });
-  } else {
-    // Sin OpenRouter — usar Gemini
-    var gPool2 = (window._appGeminiKeys && window._appGeminiKeys.length) ? window._appGeminiKeys : GEMINI_KEYS;
-    if (gPool2 && gPool2.length > 0) {
-      llamarGemini(prompt, callback);
-    } else {
-      callback(null, 'sin keys configuradas');
+    // ── OpenRouter es el motor principal ──
+    // Si todas las keys están en rate-limit, reintentamos hasta 2 veces
+    // esperando 30s entre intentos antes de caer a Gemini.
+    var reintentos = 0;
+    var maxReintentos = 2;
+
+    function intentarOR() {
+      llamarOpenRouterPool(prompt, callback, function() {
+        // OpenRouter agotó todos sus modelos/keys en este intento
+        if (reintentos < maxReintentos) {
+          reintentos++;
+          var esperaMs = 30000; // 30s para que los rate-limits se recuperen
+          var segs = 30;
+          var statusEl = document.getElementById('gemini-status');
+          console.warn('[IA] OR agotado — reintento ' + reintentos + '/' + maxReintentos + ' en ' + segs + 's');
+          if (statusEl) {
+            var t0 = Date.now();
+            var cd = setInterval(function() {
+              var rem = segs - Math.floor((Date.now() - t0) / 1000);
+              if (rem <= 0) { clearInterval(cd); return; }
+              statusEl.textContent = '⏳ OR retry ' + reintentos + ' en ' + rem + 's';
+              statusEl.style.color = '#ff8800';
+            }, 500);
+          }
+          setTimeout(function() {
+            // Limpiar estado de agotados para el reintento
+            window._orModelosAgotados = {}; _orModelosAgotados = window._orModelosAgotados;
+            intentarOR();
+          }, esperaMs);
+        } else {
+          // Agotados todos los reintentos de OR — Gemini como último recurso
+          if (gPool && gPool.length > 0) {
+            console.warn('[IA] OpenRouter agotado tras ' + maxReintentos + ' reintentos — usando Gemini como último recurso');
+            var statusEl2 = document.getElementById('gemini-status');
+            if (statusEl2) { statusEl2.textContent = '⚠ Gemini (último recurso)'; statusEl2.style.color = '#ffcc00'; }
+            llamarGemini(prompt, callback);
+          } else {
+            console.error('[IA] Sin IA disponible — OR agotado y sin keys Gemini');
+            callback(null, 'sin IA disponible — revisa tus keys en 🤖');
+          }
+        }
+      });
     }
+
+    intentarOR();
+
+  } else if (gPool && gPool.length > 0) {
+    // Sin OpenRouter configurado — usar Gemini directamente
+    console.log('[IA] Sin OR configurado — usando Gemini');
+    llamarGemini(prompt, callback);
+  } else {
+    callback(null, 'sin keys configuradas — abre 🤖 para agregar');
   }
 }
 window.llamarIA = llamarIA;
