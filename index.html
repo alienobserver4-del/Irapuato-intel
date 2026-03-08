@@ -3096,6 +3096,7 @@ function renderBD() {
         (n.comunidad ? '<span class="nc-lugar">Com: ' + n.comunidad + '</span>' : '') +
         (n.nombres ? '<span style="color:#ffa500;font-size:7px;">Implicados: ' + n.nombres + '</span>' : '') +
         '<span style="color:var(--muted);font-size:7px;">Captura: ' + fecha + (n.fecha_evento ? ' | Evento: ' + n.fecha_evento : '') + '</span>' +
+        (n.link ? '<div style="margin-top:6px;"><a href="' + n.link + '" target="_blank" rel="noopener" style="font-family:var(--title);font-size:7px;font-weight:700;color:#00f5ff;text-decoration:none;border:1px solid #00f5ff44;padding:3px 8px;border-radius:2px;background:rgba(0,245,255,.08);letter-spacing:1px;">&#128279; VER NOTICIA</a></div>' : '') +
       '</div>' +
       '<div id="bd-edit-' + n.id + '" style="display:none;margin-top:8px;border-top:1px solid #0d2040;padding-top:8px;">' +
         '<select id="bde-tipo-' + n.id + '" class="nc-select" style="margin-bottom:4px;">' +
@@ -3664,8 +3665,9 @@ function renderMapa() {
         (n.tiempo_dia && n.tiempo_dia !== 'desconocido' ? ' &#9200; ' + n.tiempo_dia : '') +
       '</div>' +
       (n.resumen ? '<div class="mapa-popup-res">' + n.resumen + '</div>' : '') +
-      '<div style="margin-top:8px;text-align:right;">' +
-        '<button onclick="verDetallesBD(\'' + nId + '\')" style="font-family:\'Orbitron\',monospace;font-size:7px;padding:4px 8px;background:rgba(0,245,255,.1);color:#00f5ff;border:1px solid #00f5ff44;border-radius:2px;cursor:pointer;letter-spacing:1px;">VER DETALLE &#9654;</button>' +
+      '<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end;align-items:center;">' +
+        (n.link ? '<a href="' + n.link + '" target="_blank" rel="noopener" style="font-family:\'Orbitron\',monospace;font-size:7px;padding:4px 8px;background:rgba(255,200,0,.1);color:#ffc800;border:1px solid #ffc80044;border-radius:2px;text-decoration:none;letter-spacing:1px;">&#128279; VER</a>' : '') +
+        '<button onclick="verDetallesBD(\'' + nId + '\')" style="font-family:\'Orbitron\',monospace;font-size:7px;padding:4px 8px;background:rgba(0,245,255,.1);color:#00f5ff;border:1px solid #00f5ff44;border-radius:2px;cursor:pointer;letter-spacing:1px;">DETALLE &#9654;</button>' +
       '</div>';
 
     marker.bindPopup(popupHtml, { maxWidth: 270, className: 'mapa-popup-custom' });
