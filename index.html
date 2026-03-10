@@ -103,6 +103,43 @@ header {
 .tab.active.intel { color:var(--red); border-bottom-color:var(--red); background:rgba(255,34,85,.04); }
 .tab.active.aprende { color:#b060ff; border-bottom-color:#b060ff; background:rgba(176,96,255,.04); }
 
+/* ── SUB-TABS ECONOMÍA ── */
+.ec-stab-bar { display:flex; background:rgba(0,5,15,.98); border-bottom:1px solid #0d2040; flex-shrink:0; }
+.ec-stab {
+  flex:1; padding:8px 4px; font-family:var(--title); font-size:6.5px; font-weight:700; letter-spacing:.8px;
+  color:var(--muted); background:transparent; border:none; border-bottom:2px solid transparent;
+  cursor:pointer; transition:all .2s; white-space:nowrap;
+}
+.ec-stab.active { color:#ffcc00; border-bottom-color:#ffcc00; background:rgba(255,204,0,.05); }
+
+/* ── ANÁLISIS DENUE ── */
+#ec-analisis { display:none; flex:1; flex-direction:column; overflow:hidden; }
+#ec-analisis.visible { display:flex; }
+#ec-mapa-wrap { display:none; flex:1; flex-direction:column; overflow:hidden; }
+#ec-mapa-wrap.visible { display:flex; }
+
+.ec-filtros-bar { display:flex; align-items:center; gap:4px; padding:5px 10px;
+  background:rgba(0,8,20,.96); border-bottom:1px solid #0d2040; flex-shrink:0; overflow-x:auto; }
+.ec-filtros-bar::-webkit-scrollbar { height:2px; } .ec-filtros-bar::-webkit-scrollbar-thumb { background:#1a3a5a; }
+
+.ec-stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:8px 10px; flex-shrink:0; }
+.ec-stat-card { background:#060d18; border:1px solid #0d2040; border-radius:4px; padding:7px 8px; text-align:center; }
+.ec-stat-n { font-family:var(--title); font-size:15px; font-weight:900; color:#ffcc00; line-height:1.1; }
+.ec-stat-l { font-size:5.5px; color:var(--muted); letter-spacing:.8px; font-family:var(--title); margin-top:2px; }
+
+.ec-tabla-wrap { flex:1; overflow-y:auto; padding:0 10px 10px; }
+.ec-tabla-wrap::-webkit-scrollbar { width:3px; } .ec-tabla-wrap::-webkit-scrollbar-thumb { background:#1a3a5a; }
+.ec-tabla { width:100%; border-collapse:collapse; font-size:8px; }
+.ec-tabla th { font-family:var(--title); font-size:5.5px; letter-spacing:.8px; color:#3a6a9a;
+  padding:5px 6px; border-bottom:1px solid #0d2040; text-align:left; position:sticky; top:0;
+  background:#060d18; white-space:nowrap; }
+.ec-tabla td { padding:5px 6px; border-bottom:1px solid #080f1e; color:var(--text); vertical-align:middle; }
+.ec-tabla tr:hover td { background:rgba(0,245,255,.03); }
+.ec-cat-dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:4px; vertical-align:middle; flex-shrink:0; }
+.ec-badge { font-family:var(--title); font-size:5px; padding:1px 4px; border-radius:2px; letter-spacing:.5px; }
+.ec-sort-btn { background:none; border:none; cursor:pointer; color:#3a6a9a; font-size:8px; padding:0 2px; }
+.ec-sort-btn.asc::after { content:' ▲'; } .ec-sort-btn.desc::after { content:' ▼'; }
+
 /* ── SUB-TABS GOBIERNO ── */
 .gob-stab {
   flex:1; padding:9px 6px; font-family:var(--title); font-size:7px; font-weight:700; letter-spacing:.8px;
@@ -570,10 +607,10 @@ header {
 /* Botón heatmap */
 .mapa-heat-btn {
   padding:5px 9px; font-family:var(--title); font-size:6px; letter-spacing:1px;
-  border-radius:3px; cursor:pointer; border:1px solid #ff6600;
-  background:rgba(3,5,10,.88); color:#ff6600; white-space:nowrap;
+  border-radius:3px; cursor:pointer; border:1px solid #0066cc;
+  background:rgba(3,5,10,.88); color:#4499ff; white-space:nowrap;
 }
-.mapa-heat-btn.activo { background:rgba(255,102,0,.2); color:#ffaa44; border-color:#ffaa44; }
+.mapa-heat-btn.activo { background:rgba(0,102,255,.18); color:#66bbff; border-color:#44aaff; }
 .intel-t-btn {
   padding:3px 6px; font-family:var(--title); font-size:6px; letter-spacing:.3px;
   border-radius:3px; cursor:pointer; border:1px solid #1a3a5a;
@@ -583,6 +620,13 @@ header {
 /* Mini mapa en modal BD */
 #bd-mini-mapa { width:100%; height:160px; border-radius:4px; border:1px solid #0d2040; margin-top:8px; }
 .bd-modal-box { background:#060f1e; border:1px solid #00c8ff55; border-radius:6px; padding:20px; max-width:520px; width:92%; margin:30px auto; position:relative; }
+
+/* Popup DENUE personalizado */
+.denue-popup-custom .leaflet-popup-content-wrapper {
+  background:transparent !important; border:none !important; box-shadow:none !important; padding:0 !important;
+}
+.denue-popup-custom .leaflet-popup-content { margin:0 !important; }
+.denue-popup-custom .leaflet-popup-tip-container { display:none; }
 </style>
 </head>
 
@@ -1024,31 +1068,79 @@ header {
 
 <!-- DENUE: fuera de #panel igual que intel/mapa -->
 <div id="sec-denue" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:100;background:var(--bg);flex-direction:column;">
-  <!-- buscador -->
-  <div style="display:flex;gap:6px;align-items:center;padding:5px 10px;background:#040c18;border-bottom:1px solid #0a1a2a;flex-shrink:0;">
-    <input class="denue-search-input" id="denue-search" type="text" placeholder="🔍 Buscar negocio o actividad..." oninput="denueSearch(this.value)">
-    <button class="denue-search-btn" onclick="denueSearch(document.getElementById('denue-search').value)">BUSCAR</button>
-    <button class="denue-modo-btn" id="denue-modo-btn" onclick="toggleDenueModo()">🔥 CALOR</button>
+
+  <!-- SUB-TABS: MAPA / ANÁLISIS -->
+  <div class="ec-stab-bar">
+    <button class="ec-stab active" id="ec-stab-mapa" onclick="verEcSubtab('mapa')">🗺 MAPA</button>
+    <button class="ec-stab" id="ec-stab-analisis" onclick="verEcSubtab('analisis')">📊 ANÁLISIS</button>
   </div>
-  <!-- filtros categoría -->
-  <div class="denue-barra" id="denue-cats-bar"></div>
-  <!-- filtros tamaño -->
-  <div style="display:flex;align-items:center;gap:4px;padding:3px 10px;background:#020810;border-bottom:1px solid #0a1a2a;flex-shrink:0;overflow-x:auto;">
-    <span style="font-family:var(--title);font-size:5.5px;color:#2a4a6a;letter-spacing:1px;white-space:nowrap;margin-right:2px;">TAMAÑO:</span>
-    <button class="denue-size-btn activo" onclick="filtrarDenueSize(0,this)">TODOS</button>
-    <button class="denue-size-btn" onclick="filtrarDenueSize(1,this)">MICRO 0-5</button>
-    <button class="denue-size-btn" onclick="filtrarDenueSize(3,this)">PEQUEÑO 11-30</button>
-    <button class="denue-size-btn" onclick="filtrarDenueSize(5,this)">MED 51-100</button>
-    <button class="denue-size-btn" onclick="filtrarDenueSize(6,this)">GRANDE 100+</button>
-  </div>
-  <!-- mapa -->
-  <div style="flex:1;position:relative;">
-    <div id="denue-leaflet" style="width:100%;height:100%;background:#060d18;"></div>
-    <div style="position:absolute;bottom:0;left:0;right:0;z-index:900;background:rgba(3,5,10,.92);border-top:1px solid #0d2040;padding:5px 12px;font-size:7px;color:var(--muted);font-family:var(--title);letter-spacing:1px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-      <span id="denue-cnt-label" style="color:#ffcc00;">— Cargando DENUE…</span>
-      <span id="denue-modo-label" style="margin-left:auto;color:#3a6a9a;">HEATMAP</span>
+
+  <!-- ── SUB-TAB: MAPA ── -->
+  <div id="ec-mapa-wrap" class="visible">
+    <!-- buscador + modo -->
+    <div style="display:flex;gap:6px;align-items:center;padding:5px 10px;background:#040c18;border-bottom:1px solid #0a1a2a;flex-shrink:0;">
+      <input class="denue-search-input" id="denue-search" type="text" placeholder="🔍 Buscar negocio o actividad..." oninput="denueSearch(this.value)">
+      <button class="denue-search-btn" onclick="denueSearch(document.getElementById('denue-search').value)">BUSCAR</button>
+      <button class="denue-modo-btn" id="denue-modo-btn" onclick="toggleDenueModo()">💧 CALOR</button>
+    </div>
+    <!-- filtros categoría -->
+    <div class="denue-barra" id="denue-cats-bar"></div>
+    <!-- filtros tamaño -->
+    <div style="display:flex;align-items:center;gap:4px;padding:3px 10px;background:#020810;border-bottom:1px solid #0a1a2a;flex-shrink:0;overflow-x:auto;">
+      <span style="font-family:var(--title);font-size:5.5px;color:#2a4a6a;letter-spacing:1px;white-space:nowrap;margin-right:2px;">TAMAÑO:</span>
+      <button class="denue-size-btn activo" onclick="filtrarDenueSize(0,this)">TODOS</button>
+      <button class="denue-size-btn" onclick="filtrarDenueSize(1,this)">MICRO 0-5</button>
+      <button class="denue-size-btn" onclick="filtrarDenueSize(3,this)">PEQUEÑO 11-30</button>
+      <button class="denue-size-btn" onclick="filtrarDenueSize(5,this)">MED 51-100</button>
+      <button class="denue-size-btn" onclick="filtrarDenueSize(6,this)">GRANDE 100+</button>
+    </div>
+    <!-- mapa -->
+    <div style="flex:1;position:relative;">
+      <div id="denue-leaflet" style="width:100%;height:100%;background:#060d18;"></div>
+      <div style="position:absolute;bottom:0;left:0;right:0;z-index:900;background:rgba(3,5,10,.92);border-top:1px solid #0d2040;padding:5px 12px;font-size:7px;color:var(--muted);font-family:var(--title);letter-spacing:1px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <span id="denue-cnt-label" style="color:#ffcc00;">— Cargando DENUE…</span>
+        <span id="denue-modo-label" style="margin-left:auto;color:#3a6a9a;">HEATMAP</span>
+      </div>
     </div>
   </div>
+
+  <!-- ── SUB-TAB: ANÁLISIS ── -->
+  <div id="ec-analisis">
+    <!-- filtros análisis -->
+    <div class="ec-filtros-bar" id="ec-anal-cats"></div>
+    <div class="ec-filtros-bar" style="gap:6px;padding:4px 10px;">
+      <input id="ec-anal-search" type="text" class="denue-search-input" style="flex:1;font-size:8px;" placeholder="🔍 Buscar nombre o giro…" oninput="ecAnalFiltrar()">
+      <select id="ec-anal-size" onchange="ecAnalFiltrar()" style="background:#020810;border:1px solid #0d2040;color:var(--text);font-family:var(--mono);font-size:8px;padding:4px 6px;border-radius:3px;">
+        <option value="0">Todos los tamaños</option>
+        <option value="1">Micro 0-5</option>
+        <option value="2">6-10</option>
+        <option value="3">Pequeño 11-30</option>
+        <option value="4">31-50</option>
+        <option value="5">Med 51-100</option>
+        <option value="6">Grande 100+</option>
+      </select>
+      <button onclick="ecAnalExportar()" style="padding:4px 8px;font-family:var(--title);font-size:6px;letter-spacing:.5px;border-radius:3px;cursor:pointer;border:1px solid #ffcc0055;background:transparent;color:#ffcc0077;white-space:nowrap;">⬇ CSV</button>
+    </div>
+    <!-- stats cards -->
+    <div class="ec-stat-grid" id="ec-stat-grid"></div>
+    <!-- tabla -->
+    <div class="ec-tabla-wrap">
+      <table class="ec-tabla">
+        <thead>
+          <tr>
+            <th><button class="ec-sort-btn" onclick="ecAnalSort('cat')">CAT</button></th>
+            <th><button class="ec-sort-btn" onclick="ecAnalSort('nombre')">NOMBRE</button></th>
+            <th><button class="ec-sort-btn" onclick="ecAnalSort('giro')">GIRO</button></th>
+            <th><button class="ec-sort-btn" onclick="ecAnalSort('colonia')">COLONIA</button></th>
+            <th><button class="ec-sort-btn" onclick="ecAnalSort('tam')">EMPL.</button></th>
+          </tr>
+        </thead>
+        <tbody id="ec-tabla-body"></tbody>
+      </table>
+      <div id="ec-tabla-footer" style="font-family:var(--title);font-size:6px;color:#3a6a9a;letter-spacing:1px;padding:6px 2px;"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- INTEL: fuera de #panel para tener altura real -->
@@ -1804,6 +1896,7 @@ function iniciarDenue() {
     denueMapaObj = L.map('denue-leaflet', { center:[20.6795,-101.354], zoom:13 });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'©OSM', maxZoom:19 }).addTo(denueMapaObj);
   }
+  _denueBindZoom();
   renderDenueCatBtns();
   cargarDenue(function() { renderDenueMapa(); });
 }
@@ -1877,40 +1970,77 @@ function renderDenueMapa(extraFn) {
   var lbl = document.getElementById('denue-cnt-label');
   if (items.length === 0) { if (lbl) lbl.textContent = '0 establecimientos encontrados'; return; }
 
-  if (denueModo === 'heat') {
+  var zoom = denueMapaObj.getZoom();
+  // Auto-switch: zoom >= 15 = puntos detallados, zoom < 15 = heatmap (salvo modo forzado)
+  var modoEfectivo = denueModo;
+  if (denueModo === 'heat' && zoom >= 15) modoEfectivo = 'markers';
+
+  if (modoEfectivo === 'heat') {
     var pts = items.map(function(r){ return [r[5], r[6], Math.min(r[4] / 7, 1)]; });
     if (typeof L.heatLayer === 'function') {
-      denueHeatLayer = L.heatLayer(pts, { radius:18, blur:15, maxZoom:17,
-        gradient:{ 0.2:'#001a33', 0.4:'#003366', 0.6:'#0066cc', 0.8:'#ffcc00', 1:'#ff6600' }
+      // Gradiente azul económico con menos saturación/opacidad
+      denueHeatLayer = L.heatLayer(pts, {
+        radius: 22,
+        blur: 20,
+        maxZoom: 17,
+        minOpacity: 0.25,
+        max: 1.0,
+        gradient: {
+          0.0: 'rgba(0,0,0,0)',
+          0.15: 'rgba(0,20,60,0.45)',
+          0.35: 'rgba(0,60,150,0.55)',
+          0.55: 'rgba(0,100,220,0.62)',
+          0.75: 'rgba(30,160,255,0.68)',
+          0.90: 'rgba(120,210,255,0.72)',
+          1.0:  'rgba(200,240,255,0.78)'
+        }
       }).addTo(denueMapaObj);
     }
     if (lbl) lbl.textContent = items.length.toLocaleString() + ' establecimientos · HEATMAP';
+    var modlbl = document.getElementById('denue-modo-label');
+    if (modlbl) modlbl.textContent = 'HEATMAP — acércate para ver detalle';
   } else {
-    var MAX = 800;
+    var MAX = 1200;
     var muestra = items.slice(0, MAX);
     var grupo = L.layerGroup();
     muestra.forEach(function(r) {
       var color = DENUE_COLORS[r[1]] || '#aaaaaa';
-      var sz = 6 + Math.min(r[4], 4) * 2;
+      var sz = 7 + Math.min(r[4], 4) * 1.5;
       var ic = L.divIcon({ className:'', iconSize:[sz,sz], iconAnchor:[sz/2,sz/2],
-        html: '<div style="width:'+sz+'px;height:'+sz+'px;background:'+color+';border-radius:50%;border:1px solid rgba(255,255,255,.3);opacity:.85;"></div>'
+        html: '<div style="width:'+sz+'px;height:'+sz+'px;background:'+color+';border-radius:50%;border:1.5px solid rgba(255,255,255,.4);box-shadow:0 0 4px '+color+'88;opacity:.9;cursor:pointer;"></div>'
       });
+      var catLabel = DENUE_LABELS[r[1]] || r[1];
+      var empLabel = DENUE_PER[r[4]] || 'N/D';
       L.marker([r[5], r[6]], {icon:ic})
         .bindPopup(
-          '<div style="font-family:Orbitron,monospace;font-size:10px;color:#c0e8ff;line-height:1.3;margin-bottom:3px;">' + (r[0]||'Sin nombre') + '</div>' +
-          '<div style="font-size:8px;color:#5a9abf;margin-bottom:4px;">' + r[2] + '</div>' +
-          '<div style="font-size:7px;color:#3a6a8a;line-height:1.8;">📍 ' + r[3] + '<br>👥 ' + (DENUE_PER[r[4]]||'N/D') + ' personas</div>',
-          { maxWidth:200 }
+          '<div style="font-family:Orbitron,monospace;background:#06101e;border:1px solid #0d2040;border-radius:4px;padding:8px 10px;min-width:160px;">' +
+          '<div style="font-size:9px;font-weight:700;color:#c0e8ff;line-height:1.3;margin-bottom:4px;">' + (r[0]||'Sin nombre') + '</div>' +
+          '<div style="font-size:7px;color:'+color+';margin-bottom:3px;letter-spacing:.5px;">' + catLabel + '</div>' +
+          '<div style="font-size:7px;color:#5a9abf;margin-bottom:2px;">' + r[2] + '</div>' +
+          '<div style="font-size:6.5px;color:#3a6a8a;line-height:1.8;">📍 ' + r[3] + '<br>👥 ' + empLabel + ' empleados</div>' +
+          '</div>',
+          { maxWidth:220, className:'denue-popup-custom' }
         )
         .addTo(grupo);
     });
     denueMarkersLayer = grupo;
     grupo.addTo(denueMapaObj);
-    var extra = items.length > MAX ? ' (mostrando ' + MAX + ' de ' + items.length.toLocaleString() + ')' : '';
+    var extra = items.length > MAX ? ' (mostrando '+MAX+' de '+items.length.toLocaleString()+')' : '';
     if (lbl) lbl.textContent = items.length.toLocaleString() + ' establecimientos' + extra;
-    if (items.length > MAX && typeof toast === 'function') toast('Mostrando ' + MAX + ' de ' + items.length.toLocaleString() + ' — filtra para reducir', 'warn');
+    var modlbl2 = document.getElementById('denue-modo-label');
+    if (modlbl2) modlbl2.textContent = 'PUNTOS · toca para detalle';
+    if (items.length > MAX && typeof toast === 'function') toast('Mostrando '+MAX+' de '+items.length.toLocaleString()+' — filtra para reducir', 'warn');
   }
 }
+// Registrar evento de zoom para auto-switch heatmap ↔ puntos
+function _denueBindZoom() {
+  if (!denueMapaObj || denueMapaObj._denueZoomBound) return;
+  denueMapaObj._denueZoomBound = true;
+  denueMapaObj.on('zoomend', function() {
+    if (denueModo === 'heat') renderDenueMapa();
+  });
+}
+
 
 // Overlay DENUE sobre mapa Intel
 function toggleIntelDenue(btn) {
@@ -1936,6 +2066,182 @@ function toggleIntelDenue(btn) {
   }
 }
 window.toggleIntelDenue = toggleIntelDenue;
+
+// ═══════════════════════════════════════════════════════════════
+// SUB-TABS ECONOMÍA: MAPA / ANÁLISIS
+// ═══════════════════════════════════════════════════════════════
+var ecSubtabActual = 'mapa';
+
+function verEcSubtab(cual) {
+  ecSubtabActual = cual;
+  document.querySelectorAll('.ec-stab').forEach(function(b){ b.classList.remove('active'); });
+  var btn = document.getElementById('ec-stab-' + cual);
+  if (btn) btn.classList.add('active');
+
+  var mapa = document.getElementById('ec-mapa-wrap');
+  var anal = document.getElementById('ec-analisis');
+  if (cual === 'mapa') {
+    if (mapa) { mapa.classList.add('visible'); mapa.style.display='flex'; }
+    if (anal) { anal.classList.remove('visible'); anal.style.display='none'; }
+    // Re-ajustar mapa Leaflet
+    setTimeout(function(){
+      if (denueMapaObj) { denueMapaObj.invalidateSize(); }
+      else { iniciarDenue(); }
+    }, 100);
+  } else {
+    if (mapa) { mapa.classList.remove('visible'); mapa.style.display='none'; }
+    if (anal) { anal.classList.add('visible'); anal.style.display='flex'; }
+    cargarDenue(function(){ ecAnalInit(); });
+  }
+}
+window.verEcSubtab = verEcSubtab;
+
+// ── Módulo Análisis DENUE ──
+var ecAnalCatFiltro = 'todos';
+var ecAnalSortCol   = 'nombre';
+var ecAnalSortDir   = 'asc';
+var ecAnalPage      = 0;
+var EC_ANAL_PAGE_SIZE = 200;
+
+function ecAnalInit() {
+  // Botones de categoría
+  var bar = document.getElementById('ec-anal-cats');
+  if (bar && !bar._ready) {
+    bar._ready = true;
+    var cats = ['todos'].concat(Object.keys(DENUE_LABELS));
+    bar.innerHTML = cats.map(function(k){
+      var label = k==='todos'?'TODOS':DENUE_LABELS[k];
+      var color = k==='todos'?'#00ccff':(DENUE_COLORS[k]||'#5a8aaa');
+      return '<button class="denue-cat-btn activo" id="ec-acat-'+k+'" onclick="ecAnalSetCat(this.dataset.k)" data-k="'+k+'" style="color:'+color+';border-color:'+color+';">'+label+'</button>';
+    }).join('');
+  }
+  ecAnalFiltrar();
+}
+window.ecAnalInit = ecAnalInit;
+
+function ecAnalSetCat(cat) {
+  ecAnalCatFiltro = cat;
+  document.querySelectorAll('#ec-anal-cats .denue-cat-btn').forEach(function(b){
+    var bid = b.id.replace('ec-acat-','');
+    if (cat==='todos'){ b.classList.add('activo'); b.classList.remove('inactivo'); }
+    else { b.classList.toggle('activo', bid===cat); b.classList.toggle('inactivo', bid!==cat); }
+  });
+  ecAnalFiltrar();
+}
+window.ecAnalSetCat = ecAnalSetCat;
+
+function ecAnalFiltrar() {
+  if (!DENUE_DATA) return;
+  var q = (document.getElementById('ec-anal-search')||{}).value || '';
+  q = q.trim().toLowerCase();
+  var sz = parseInt((document.getElementById('ec-anal-size')||{}).value||'0');
+  var items = DENUE_DATA.filter(function(r){
+    if (ecAnalCatFiltro!=='todos' && r[1]!==ecAnalCatFiltro) return false;
+    if (sz>0 && r[4]<sz) return false;
+    if (q && r[0].toLowerCase().indexOf(q)<0 && r[2].toLowerCase().indexOf(q)<0 && r[3].toLowerCase().indexOf(q)<0) return false;
+    return true;
+  });
+  // Ordenar
+  items.sort(function(a,b){
+    var va,vb;
+    if (ecAnalSortCol==='nombre'){ va=a[0]; vb=b[0]; }
+    else if (ecAnalSortCol==='giro'){ va=a[2]; vb=b[2]; }
+    else if (ecAnalSortCol==='colonia'){ va=a[3]; vb=b[3]; }
+    else if (ecAnalSortCol==='cat'){ va=a[1]; vb=b[1]; }
+    else if (ecAnalSortCol==='tam'){ va=a[4]; vb=b[4]; return ecAnalSortDir==='asc'?va-vb:vb-va; }
+    else { va=a[0]; vb=b[0]; }
+    if (va<vb) return ecAnalSortDir==='asc'?-1:1;
+    if (va>vb) return ecAnalSortDir==='asc'?1:-1;
+    return 0;
+  });
+
+  // Stats
+  ecAnalRenderStats(items);
+  // Tabla (primera página)
+  ecAnalPage = 0;
+  ecAnalRenderTabla(items);
+}
+window.ecAnalFiltrar = ecAnalFiltrar;
+
+function ecAnalSort(col) {
+  if (ecAnalSortCol===col) { ecAnalSortDir = ecAnalSortDir==='asc'?'desc':'asc'; }
+  else { ecAnalSortCol=col; ecAnalSortDir='asc'; }
+  document.querySelectorAll('.ec-sort-btn').forEach(function(b){ b.classList.remove('asc','desc'); });
+  var active = document.querySelector('.ec-sort-btn[onclick*="\''+col+'\'"]');
+  if (active) active.classList.add(ecAnalSortDir);
+  ecAnalFiltrar();
+}
+window.ecAnalSort = ecAnalSort;
+
+function ecAnalRenderStats(items) {
+  var grid = document.getElementById('ec-stat-grid');
+  if (!grid) return;
+  // Conteos por categoría top 3
+  var catCount = {};
+  var totalEmp = 0;
+  items.forEach(function(r){ catCount[r[1]] = (catCount[r[1]]||0)+1; totalEmp += (r[4]||0); });
+  var top = Object.keys(catCount).sort(function(a,b){ return catCount[b]-catCount[a]; }).slice(0,3);
+  var html = '<div class="ec-stat-card"><div class="ec-stat-n" style="color:#00ccff;">'+items.length.toLocaleString()+'</div><div class="ec-stat-l">ESTABLECIMIENTOS</div></div>';
+  top.forEach(function(k){
+    var color = DENUE_COLORS[k]||'#aaaaaa';
+    var label = (DENUE_LABELS[k]||k).replace(/[🛒✂🍽🏭🏥📦🎓💼🏠🏦🎭🔧🏛🚛🏗📡⚡🌱⛏]/u,'').trim();
+    html += '<div class="ec-stat-card"><div class="ec-stat-n" style="color:'+color+';">'+catCount[k].toLocaleString()+'</div><div class="ec-stat-l">'+label+'</div></div>';
+  });
+  grid.innerHTML = html;
+}
+
+function ecAnalRenderTabla(items) {
+  var tbody = document.getElementById('ec-tabla-body');
+  var footer = document.getElementById('ec-tabla-footer');
+  if (!tbody) return;
+  var muestra = items.slice(0, EC_ANAL_PAGE_SIZE);
+  tbody.innerHTML = muestra.map(function(r){
+    var color = DENUE_COLORS[r[1]]||'#aaaaaa';
+    var empLabel = DENUE_PER[r[4]]||'N/D';
+    var catLabel = (DENUE_LABELS[r[1]]||r[1]).replace(/[🛒✂🍽🏭🏥📦🎓💼🏠🏦🎭🔧🏛🚛🏗📡⚡🌱⛏]/u,'').trim();
+    return '<tr onclick="ecAnalVerEnMapa('+r[5]+','+r[6]+')" style="cursor:pointer;">' +
+      '<td><span class="ec-cat-dot" style="background:'+color+';"></span><span class="ec-badge" style="color:'+color+';border:1px solid '+color+'44;">'+catLabel+'</span></td>' +
+      '<td style="font-weight:600;color:#d0f0ff;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r[0]+'">'+(r[0]||'—')+'</td>' +
+      '<td style="color:#6a9abf;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r[2]+'">'+(r[2]||'—')+'</td>' +
+      '<td style="color:#4a7a9a;white-space:nowrap;">'+(r[3]||'—')+'</td>' +
+      '<td style="color:#ffcc00;white-space:nowrap;text-align:center;">'+empLabel+'</td>' +
+      '</tr>';
+  }).join('');
+  if (footer) {
+    footer.textContent = items.length > EC_ANAL_PAGE_SIZE
+      ? 'Mostrando '+EC_ANAL_PAGE_SIZE+' de '+items.length.toLocaleString()+' resultados — usa filtros para reducir'
+      : items.length.toLocaleString()+' resultados';
+  }
+}
+
+function ecAnalVerEnMapa(lat, lng) {
+  verEcSubtab('mapa');
+  setTimeout(function(){
+    if (denueMapaObj) { denueMapaObj.setView([lat,lng], 17); }
+  }, 300);
+}
+window.ecAnalVerEnMapa = ecAnalVerEnMapa;
+
+function ecAnalExportar() {
+  if (!DENUE_DATA) return;
+  var q = (document.getElementById('ec-anal-search')||{}).value||'';
+  q = q.trim().toLowerCase();
+  var sz = parseInt((document.getElementById('ec-anal-size')||{}).value||'0');
+  var items = DENUE_DATA.filter(function(r){
+    if (ecAnalCatFiltro!=='todos' && r[1]!==ecAnalCatFiltro) return false;
+    if (sz>0 && r[4]<sz) return false;
+    if (q && r[0].toLowerCase().indexOf(q)<0 && r[2].toLowerCase().indexOf(q)<0) return false;
+    return true;
+  });
+  var csv = 'nombre,categoria,giro,colonia,empleados,lat,lng\n';
+  csv += items.map(function(r){ return [r[0],r[1],r[2],r[3],DENUE_PER[r[4]]||r[4],r[5],r[6]].map(function(v){ return '"'+(v||'').toString().replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+  var blob = new Blob([csv], {type:'text/csv'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href=url; a.download='denue_irapuato.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+window.ecAnalExportar = ecAnalExportar;
+
 
 // ═══════════════════════════════════════════════════════════════
 // SECCIÓN GOBIERNO
