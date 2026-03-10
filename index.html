@@ -85,6 +85,7 @@ header {
 .tab.active.mapa { color:var(--green); border-bottom-color:var(--green); background:rgba(0,255,136,.04); }
 .tab.active.gob { color:#00ccff; border-bottom-color:#00ccff; background:rgba(0,204,255,.04); }
 .tab.active.intel { color:var(--red); border-bottom-color:var(--red); background:rgba(255,34,85,.04); }
+.tab.active.aprende { color:#b060ff; border-bottom-color:#b060ff; background:rgba(176,96,255,.04); }
 
 /* ── SECCIÓN GOBIERNO ── */
 #sec-gob { padding:0; display:flex; flex-direction:column; height:100%; }
@@ -557,6 +558,7 @@ header {
     <button class="tab bd" onclick="verTab('bd')">🗄 BD <span id="badge-bd" class="badge" style="display:none">0</span></button>
     <button class="tab mapa" onclick="verTab('mapa')">🗺 MAPA</button>
     <button class="tab intel" onclick="verTab('intel')">📡 INTEL</button>
+    <button class="tab aprende" onclick="verTab('aprende')">🧠 APRENDE</button>
   </div>
 
   <!-- PANEL -->
@@ -638,6 +640,54 @@ header {
     </div>
 
     <!-- ═══════════ BASE DE DATOS ═══════════ -->
+    <!-- SECCIÓN APRENDE -->
+    <div id="sec-aprende" class="seccion" style="display:none;">
+      <div class="sec-header">// 🧠 APRENDIZAJE — <span>IA vs TUS CORRECCIONES</span></div>
+      <div style="padding:12px;">
+
+        <!-- Controles -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+          <button onclick="cargarAprendizaje()" style="padding:8px 12px;font-family:var(--title);font-size:8px;background:rgba(176,96,255,.15);color:#b060ff;border:1px solid #b060ff;border-radius:3px;cursor:pointer;letter-spacing:1px;">🔄 ACTUALIZAR</button>
+          <button onclick="evaluarYAjustarPrompt()" style="padding:8px 12px;font-family:var(--title);font-size:8px;background:rgba(255,200,0,.12);color:#ffc800;border:1px solid #ffc800;border-radius:3px;cursor:pointer;letter-spacing:1px;">⚡ AUTO-AJUSTAR PROMPT</button>
+          <button onclick="exportarCorrecciones()" style="padding:8px 12px;font-family:var(--title);font-size:8px;background:rgba(0,245,255,.1);color:#00f5ff;border:1px solid #00f5ff;border-radius:3px;cursor:pointer;letter-spacing:1px;">📥 EXPORTAR CSV</button>
+          <button onclick="verPromptSugerido()" style="padding:8px 12px;font-family:var(--title);font-size:8px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88;border-radius:3px;cursor:pointer;letter-spacing:1px;">👁 VER PROMPT</button>
+        </div>
+
+        <!-- Umbral configurable -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;background:#060d18;border:1px solid #0d2040;border-radius:3px;padding:8px 12px;">
+          <span style="font-family:var(--mono);font-size:7px;color:#3a5a7a;flex:1;">UMBRAL AUTO-AJUSTE: corregir un campo</span>
+          <input id="apr-umbral" type="number" min="3" max="50" value="10"
+            style="width:50px;background:#020810;border:1px solid #b060ff44;color:#b060ff;font-family:var(--mono);font-size:9px;padding:4px 6px;border-radius:2px;text-align:center;"
+            onchange="UMBRAL_APRENDIZAJE=parseInt(this.value)||10;">
+          <span style="font-family:var(--mono);font-size:7px;color:#3a5a7a;">veces activa la regla</span>
+        </div>
+
+        <!-- Resumen estadístico -->
+        <div id="apr-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"></div>
+
+        <!-- Reglas activas en el prompt -->
+        <div style="font-family:var(--title);font-size:8px;color:#ffc800;letter-spacing:1px;margin-bottom:8px;">// REGLAS ACTIVAS EN EL PROMPT</div>
+        <div id="apr-reglas" style="margin-bottom:14px;"><div style="color:#2a4a6a;font-size:8px;">Cargando reglas...</div></div>
+
+        <!-- Campos más corregidos -->
+        <div style="font-family:var(--title);font-size:8px;color:#b060ff;letter-spacing:1px;margin-bottom:8px;">// CAMPOS MÁS CORREGIDOS</div>
+        <div id="apr-campos" style="margin-bottom:14px;"></div>
+
+        <!-- Lista de correcciones recientes -->
+        <div style="font-family:var(--title);font-size:8px;color:#b060ff;letter-spacing:1px;margin-bottom:8px;">// CORRECCIONES RECIENTES</div>
+        <div id="apr-lista" style="display:flex;flex-direction:column;gap:6px;"></div>
+
+        <!-- Modal prompt sugerido -->
+        <div id="apr-prompt-modal" style="display:none;background:#030810;border:1px solid #b060ff44;border-radius:4px;padding:12px;margin-top:12px;">
+          <div style="font-family:var(--title);font-size:8px;color:#b060ff;margin-bottom:8px;">// PROMPT AJUSTADO BASADO EN TUS CORRECCIONES</div>
+          <div style="font-size:7px;color:#2a4a6a;margin-bottom:8px;">Este prompt incorpora los patrones de corrección más frecuentes. Puedes copiarlo y usarlo como base.</div>
+          <textarea id="apr-prompt-txt" style="width:100%;min-height:200px;background:#020810;border:1px solid #0d2040;color:#c0e8ff;font-family:'Share Tech Mono',monospace;font-size:8px;padding:10px;border-radius:3px;resize:vertical;line-height:1.5;" readonly></textarea>
+          <button onclick="copiarPrompt()" style="margin-top:6px;width:100%;padding:8px;font-family:var(--title);font-size:8px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88;border-radius:3px;cursor:pointer;">📋 COPIAR PROMPT</button>
+        </div>
+
+      </div>
+    </div>
+
     <div id="sec-bd" class="seccion">
       <div class="sec-header">// BASE DE DATOS — <span>NOTICIAS APROBADAS</span></div>
 
@@ -1332,6 +1382,9 @@ function verTab(cual) {
     secEl.classList.add('activa');
     secEl.style.display = 'block';
   }
+  if (cual === 'aprende') {
+    setTimeout(function() { if (typeof iniciarAprende === 'function') iniciarAprende(); }, 100);
+  }
   if (cual === 'intel') {
     // INTEL: mapa de incidentes — se maneja como sec-mapa (position:fixed)
     var secIntelEl = document.getElementById('sec-intel');
@@ -1981,6 +2034,40 @@ function clasificarLocal(txt) {
   return { titulo: titulo, tipo: tipo, calle1: '', calle2: '', colonia: '', comunidad: '', nombres: '', resumen: txt.slice(0, 300), lat: 20.6795, lng: -101.3540, confianza: 'baja' };
 }
 
+function obtenerPromptBase() {
+  // Devuelve el sistema prompt para mostrarlo en el panel de aprendizaje
+  return buildPrompt('[TEXTO DE EJEMPLO]');
+}
+window.obtenerPromptBase = obtenerPromptBase;
+
+// Reglas de aprendizaje cargadas desde Firebase (se aplican al prompt en tiempo real)
+var _promptRules = []; // [{campo, regla, veces, fecha}]
+var _promptRulesLoaded = false;
+var UMBRAL_APRENDIZAJE = 10; // correcciones antes de auto-ajustar prompt
+
+function cargarReglasPrompt(callback) {
+  if (!db) { if (callback) callback(); return; }
+  db.collection('config').doc('prompt-rules').get()
+    .then(function(doc) {
+      if (doc.exists) {
+        var data = doc.data();
+        _promptRules = Array.isArray(data.rules) ? data.rules : [];
+        _promptRulesLoaded = true;
+        console.log('[Prompt] ' + _promptRules.length + ' reglas de aprendizaje cargadas');
+      }
+      if (callback) callback();
+    })
+    .catch(function(e) { console.warn('[Prompt] Error cargando reglas:', e.message); if (callback) callback(); });
+}
+window.cargarReglasPrompt = cargarReglasPrompt;
+
+function guardarReglasPrompt(rules) {
+  if (!db) return;
+  db.collection('config').doc('prompt-rules').set({ rules: rules, updatedAt: new Date().toISOString() })
+    .then(function() { console.log('[Prompt] Reglas guardadas en Firebase ✓'); })
+    .catch(function(e) { console.warn('[Prompt] Error guardando reglas:', e.message); });
+}
+
 function buildPrompt(texto) {
   var frag = texto.slice(0, 3000);
   var p = 'Eres extractor de datos estructurados de noticias locales de Irapuato, Guanajuato, Mexico.\n';
@@ -2008,6 +2095,20 @@ function buildPrompt(texto) {
   p += 'TEXTO: "Localizan cuerpo en el Trebol del Libramiento Sur. Irapuato, Gto. El cuerpo de una mujer sin vida fue localizado en la avenida Insurgentes, a la altura del Trebol del Libramiento Sur, a metros del reten de la Guardia Nacional, la tarde del martes 3 de marzo."\n';
   p += 'JSON: {"titulo":"Hallan cuerpo de mujer con huellas de violencia en Av. Insurgentes","tipo":"seguridad","calle1":"Avenida Insurgentes","calle2":"Trebol del Libramiento Sur","colonia":"","comunidad":"","nombres":"","resumen":"El cuerpo de una mujer sin vida fue encontrado en un baldio de Av. Insurgentes, a metros del reten de la Guardia Nacional. Paramédicos confirmaron ausencia de signos vitales y el cuerpo presentaba huellas de violencia. La FGE inicio investigacion.","fecha_evento":"03/03/2026","tiempo_dia":"tarde","lat":20.65,"lng":-101.37,"confianza":"alta"}\n\n';
   p += 'TEXTO A ANALIZAR:\n' + frag + '\n\nJSON:';
+
+  // Inyectar reglas de aprendizaje automático si existen
+  if (_promptRules && _promptRules.length > 0) {
+    var reglasActivas = _promptRules.filter(function(r){ return r.activa !== false; });
+    if (reglasActivas.length > 0) {
+      p = p.replace('REGLAS CRITICAS:\n', 'REGLAS CRITICAS (ajustadas por aprendizaje automático):\n');
+      var extra = '\n// APRENDIDO DE CORRECCIONES REALES:\n';
+      reglasActivas.forEach(function(r) {
+        extra += r.regla + '\n';
+      });
+      p = p.replace('TEXTO A ANALIZAR:', extra + 'TEXTO A ANALIZAR:');
+    }
+  }
+
   return p;
 }
 
@@ -2897,6 +2998,23 @@ function analizarConIA(id, texto, fuente, link) {
       card.dataset.lng = r.lng || -101.3540;
       card.dataset.colonia = r.colonia || '';
       card.dataset.confianza = r.confianza || 'baja';
+      // Guardar snapshot completo de lo que propuso la IA
+      card.dataset.ia_raw = JSON.stringify({
+        titulo: r.titulo || '',
+        tipo: r.tipo || 'rumor',
+        tipo2: r.tipo2 || '',
+        calle: r.calle1 || r.calle || '',
+        calle2: r.calle2 || '',
+        colonia: r.colonia || '',
+        comunidad: r.comunidad || '',
+        nombres: r.nombres || '',
+        fecha_evento: r.fecha_evento || '',
+        tiempo_dia: r.tiempo_dia || 'desconocido',
+        resumen: r.resumen || '',
+        confianza: r.confianza || 'baja',
+        lat: r.lat || 20.6795,
+        lng: r.lng || -101.3540
+      });
     }
 
     // Mostrar edicion automaticamente
@@ -2938,6 +3056,39 @@ function aprobarCard(id, fuente, link) {
   var ahora = new Date();
   var fechaCaptura = ahora.getDate() + '/' + (ahora.getMonth()+1) + '/' + ahora.getFullYear() + ' ' + ahora.getHours() + ':' + (ahora.getMinutes()<10?'0':'') + ahora.getMinutes();
 
+  // Snapshot final del usuario al aprobar
+  var usuario_aprobacion = {
+    titulo: titulo.trim(),
+    tipo: tipo,
+    tipo2: tipo2 || '',
+    calle: calle.trim(),
+    calle2: calle2.trim(),
+    colonia: colonia.trim(),
+    comunidad: comunidad.trim(),
+    nombres: nombres.trim(),
+    fecha_evento: fechaEvento.trim(),
+    tiempo_dia: tiempodia,
+    resumen: resumen.trim()
+  };
+
+  // Recuperar snapshot de la IA si existe
+  var ia_raw = null;
+  try {
+    if (card.dataset.ia_raw) ia_raw = JSON.parse(card.dataset.ia_raw);
+  } catch(e) {}
+
+  // Calcular diff: campos donde el usuario cambió lo que propuso la IA
+  var diff = {};
+  if (ia_raw) {
+    Object.keys(usuario_aprobacion).forEach(function(k) {
+      var iaVal = (ia_raw[k] || '').toString().trim();
+      var usrVal = (usuario_aprobacion[k] || '').toString().trim();
+      if (iaVal !== usrVal) {
+        diff[k] = { ia: iaVal, usuario: usrVal };
+      }
+    });
+  }
+
   var noticia = {
     titulo: titulo.trim(),
     tipo: tipo,
@@ -2959,7 +3110,12 @@ function aprobarCard(id, fuente, link) {
     score_veracidad: (fuente === 'El Sol - Policiaca' || fuente === 'El Sol - Local' || fuente === 'AM Irapuato' || fuente === 'Periódico Correo' || fuente === 'Tinta Negra — Irapuato') ? 0.9 : (fuente === 'Ciudadano' ? 0.5 : 0.7),
     fechaCaptura: fechaCaptura,
     viaIA: true,
-    fechaGuardado: firebase.firestore.FieldValue.serverTimestamp()
+    fechaGuardado: firebase.firestore.FieldValue.serverTimestamp(),
+    // Sistema de aprendizaje
+    ia_raw: ia_raw || null,
+    usuario_aprobacion: usuario_aprobacion,
+    aprendizaje_diff: diff,
+    aprendizaje_campos_corregidos: Object.keys(diff)
   };
 
   if (db) {
@@ -3492,7 +3648,8 @@ function guardarEditBD(id) {
   }
 
   var urlEl2 = document.getElementById('bde-url-' + id);
-  var updates = {
+  // Snapshot de edición del usuario en BD
+  var usuario_edicion = {
     tipo: tipoEl2 ? tipoEl2.value : 'rumor',
     titulo: tit ? tit.value : '',
     calle: calleVal,
@@ -3505,6 +3662,25 @@ function guardarEditBD(id) {
     resumen: resEl2 ? resEl2.value.trim() : '',
     url: urlEl2 ? urlEl2.value.trim() : ''
   };
+
+  // Recalcular diff contra ia_raw si existe en el registro
+  var nActual = null;
+  for (var ix = 0; ix < noticias.length; ix++) { if (noticias[ix].id === id) { nActual = noticias[ix]; break; } }
+  var diff_edicion = {};
+  if (nActual && nActual.ia_raw) {
+    Object.keys(usuario_edicion).forEach(function(k) {
+      if (k === 'url') return; // URL no es campo de IA
+      var iaVal = (nActual.ia_raw[k] || '').toString().trim();
+      var usrVal = (usuario_edicion[k] || '').toString().trim();
+      if (iaVal !== usrVal) diff_edicion[k] = { ia: iaVal, usuario: usrVal };
+    });
+  }
+
+  var updates = usuario_edicion;
+  updates.usuario_edicion = usuario_edicion;
+  updates.aprendizaje_diff = diff_edicion;
+  updates.aprendizaje_campos_corregidos = Object.keys(diff_edicion);
+  updates.ultima_edicion_usuario = new Date().toISOString();
   if (latBD && lngBD) { updates.lat = latBD; updates.lng = lngBD; }
   db.collection('noticias-fase1').doc(id).update(updates)
   .then(function() {
@@ -3552,6 +3728,377 @@ function actualizarBadge() {
     badge.style.display = 'none';
   }
 }
+
+
+// ═══════════════════════════════════════════════════════════════
+// SISTEMA DE APRENDIZAJE — IA vs Correcciones del Usuario
+// ═══════════════════════════════════════════════════════════════
+
+var _aprData = []; // cache local de correcciones
+
+var CAMPOS_LABELS = {
+  titulo: 'Título',
+  tipo: 'Tipo',
+  tipo2: 'Tipo 2',
+  calle: 'Calle 1',
+  calle2: 'Calle 2',
+  colonia: 'Colonia',
+  comunidad: 'Comunidad',
+  nombres: 'Nombres',
+  fecha_evento: 'Fecha evento',
+  tiempo_dia: 'Momento del día',
+  resumen: 'Resumen'
+};
+
+
+function evaluarYAjustarPrompt() {
+  if (!db) return;
+  // Leer todas las noticias con diff para calcular patrones
+  db.collection('noticias-fase1')
+    .where('viaIA', '==', true)
+    .orderBy('fechaGuardado', 'desc')
+    .limit(500)
+    .get()
+    .then(function(snap) {
+      // Contar correcciones por campo + recopilar ejemplos
+      var porCampo = {};
+      var ejemplosPorCampo = {};
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        if (!d.aprendizaje_diff) return;
+        Object.keys(d.aprendizaje_diff).forEach(function(k) {
+          var dv = d.aprendizaje_diff[k];
+          if (!dv.ia && !dv.usuario) return; // skip vacíos
+          porCampo[k] = (porCampo[k] || 0) + 1;
+          if (!ejemplosPorCampo[k]) ejemplosPorCampo[k] = [];
+          if (ejemplosPorCampo[k].length < 5) {
+            ejemplosPorCampo[k].push({ ia: dv.ia, usr: dv.usuario });
+          }
+        });
+      });
+
+      // Generar reglas para campos que superen el umbral
+      var reglasNuevas = [];
+      Object.keys(porCampo).forEach(function(campo) {
+        if (porCampo[campo] < UMBRAL_APRENDIZAJE) return;
+        var ejs = ejemplosPorCampo[campo] || [];
+        var reglaTexto = generarRegla(campo, porCampo[campo], ejs);
+        if (reglaTexto) {
+          // Verificar si ya existe una regla para este campo
+          var existente = _promptRules.find(function(r){ return r.campo === campo; });
+          if (existente) {
+            existente.regla = reglaTexto;
+            existente.veces = porCampo[campo];
+            existente.fecha = new Date().toISOString();
+            reglasNuevas.push(existente);
+          } else {
+            reglasNuevas.push({
+              campo: campo,
+              regla: reglaTexto,
+              veces: porCampo[campo],
+              fecha: new Date().toISOString(),
+              activa: true
+            });
+          }
+        }
+      });
+
+      // También mantener reglas existentes de campos que no llegaron al umbral aún
+      _promptRules.forEach(function(r) {
+        var yaIncluida = reglasNuevas.find(function(nr){ return nr.campo === r.campo; });
+        if (!yaIncluida) reglasNuevas.push(r);
+      });
+
+      if (reglasNuevas.length > 0) {
+        _promptRules = reglasNuevas;
+        guardarReglasPrompt(reglasNuevas);
+        renderReglasBD();
+        toast('🧠 Prompt ajustado automáticamente: ' + reglasNuevas.filter(function(r){return r.activa!==false;}).length + ' reglas activas', 'ok');
+      }
+    })
+    .catch(function(e) { console.warn('[Aprendizaje] Error evaluando:', e.message); });
+}
+window.evaluarYAjustarPrompt = evaluarYAjustarPrompt;
+
+function generarRegla(campo, veces, ejemplos) {
+  var LABELS = {
+    titulo: 'TÍTULO', tipo: 'TIPO', tipo2: 'TIPO SECUNDARIO',
+    calle: 'CALLE 1', calle2: 'CALLE 2', colonia: 'COLONIA',
+    comunidad: 'COMUNIDAD', nombres: 'NOMBRES',
+    fecha_evento: 'FECHA DEL EVENTO', tiempo_dia: 'MOMENTO DEL DÍA', resumen: 'RESUMEN'
+  };
+  var label = LABELS[campo] || campo.toUpperCase();
+
+  // Detectar patrón más común: IA deja vacío cuando no debería
+  var iaVacio = ejemplos.filter(function(e){ return !e.ia && e.usr; }).length;
+  var usuarioVacio = ejemplos.filter(function(e){ return e.ia && !e.usr; }).length;
+  var ambosLlenos = ejemplos.filter(function(e){ return e.ia && e.usr && e.ia !== e.usr; }).length;
+
+  var regla = 'APRENDIDO (' + veces + ' correcciones en ' + label + '): ';
+
+  if (iaVacio > ambosLlenos && iaVacio > usuarioVacio) {
+    regla += 'NO dejes ' + label + ' vacío si hay información disponible en el texto.';
+  } else if (usuarioVacio > ambosLlenos && usuarioVacio > iaVacio) {
+    regla += 'No inventes ' + label + ' si el texto no lo menciona explícitamente. Déjalo vacío.';
+  } else if (campo === 'tipo' && ambosLlenos > 0) {
+    // Detectar confusión de tipos más frecuente
+    var confusiones = {};
+    ejemplos.forEach(function(e) {
+      if (e.ia && e.usr && e.ia !== e.usr) {
+        var k = e.ia + '->' + e.usr;
+        confusiones[k] = (confusiones[k] || 0) + 1;
+      }
+    });
+    var topConfusion = Object.keys(confusiones).sort(function(a,b){ return confusiones[b]-confusiones[a]; })[0];
+    if (topConfusion) {
+      var parts = topConfusion.split('->');
+      regla += 'Cuando clasificas como "' + parts[0] + '", el usuario lo corrige a "' + parts[1] + '". Revisa bien esta distinción.';
+    } else {
+      regla += 'Sé más cuidadoso clasificando ' + label + '.';
+    }
+  } else if (campo === 'tiempo_dia' && ambosLlenos > 0) {
+    regla += 'Solo asigna momento del día si el texto menciona hora explícita o palabra "mañana/tarde/noche/madrugada". Si no, usa "desconocido".';
+  } else if (campo === 'colonia' && usuarioVacio > 0) {
+    regla += 'Solo extrae COLONIA si el texto dice explícitamente "colonia X" o "col. X". No inferir por ubicación.';
+  } else {
+    regla += 'Presta más atención al campo ' + label + ' (' + veces + ' correcciones registradas).';
+  }
+
+  return regla;
+}
+window.generarRegla = generarRegla;
+
+function renderReglasBD() {
+  var el = document.getElementById('apr-reglas');
+  if (!el) return;
+  var activas = _promptRules.filter(function(r){ return r.activa !== false; });
+  var inactivas = _promptRules.filter(function(r){ return r.activa === false; });
+  if (_promptRules.length === 0) {
+    el.innerHTML = '<div style="color:#2a4a6a;font-size:8px;">Sin reglas generadas aún. Se crean automáticamente cuando un campo supera ' + UMBRAL_APRENDIZAJE + ' correcciones.</div>';
+    return;
+  }
+  el.innerHTML = _promptRules.map(function(r, i) {
+    var isActiva = r.activa !== false;
+    return '<div style="background:#060d18;border:1px solid ' + (isActiva ? '#b060ff44' : '#0d2040') + ';border-left:3px solid ' + (isActiva ? '#b060ff' : '#2a4a6a') + ';border-radius:3px;padding:8px 10px;margin-bottom:6px;opacity:' + (isActiva ? '1' : '0.5') + ';">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+        '<span style="font-family:var(--title);font-size:7px;color:' + (isActiva ? '#b060ff' : '#3a5a7a') + ';letter-spacing:1px;">' + (r.campo||'').toUpperCase() + ' — ' + (r.veces||0) + ' correcciones</span>' +
+        '<div style="display:flex;gap:4px;">' +
+          '<button onclick="toggleRegla(' + i + ')" style="font-size:7px;padding:2px 6px;background:' + (isActiva ? 'rgba(255,34,85,.1)' : 'rgba(0,255,136,.1)') + ';color:' + (isActiva ? '#ff2255' : '#00ff88') + ';border:1px solid ' + (isActiva ? '#ff225544' : '#00ff8844') + ';border-radius:2px;cursor:pointer;font-family:var(--title);">' + (isActiva ? 'DESACTIVAR' : 'ACTIVAR') + '</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:8px;color:#8aa8c0;line-height:1.5;">' + (r.regla||'') + '</div>' +
+      '<div style="font-size:6px;color:#2a4a6a;margin-top:3px;">' + (r.fecha ? new Date(r.fecha).toLocaleDateString('es-MX') : '') + '</div>' +
+    '</div>';
+  }).join('');
+}
+window.renderReglasBD = renderReglasBD;
+
+function toggleRegla(i) {
+  if (!_promptRules[i]) return;
+  _promptRules[i].activa = _promptRules[i].activa === false ? true : false;
+  guardarReglasPrompt(_promptRules);
+  renderReglasBD();
+  var activas = _promptRules.filter(function(r){ return r.activa !== false; }).length;
+  toast('Regla ' + (_promptRules[i].activa ? 'activada' : 'desactivada') + ' — ' + activas + ' activas', 'ok');
+}
+window.toggleRegla = toggleRegla;
+
+function cargarAprendizaje() {
+  if (!db) { toast('Firebase no disponible', 'err'); return; }
+  var lista = document.getElementById('apr-lista');
+  var stats = document.getElementById('apr-stats');
+  var campos = document.getElementById('apr-campos');
+  if (lista) lista.innerHTML = '<div style="color:#2a4a6a;font-size:8px;padding:10px;">Cargando...</div>';
+
+  db.collection('noticias-fase1')
+    .where('viaIA', '==', true)
+    .orderBy('fechaGuardado', 'desc')
+    .limit(200)
+    .get()
+    .then(function(snap) {
+      _aprData = [];
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        d._id = doc.id;
+        if (d.ia_raw && d.aprendizaje_diff) _aprData.push(d);
+      });
+      renderAprendizaje();
+    })
+    .catch(function(e) {
+      toast('Error cargando datos: ' + e.message, 'err');
+    });
+}
+window.cargarAprendizaje = cargarAprendizaje;
+
+function renderAprendizaje() {
+  // Estadísticas globales
+  var total = _aprData.length;
+  var conCorreccion = _aprData.filter(function(d) { return Object.keys(d.aprendizaje_diff || {}).length > 0; }).length;
+  var pct = total > 0 ? Math.round((conCorreccion / total) * 100) : 0;
+
+  // Contar correcciones por campo
+  var porCampo = {};
+  _aprData.forEach(function(d) {
+    Object.keys(d.aprendizaje_diff || {}).forEach(function(k) {
+      porCampo[k] = (porCampo[k] || 0) + 1;
+    });
+  });
+  var camposOrdenados = Object.keys(porCampo).sort(function(a,b){ return porCampo[b]-porCampo[a]; });
+
+  // Render stats
+  var statsEl = document.getElementById('apr-stats');
+  if (statsEl) statsEl.innerHTML =
+    mkStatBox('NOTICIAS CON IA', total, '#b060ff') +
+    mkStatBox('CON CORRECCIONES', conCorreccion, '#ffc800') +
+    mkStatBox('TASA DE ERROR', pct + '%', pct > 50 ? '#ff2255' : pct > 25 ? '#ffc800' : '#00ff88') +
+    mkStatBox('CAMPOS DISTINTOS', camposOrdenados.length, '#00f5ff');
+
+  // Render campos más corregidos
+  var camposEl = document.getElementById('apr-campos');
+  if (camposEl) {
+    if (camposOrdenados.length === 0) {
+      camposEl.innerHTML = '<div style="color:#2a4a6a;font-size:8px;">Sin correcciones registradas aún</div>';
+    } else {
+      var maxVal = porCampo[camposOrdenados[0]] || 1;
+      camposEl.innerHTML = camposOrdenados.map(function(k) {
+        var pctBar = Math.round((porCampo[k] / maxVal) * 100);
+        var label = CAMPOS_LABELS[k] || k;
+        return '<div style="margin-bottom:6px;">' +
+          '<div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:7px;color:#8aa8c0;margin-bottom:2px;">' +
+            '<span>' + label + '</span><span>' + porCampo[k] + ' correcciones</span>' +
+          '</div>' +
+          '<div style="height:4px;background:#0d2040;border-radius:2px;">' +
+            '<div style="height:4px;background:#b060ff;border-radius:2px;width:' + pctBar + '%;transition:width .4s;"></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+  }
+
+  // Render lista de correcciones recientes
+  var listaEl = document.getElementById('apr-lista');
+  if (listaEl) {
+    var conDiff = _aprData.filter(function(d){ return Object.keys(d.aprendizaje_diff||{}).length > 0; });
+    if (conDiff.length === 0) {
+      listaEl.innerHTML = '<div style="color:#2a4a6a;font-size:8px;padding:10px 0;">Sin correcciones registradas aún. Aprueba y edita algunas noticias para comenzar.</div>';
+    } else {
+      listaEl.innerHTML = conDiff.slice(0, 30).map(function(d) {
+        var diffs = d.aprendizaje_diff || {};
+        var campos = Object.keys(diffs);
+        return '<div style="background:#060d18;border:1px solid #0d2040;border-left:3px solid #b060ff;border-radius:3px;padding:8px 10px;">' +
+          '<div style="font-size:8px;color:#c0e8ff;margin-bottom:5px;font-family:var(--mono);">' + (d.titulo||'Sin título') + '</div>' +
+          '<div style="font-size:7px;color:#2a4a6a;margin-bottom:6px;">' + (d.fuente||'') + ' — ' + (d.fechaCaptura||'') + '</div>' +
+          campos.map(function(k) {
+            var dv = diffs[k];
+            var label = CAMPOS_LABELS[k] || k;
+            return '<div style="margin-bottom:4px;background:#030810;border-radius:2px;padding:5px 7px;">' +
+              '<div style="font-family:var(--title);font-size:6px;color:#b060ff;letter-spacing:1px;margin-bottom:3px;">' + label.toUpperCase() + '</div>' +
+              '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+                '<div style="flex:1;min-width:80px;">' +
+                  '<div style="font-size:6px;color:#ff4466;font-family:var(--mono);margin-bottom:1px;">IA propuso:</div>' +
+                  '<div style="font-size:7px;color:#ff8899;">' + (dv.ia || '(vacío)') + '</div>' +
+                '</div>' +
+                '<div style="color:#2a4a6a;font-size:10px;align-self:center;">→</div>' +
+                '<div style="flex:1;min-width:80px;">' +
+                  '<div style="font-size:6px;color:#00ff88;font-family:var(--mono);margin-bottom:1px;">Tú pusiste:</div>' +
+                  '<div style="font-size:7px;color:#88ffcc;">' + (dv.usuario || '(vacío)') + '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+          }).join('') +
+        '</div>';
+      }).join('');
+    }
+  }
+}
+
+function mkStatBox(label, val, color) {
+  return '<div style="background:#060d18;border:1px solid ' + color + '33;border-radius:4px;padding:10px;text-align:center;">' +
+    '<div style="font-family:var(--title);font-size:16px;color:' + color + ';font-weight:700;">' + val + '</div>' +
+    '<div style="font-family:var(--mono);font-size:6px;color:#3a5a7a;margin-top:3px;letter-spacing:1px;">' + label + '</div>' +
+  '</div>';
+}
+
+function exportarCorrecciones() {
+  if (_aprData.length === 0) { toast('Primero actualiza los datos', 'warn'); return; }
+  var rows = ['id,fuente,fecha_captura,campo,ia_propuso,usuario_puso'];
+  _aprData.forEach(function(d) {
+    Object.keys(d.aprendizaje_diff || {}).forEach(function(k) {
+      var dv = d.aprendizaje_diff[k];
+      var esc = function(s) { return '"' + (s||'').replace(/"/g,'""') + '"'; };
+      rows.push([esc(d._id), esc(d.fuente), esc(d.fechaCaptura), esc(k), esc(dv.ia), esc(dv.usuario)].join(','));
+    });
+  });
+  var blob = new Blob([rows.join('\n')], {type:'text/csv;charset=utf-8;'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'correcciones-ia-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  toast('CSV exportado', 'ok');
+}
+window.exportarCorrecciones = exportarCorrecciones;
+
+function verPromptSugerido() {
+  var modal = document.getElementById('apr-prompt-modal');
+  var txt = document.getElementById('apr-prompt-txt');
+  if (!modal || !txt) return;
+  modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
+  if (modal.style.display === 'none') return;
+
+  // Analizar patrones para ajustar prompt
+  var porCampo = {};
+  var ejemplos = {};
+  _aprData.forEach(function(d) {
+    Object.keys(d.aprendizaje_diff || {}).forEach(function(k) {
+      var dv = d.aprendizaje_diff[k];
+      porCampo[k] = (porCampo[k] || 0) + 1;
+      if (!ejemplos[k]) ejemplos[k] = [];
+      if (ejemplos[k].length < 3) ejemplos[k].push({ ia: dv.ia, usr: dv.usuario });
+    });
+  });
+
+  var ajustes = '';
+  var camposTop = Object.keys(porCampo).sort(function(a,b){ return porCampo[b]-porCampo[a]; }).slice(0,5);
+  camposTop.forEach(function(k) {
+    var label = CAMPOS_LABELS[k] || k;
+    ajustes += '\n// CAMPO: ' + label.toUpperCase() + ' (corregido ' + porCampo[k] + ' veces)\n';
+    (ejemplos[k] || []).forEach(function(ej) {
+      if (ej.ia && ej.usr && ej.ia !== ej.usr) {
+        ajustes += '//   IA dijo "' + ej.ia.slice(0,50) + '" → correcto: "' + ej.usr.slice(0,50) + '"\n';
+      }
+    });
+  });
+
+  var promptBase = obtenerPromptBase ? obtenerPromptBase() : '[Prompt base no disponible]';
+
+  txt.value = '// PROMPT AJUSTADO — Generado automáticamente basado en ' + _aprData.length + ' noticias\n' +
+    '// Fecha: ' + new Date().toLocaleDateString('es-MX') + '\n' +
+    (ajustes ? '\n// ═══ PATRONES DE CORRECCIÓN DETECTADOS ═══' + ajustes + '\n' : '') +
+    '// ═══ INSTRUCCIONES ADICIONALES SUGERIDAS ═══\n' +
+    (porCampo['tipo'] ? '// - El campo TIPO ha sido corregido ' + porCampo['tipo'] + ' veces. Sé más conservador con la clasificación.\n' : '') +
+    (porCampo['calle'] ? '// - El campo CALLE ha sido corregido ' + porCampo['calle'] + ' veces. Extrae nombres de calles textuales exactamente.\n' : '') +
+    (porCampo['colonia'] ? '// - El campo COLONIA ha sido corregido ' + porCampo['colonia'] + ' veces. Si no hay colonia explícita, deja vacío.\n' : '') +
+    (porCampo['tiempo_dia'] ? '// - El campo MOMENTO DEL DÍA ha sido corregido ' + porCampo['tiempo_dia'] + ' veces. Solo usa mañana/tarde/noche/madrugada si hay hora explícita.\n' : '') +
+    (porCampo['resumen'] ? '// - El campo RESUMEN ha sido corregido ' + porCampo['resumen'] + ' veces. Sé más conciso y objetivo.\n' : '') +
+    '\n// ═══ PROMPT BASE ═══\n' + promptBase;
+}
+window.verPromptSugerido = verPromptSugerido;
+
+function copiarPrompt() {
+  var txt = document.getElementById('apr-prompt-txt');
+  if (!txt) return;
+  txt.select();
+  document.execCommand('copy');
+  toast('Prompt copiado al portapapeles', 'ok');
+}
+window.copiarPrompt = copiarPrompt;
+
+// Auto-cargar cuando se abre el tab
+function iniciarAprende() {
+  renderReglasBD(); // siempre mostrar reglas actuales
+  if (_aprData.length === 0) cargarAprendizaje();
+}
+window.iniciarAprende = iniciarAprende;
 
 // ═══════════════════════════════════════════════════════════════
 // MODAL FACEBOOK
@@ -3657,6 +4204,8 @@ if (typeof firebase === 'undefined') {
   escucharBD();
   // Cargar keys desde Firebase (sincroniza entre dispositivos)
   setTimeout(function() { cargarKeysFirebase(); }, 800);
+  // Cargar reglas de prompt aprendidas
+  setTimeout(function() { cargarReglasPrompt(function() { renderReglasBD(); }); }, 1200);
   // Cargar base geo-interna
   setTimeout(function() {
     db.collection('geo-irapuato').limit(300).get()
