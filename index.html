@@ -1135,7 +1135,6 @@ var firebaseConfig = {
 var PROXY1 = 'https://api.allorigins.win/raw?url=';
 var PROXY2 = 'https://corsproxy.io/?';
 var PROXY_OEM = 'https://corsproxy.io/?'; // OEM bloquea allorigins
-var PROXY2 = 'https://corsproxy.io/?';
 
 var FUENTES_RSS = {
   sol_local: {
@@ -4202,10 +4201,20 @@ if (typeof firebase === 'undefined') {
 }
   db = firebase.firestore();
   escucharBD();
-  // Cargar keys desde Firebase (sincroniza entre dispositivos)
-  setTimeout(function() { cargarKeysFirebase(); }, 800);
-  // Cargar reglas de prompt aprendidas
-  setTimeout(function() { cargarReglasPrompt(function() { renderReglasBD(); }); }, 1200);
+
+  // Esperar a que db esté listo antes de llamar funciones dependientes
+  function esperarDBYCargar(intentos) {
+    intentos = intentos || 0;
+    if (typeof db !== 'undefined' && db) {
+      cargarKeysFirebase();
+      setTimeout(function() { cargarReglasPrompt(function() { renderReglasBD(); }); }, 400);
+    } else if (intentos < 20) {
+      setTimeout(function() { esperarDBYCargar(intentos + 1); }, 300);
+    } else {
+      console.warn('[Init] Firebase db no disponible tras 6s');
+    }
+  }
+  setTimeout(function() { esperarDBYCargar(); }, 500);
   // Cargar base geo-interna
   setTimeout(function() {
     db.collection('geo-irapuato').limit(300).get()
