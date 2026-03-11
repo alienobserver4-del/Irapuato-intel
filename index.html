@@ -1651,20 +1651,33 @@ function procesarColaFetch() {
 
 function escucharBD() {
   if (!db) return;
-  db.collection('noticias-fase1').orderBy('fechaGuardado', 'desc').onSnapshot(function(snap) {
-    noticias = snap.docs.map(function(d) {
-      var o = d.data();
-      o.id = d.id;
-      return o;
-    });
-    renderBD();
-    actualizarBadge();
-    if (mapaIniciado) renderMapa();
-    if (intelIniciado) renderIntel();
-    if (gobMapaIniciado) renderGobMapaMarkers();
-    renderGobNoticias();
-  }, function(err) {
-  });
+  // Sin orderBy en Firestore — evita el bug de Firebase SDK 8.10.x donde
+  // serverTimestamp + orderBy causa loop infinito (oi→gy→yy) al escribir desde móvil.
+  // El orden se aplica localmente después de recibir los datos.
+  db.collection('noticias-fase1').onSnapshot(
+    { includeMetadataChanges: false },
+    function(snap) {
+      if (snap.metadata && snap.metadata.hasPendingWrites) return;
+      noticias = snap.docs.map(function(d) {
+        var o = d.data();
+        o.id = d.id;
+        return o;
+      });
+      // Orden descendente por ts (nuevo) o fechaGuardado.seconds (legado)
+      noticias.sort(function(a, b) {
+        var ta = a.ts || (a.fechaGuardado && a.fechaGuardado.seconds ? a.fechaGuardado.seconds * 1000 : 0);
+        var tb = b.ts || (b.fechaGuardado && b.fechaGuardado.seconds ? b.fechaGuardado.seconds * 1000 : 0);
+        return tb - ta;
+      });
+      renderBD();
+      actualizarBadge();
+      if (mapaIniciado) renderMapa();
+      if (intelIniciado) renderIntel();
+      if (gobMapaIniciado) renderGobMapaMarkers();
+      renderGobNoticias();
+    },
+    function(err) { console.warn('[BD] onSnapshot error:', err.message); }
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -4397,6 +4410,7 @@ function aprobarCard(id, fuente, link) {
     score_veracidad: (fuente === 'El Sol - Policiaca' || fuente === 'El Sol - Local' || fuente === 'AM Irapuato' || fuente === 'Periódico Correo' || fuente === 'Tinta Negra — Irapuato') ? 0.9 : (fuente === 'Ciudadano' ? 0.5 : 0.7),
     fechaCaptura: fechaCaptura,
     viaIA: true,
+    ts: Date.now(),
     fechaGuardado: firebase.firestore.FieldValue.serverTimestamp(),
     // Sistema de aprendizaje
     ia_raw: ia_raw || null,
