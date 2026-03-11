@@ -1086,10 +1086,11 @@ header {
 <!-- DENUE: fuera de #panel igual que intel/mapa -->
 <div id="sec-denue" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:100;background:var(--bg);flex-direction:column;">
 
-  <!-- SUB-TABS: MAPA / ANÁLISIS -->
+  <!-- SUB-TABS: MAPA / BASE DENUE / ESTADÍSTICAS -->
   <div class="ec-stab-bar">
     <button class="ec-stab active" id="ec-stab-mapa" onclick="verEcSubtab('mapa')">🗺 MAPA</button>
-    <button class="ec-stab" id="ec-stab-analisis" onclick="verEcSubtab('analisis')">📊 ANÁLISIS</button>
+    <button class="ec-stab" id="ec-stab-analisis" onclick="verEcSubtab('analisis')">🗂 BASE DENUE 2025</button>
+    <button class="ec-stab" id="ec-stab-stats" onclick="verEcSubtab('stats')">📊 ESTADÍSTICAS</button>
   </div>
 
   <!-- ── SUB-TAB: MAPA ── -->
@@ -1121,16 +1122,17 @@ header {
     </div>
   </div>
 
-  <!-- ── SUB-TAB: ANÁLISIS ── -->
+  <!-- ── SUB-TAB: BASE DENUE 2025 ── -->
   <div id="ec-analisis">
-    <!-- filtros análisis -->
+    <!-- filtros categoría -->
     <div class="ec-filtros-bar" id="ec-anal-cats"></div>
-    <div class="ec-filtros-bar" style="gap:6px;padding:4px 10px;">
+    <!-- buscador + tamaño + CSV -->
+    <div class="ec-filtros-bar" style="gap:6px;padding:6px 10px;">
       <div class="ec-autocomplete-wrap">
         <input id="ec-anal-search" type="text" class="denue-search-input" style="width:100%;font-size:8px;" placeholder="🔍 Buscar nombre o giro…" oninput="ecAnalAutocompletar(this.value)" onblur="setTimeout(ecAnalCerrarAC,200)" autocomplete="off">
         <div id="ec-ac-list" class="ec-autocomplete-list" style="display:none;"></div>
       </div>
-      <select id="ec-anal-size" onchange="ecAnalFiltrar()" style="background:#020810;border:1px solid #0d2040;color:var(--text);font-family:var(--mono);font-size:8px;padding:4px 6px;border-radius:3px;">
+      <select id="ec-anal-size" onchange="ecAnalFiltrar()" style="background:#020810;border:1px solid #0d2040;color:var(--text);font-family:var(--mono);font-size:8px;padding:4px 6px;border-radius:3px;flex-shrink:0;">
         <option value="0">Todos los tamaños</option>
         <option value="1">Micro 0-5</option>
         <option value="2">6-10</option>
@@ -1139,10 +1141,8 @@ header {
         <option value="5">Med 51-100</option>
         <option value="6">Grande 100+</option>
       </select>
-      <button onclick="ecAnalExportar()" style="padding:4px 8px;font-family:var(--title);font-size:6px;letter-spacing:.5px;border-radius:3px;cursor:pointer;border:1px solid #ffcc0055;background:transparent;color:#ffcc0077;white-space:nowrap;">⬇ CSV</button>
+      <button onclick="ecAnalExportar()" style="padding:4px 10px;font-family:var(--title);font-size:6px;letter-spacing:.5px;border-radius:3px;cursor:pointer;border:1px solid #ffcc0055;background:transparent;color:#ffcc0099;white-space:nowrap;flex-shrink:0;">⬇ CSV</button>
     </div>
-    <!-- stats cards -->
-    <div class="ec-stat-grid" id="ec-stat-grid"></div>
     <!-- tabla -->
     <div class="ec-tabla-wrap">
       <table class="ec-tabla">
@@ -1158,6 +1158,16 @@ header {
         <tbody id="ec-tabla-body"></tbody>
       </table>
       <div id="ec-tabla-footer" style="font-family:var(--title);font-size:6px;color:#3a6a9a;letter-spacing:1px;padding:6px 2px;"></div>
+    </div>
+  </div>
+
+  <!-- ── SUB-TAB: ESTADÍSTICAS ── -->
+  <div id="ec-stats" style="display:none;flex:1;flex-direction:column;overflow-y:auto;">
+    <div style="padding:8px 10px 4px;font-family:var(--title);font-size:5.5px;letter-spacing:1.5px;color:#3a6a9a;border-bottom:1px solid #0d2040;flex-shrink:0;">
+      IRAPUATO · DENUE 2025 · ESTADÍSTICAS GLOBALES
+    </div>
+    <div id="ec-stats-content" style="padding:8px 10px;display:flex;flex-direction:column;gap:8px;">
+      <div style="font-size:8px;color:#3a5a7a;text-align:center;padding:20px;">Cargando estadísticas…</div>
     </div>
   </div>
 
@@ -1997,25 +2007,58 @@ function renderDenueMapa(extraFn) {
   if (denueModo === 'heat' && zoom >= 15) modoEfectivo = 'markers';
 
   if (modoEfectivo === 'heat') {
-    var pts = items.map(function(r){ return [r[5], r[6], Math.min(r[4] / 7, 1)]; });
+    // simpleheat SOLO acepta colores CSS sin rgba en gradient.
+    // La transparencia se controla con minOpacity y el canvas del layer.
+    // Normalizamos pesos por densidad real de celdas de grid para usar el rango completo.
+    var gridSize = 0.003; // ~330m por celda
+    var cellCount = {};
+    items.forEach(function(r) {
+      var cx = Math.round(r[5] / gridSize);
+      var cy = Math.round(r[6] / gridSize);
+      var k = cx + ',' + cy;
+      cellCount[k] = (cellCount[k] || 0) + 1;
+    });
+    var counts = Object.keys(cellCount).map(function(k){ return cellCount[k]; });
+    var maxCount = Math.max.apply(null, counts);
+    var minCount = Math.min.apply(null, counts);
+    var range = maxCount - minCount || 1;
+
+    var pts = items.map(function(r) {
+      var cx = Math.round(r[5] / gridSize);
+      var cy = Math.round(r[6] / gridSize);
+      var k = cx + ',' + cy;
+      // Peso normalizado 0..1 según densidad de celda
+      var w = (cellCount[k] - minCount) / range;
+      return [r[5], r[6], w];
+    });
+
     if (typeof L.heatLayer === 'function') {
-      // Gradiente azul-morado muy sutil: las calles deben verse claramente
       denueHeatLayer = L.heatLayer(pts, {
-        radius: 28,
-        blur: 30,
+        radius: 22,
+        blur: 18,
         maxZoom: 17,
-        minOpacity: 0.0,
+        minOpacity: 0.04,
         max: 1.0,
         gradient: {
-          0.0:  'rgba(0,0,0,0)',
-          0.20: 'rgba(10,15,60,0.08)',
-          0.40: 'rgba(20,30,120,0.18)',
-          0.60: 'rgba(40,60,180,0.28)',
-          0.78: 'rgba(80,40,200,0.36)',
-          0.90: 'rgba(120,60,220,0.42)',
-          1.0:  'rgba(160,80,255,0.48)'
+          0.0:  '#000000',
+          0.15: '#030818',
+          0.35: '#051535',
+          0.55: '#0a2a6e',
+          0.72: '#1050b8',
+          0.86: '#1a7ae0',
+          1.0:  '#40b0ff'
         }
       }).addTo(denueMapaObj);
+      // Reducir opacidad global del canvas del layer
+      if (denueHeatLayer._canvas) {
+        denueHeatLayer._canvas.style.opacity = '0.55';
+      }
+      // Esperar a que el canvas se cree y aplicar opacidad
+      setTimeout(function() {
+        if (denueHeatLayer && denueHeatLayer._canvas) {
+          denueHeatLayer._canvas.style.opacity = '0.55';
+        }
+      }, 100);
     }
     if (lbl) lbl.textContent = items.length.toLocaleString() + ' establecimientos · HEATMAP';
     var modlbl = document.getElementById('denue-modo-label');
@@ -2097,7 +2140,7 @@ function toggleIntelDenue(btn) {
 window.toggleIntelDenue = toggleIntelDenue;
 
 // ═══════════════════════════════════════════════════════════════
-// SUB-TABS ECONOMÍA: MAPA / ANÁLISIS
+// SUB-TABS ECONOMÍA: MAPA / BASE DENUE / ESTADÍSTICAS
 // ═══════════════════════════════════════════════════════════════
 var ecSubtabActual = 'mapa';
 
@@ -2107,20 +2150,25 @@ function verEcSubtab(cual) {
   var btn = document.getElementById('ec-stab-' + cual);
   if (btn) btn.classList.add('active');
 
-  var mapa = document.getElementById('ec-mapa-wrap');
-  var anal = document.getElementById('ec-analisis');
+  var mapa  = document.getElementById('ec-mapa-wrap');
+  var anal  = document.getElementById('ec-analisis');
+  var stats = document.getElementById('ec-stats');
+
+  // Ocultar todos
+  [mapa, anal, stats].forEach(function(el){ if(el){ el.style.display='none'; el.classList.remove('visible'); } });
+
   if (cual === 'mapa') {
-    if (mapa) { mapa.classList.add('visible'); mapa.style.display='flex'; }
-    if (anal) { anal.classList.remove('visible'); anal.style.display='none'; }
-    // Re-ajustar mapa Leaflet
+    if (mapa) { mapa.style.display='flex'; mapa.classList.add('visible'); }
     setTimeout(function(){
       if (denueMapaObj) { denueMapaObj.invalidateSize(); }
       else { iniciarDenue(); }
     }, 100);
-  } else {
-    if (mapa) { mapa.classList.remove('visible'); mapa.style.display='none'; }
-    if (anal) { anal.classList.add('visible'); anal.style.display='flex'; }
+  } else if (cual === 'analisis') {
+    if (anal) { anal.style.display='flex'; anal.classList.add('visible'); }
     cargarDenue(function(){ ecAnalInit(); });
+  } else if (cual === 'stats') {
+    if (stats) { stats.style.display='flex'; stats.classList.add('visible'); }
+    cargarDenue(function(){ ecStatsRender(); });
   }
 }
 window.verEcSubtab = verEcSubtab;
@@ -2184,8 +2232,7 @@ function ecAnalFiltrar() {
     return 0;
   });
 
-  // Stats
-  ecAnalRenderStats(items);
+  // Stats ya no se renderizan aquí (pestaña fija Estadísticas)
   // Tabla (primera página)
   ecAnalPage = 0;
   ecAnalRenderTabla(items);
@@ -2363,51 +2410,150 @@ function ecAnalRenderStats(items) {
   grid.innerHTML = html;
 }
 
-function ecDonutSVG(countObj, colors, labels) {
+function ecDonutSVG(countObj, colors, labels, rOuter) {
+  rOuter = rOuter || 28;
   var total = Object.keys(countObj).reduce(function(s,k){ return s+countObj[k]; }, 0);
   if (!total) return '<div style="font-size:7px;color:#3a5a7a;">Sin datos</div>';
   var sorted = Object.keys(countObj).sort(function(a,b){ return countObj[b]-countObj[a]; });
   var top6 = sorted.slice(0, 6);
   var otrosTotal = sorted.slice(6).reduce(function(s,k){ return s+countObj[k]; }, 0);
 
-  // SVG Donut
-  var cx=40, cy=40, r=28, inner=16;
-  var startAngle = -Math.PI/2;
-  var paths = '';
-  var legendItems = '';
+  var inner = Math.round(rOuter * 0.52);
+  var svgSize = (rOuter + 12) * 2;
+  var cx = svgSize / 2, cy = svgSize / 2;
+  var startAngle = -Math.PI / 2;
+  var paths = '', legendItems = '';
   var allKeys = top6.slice();
   var allCounts = top6.map(function(k){ return countObj[k]; });
-  if (otrosTotal > 0) { allKeys.push('…otros'); allCounts.push(otrosTotal); }
+  if (otrosTotal > 0) { allKeys.push('otros'); allCounts.push(otrosTotal); }
 
   allKeys.forEach(function(k, i) {
     var cnt = allCounts[i];
     var angle = (cnt / total) * 2 * Math.PI;
     var endAngle = startAngle + angle;
-    var x1 = cx + r * Math.cos(startAngle), y1 = cy + r * Math.sin(startAngle);
-    var x2 = cx + r * Math.cos(endAngle),   y2 = cy + r * Math.sin(endAngle);
-    var xi1= cx + inner*Math.cos(startAngle), yi1=cy+inner*Math.sin(startAngle);
-    var xi2= cx + inner*Math.cos(endAngle),   yi2=cy+inner*Math.sin(endAngle);
+    var x1  = cx + rOuter * Math.cos(startAngle), y1  = cy + rOuter * Math.sin(startAngle);
+    var x2  = cx + rOuter * Math.cos(endAngle),   y2  = cy + rOuter * Math.sin(endAngle);
+    var xi1 = cx + inner  * Math.cos(startAngle), yi1 = cy + inner  * Math.sin(startAngle);
+    var xi2 = cx + inner  * Math.cos(endAngle),   yi2 = cy + inner  * Math.sin(endAngle);
     var lg = angle > Math.PI ? 1 : 0;
     var color = (colors[k] || '#3a5a7a');
-    var pct = Math.round(cnt/total*100);
-    paths += '<path d="M'+x1+' '+y1+' A'+r+' '+r+' 0 '+lg+' 1 '+x2+' '+y2+' L'+xi2+' '+yi2+' A'+inner+' '+inner+' 0 '+lg+' 0 '+xi1+' '+yi1+' Z" fill="'+color+'" opacity="0.85" stroke="#030508" stroke-width="0.5"/>';
-    var lbl = labels ? ((labels[k]||k).replace(/[^\x00-\x7F]/g,'').trim().slice(0,12)) : k;
-    legendItems += '<div style="display:flex;align-items:center;gap:3px;font-size:6px;color:#c0e8ff;margin-bottom:1px;">' +
-      '<span style="display:inline-block;width:6px;height:6px;border-radius:1px;background:'+color+';flex-shrink:0;"></span>' +
+    var pct = Math.round(cnt / total * 100);
+    paths += '<path d="M'+x1+' '+y1+' A'+rOuter+' '+rOuter+' 0 '+lg+' 1 '+x2+' '+y2+
+             ' L'+xi2+' '+yi2+' A'+inner+' '+inner+' 0 '+lg+' 0 '+xi1+' '+yi1+' Z"'+
+             ' fill="'+color+'" opacity="0.85" stroke="#030508" stroke-width="0.5"/>';
+    var lbl = labels ? ((labels[k]||k).replace(/[^\x00-\x7F]/g,'').trim().slice(0,14)) : k;
+    legendItems += '<div style="display:flex;align-items:center;gap:4px;font-size:6px;color:#c0e8ff;margin-bottom:2px;">' +
+      '<span style="display:inline-block;width:7px;height:7px;border-radius:1px;background:'+color+';flex-shrink:0;"></span>' +
       '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+lbl+'</span>' +
-      '<span style="color:#ffcc00;font-family:var(--title);font-size:5.5px;">'+pct+'%</span>' +
+      '<span style="color:#ffcc00;font-family:var(--title);font-size:5.5px;white-space:nowrap;">'+pct+'%</span>' +
       '</div>';
     startAngle = endAngle;
   });
 
-  return '<div style="display:flex;align-items:center;gap:8px;">' +
-    '<svg width="80" height="80" viewBox="0 0 80 80" style="flex-shrink:0;">' + paths + '</svg>' +
-    '<div style="flex:1;overflow:hidden;">' + legendItems + '</div>' +
+  return '<div style="display:flex;align-items:center;gap:10px;">' +
+    '<svg width="'+svgSize+'" height="'+svgSize+'" viewBox="0 0 '+svgSize+' '+svgSize+'" style="flex-shrink:0;">' + paths + '</svg>' +
+    '<div style="flex:1;min-width:0;">' + legendItems + '</div>' +
     '</div>';
 }
 window.ecAnalRenderStats = ecAnalRenderStats;
 
+// ═══════════════════════════════════════════════════════════════
+// PESTAÑA ESTADÍSTICAS — datos fijos del total DENUE
+// ═══════════════════════════════════════════════════════════════
+var _ecStatsRendered = false;
 
+function ecStatsRender() {
+  if (_ecStatsRendered) return;
+  if (!DENUE_DATA || !DENUE_DATA.length) return;
+  _ecStatsRendered = true;
+
+  var data = DENUE_DATA;
+  var total = data.length;
+  var catCount = {}, tamCount = {}, colCount = {};
+  var totalEmpMin = 0, totalEmpMax = 0;
+  var TAM_MIN = [0,0,6,11,31,51,101,251];
+  var TAM_MAX = [0,5,10,30,50,100,250,999];
+
+  data.forEach(function(r) {
+    catCount[r[1]] = (catCount[r[1]]||0) + 1;
+    var tk = DENUE_PER[r[4]] || 'N/D';
+    tamCount[tk] = (tamCount[tk]||0) + 1;
+    if (r[3]) colCount[r[3]] = (colCount[r[3]]||0) + 1;
+    totalEmpMin += (TAM_MIN[r[4]] || 0);
+    totalEmpMax += (TAM_MAX[r[4]] || 0);
+  });
+
+  var tamColors = {'0-5':'#1a44dd','6-10':'#2266ee','11-30':'#2299ff','31-50':'#44bbff','51-100':'#66ccff','101-250':'#99ddff','251+':'#ccf0ff','N/D':'#1a2a4a'};
+  var topCols = Object.keys(colCount).sort(function(a,b){return colCount[b]-colCount[a];}).slice(0,10);
+  var maxCol = colCount[topCols[0]] || 1;
+
+  var html = '';
+
+  // Header resumen
+  html += '<div style="background:#060d18;border:1px solid #0d2040;border-radius:4px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;">'
+    + '<div><div style="font-family:var(--title);font-size:22px;font-weight:900;color:#00ccff;">'+total.toLocaleString()+'</div><div style="font-family:var(--title);font-size:5.5px;letter-spacing:1.5px;color:#3a6a9a;">ESTABLECIMIENTOS TOTALES</div></div>'
+    + '<div><div style="font-family:var(--title);font-size:13px;font-weight:700;color:#40b0ff;">'+Object.keys(catCount).length+'</div><div style="font-family:var(--title);font-size:5.5px;letter-spacing:1px;color:#3a6a9a;">SECTORES</div></div>'
+    + '<div><div style="font-family:var(--title);font-size:13px;font-weight:700;color:#40b0ff;">'+Object.keys(colCount).length.toLocaleString()+'</div><div style="font-family:var(--title);font-size:5.5px;letter-spacing:1px;color:#3a6a9a;">COLONIAS</div></div>'
+    + '<div style="margin-left:auto;font-size:7px;color:#3a6a9a;text-align:right;">Empleados estimados:<br><span style="color:#ffcc00;font-family:var(--title);font-size:9px;">'+totalEmpMin.toLocaleString()+' - '+totalEmpMax.toLocaleString()+'</span></div>'
+    + '</div>';
+
+  // Donut sector
+  html += '<div style="background:#060d18;border:1px solid #0d2040;border-radius:4px;padding:10px 12px;">'
+    + '<div style="font-family:var(--title);font-size:5.5px;letter-spacing:1.5px;color:#3a6a9a;margin-bottom:8px;">DISTRIBUCION POR SECTOR ECONOMICO</div>'
+    + ecDonutSVG(catCount, DENUE_COLORS, DENUE_LABELS, 60)
+    + '</div>';
+
+  // Donut tamano
+  html += '<div style="background:#060d18;border:1px solid #0d2040;border-radius:4px;padding:10px 12px;">'
+    + '<div style="font-family:var(--title);font-size:5.5px;letter-spacing:1.5px;color:#3a6a9a;margin-bottom:8px;">DISTRIBUCION POR TAMANO DE EMPRESA</div>'
+    + ecDonutSVG(tamCount, tamColors, null, 60)
+    + '</div>';
+
+  // Top 10 colonias
+  html += '<div style="background:#060d18;border:1px solid #0d2040;border-radius:4px;padding:10px 12px;">'
+    + '<div style="font-family:var(--title);font-size:5.5px;letter-spacing:1.5px;color:#3a6a9a;margin-bottom:8px;">TOP 10 COLONIAS POR CONCENTRACION</div>'
+    + topCols.map(function(c, i) {
+        var barW = Math.round(colCount[c]/maxCol*100);
+        var pct = Math.round(colCount[c]/total*100);
+        var blue = Math.round(100 + barW * 1.55);
+        var color = 'rgb('+Math.round(blue*0.2)+','+Math.round(blue*0.55)+','+blue+')';
+        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+          + '<div style="font-family:var(--title);font-size:5.5px;color:#3a5a7a;width:12px;text-align:right;">'+(i+1)+'</div>'
+          + '<div style="font-size:7.5px;color:#c0e8ff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c+'</div>'
+          + '<div style="width:90px;height:5px;background:#0d2040;border-radius:2px;overflow:hidden;flex-shrink:0;">'
+            + '<div style="width:'+barW+'%;height:100%;background:'+color+';border-radius:2px;"></div>'
+          + '</div>'
+          + '<div style="font-family:var(--title);font-size:6px;color:#ffcc00;width:32px;text-align:right;">'+colCount[c].toLocaleString()+'</div>'
+          + '<div style="font-size:6px;color:#3a6a9a;width:24px;text-align:right;">'+pct+'%</div>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+
+  // Barras por sector
+  var sortedCats = Object.keys(catCount).sort(function(a,b){return catCount[b]-catCount[a];});
+  var maxCat = catCount[sortedCats[0]] || 1;
+  html += '<div style="background:#060d18;border:1px solid #0d2040;border-radius:4px;padding:10px 12px;">'
+    + '<div style="font-family:var(--title);font-size:5.5px;letter-spacing:1.5px;color:#3a6a9a;margin-bottom:8px;">VOLUMEN POR SECTOR</div>'
+    + sortedCats.map(function(k) {
+        var color = DENUE_COLORS[k] || '#3a5a7a';
+        var lbl = (DENUE_LABELS[k]||k).replace(/[^\x00-\x7F]/g,'').trim();
+        var barW = Math.round(catCount[k]/maxCat*100);
+        var pct = Math.round(catCount[k]/total*100);
+        return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
+          + '<div style="width:70px;font-size:6.5px;color:'+color+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">'+lbl+'</div>'
+          + '<div style="flex:1;height:7px;background:#0d2040;border-radius:2px;overflow:hidden;">'
+            + '<div style="width:'+barW+'%;height:100%;background:'+color+';border-radius:2px;opacity:.8;"></div>'
+          + '</div>'
+          + '<div style="font-family:var(--title);font-size:6px;color:#ffcc00;width:36px;text-align:right;">'+catCount[k].toLocaleString()+'</div>'
+          + '<div style="font-size:6px;color:#3a6a9a;width:22px;text-align:right;">'+pct+'%</div>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+
+  var cont = document.getElementById('ec-stats-content');
+  if (cont) cont.innerHTML = html;
+}
+window.ecStatsRender = ecStatsRender;
 
 // ═══════════════════════════════════════════════════════════════
 // SECCIÓN GOBIERNO
