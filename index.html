@@ -4719,33 +4719,32 @@ function distanciaMetros(lat1, lng1, lat2, lng2) {
 // Criterio: misma fecha_evento + coordenadas < 100m (≈1 calle) O relacionadas_ids explícitas
 function agruparNoticias(lista) {
   var usadas = {};
-  var grupos = []; // [{principal: noticia, relacionadas: [noticia, ...]}]
+  var grupos = [];
 
   for (var i = 0; i < lista.length; i++) {
     var n = lista[i];
-    if (usadas[n.id]) continue;
-
-    var grupo = { principal: n, relacionadas: [] };
+    if (!n || !n.id || usadas[n.id]) continue;
     usadas[n.id] = true;
 
-    // Noticias ya vinculadas explícitamente (campo relacionadas_ids)
+    var grupo = { principal: n, relacionadas: [] };
     var explicitasIds = Array.isArray(n.relacionadas_ids) ? n.relacionadas_ids : [];
 
     for (var j = 0; j < lista.length; j++) {
       var m = lista[j];
-      if (m.id === n.id || usadas[m.id]) continue;
+      if (!m || !m.id || m.id === n.id || usadas[m.id]) continue;
 
-      // Vinculación explícita
+      // Vinculación explícita (solo un sentido para evitar ciclos — el que tenga el id en su lista)
       var esExplicita = explicitasIds.indexOf(m.id) >= 0;
-      var mIds = Array.isArray(m.relacionadas_ids) ? m.relacionadas_ids : [];
-      if (!esExplicita) esExplicita = mIds.indexOf(n.id) >= 0;
 
-      // Vinculación automática: misma fecha_evento + coordenadas < 100m
+      // Vinculación automática: misma fecha_evento (exacta, no vacía) + coordenadas < 100m
       var esAutomatica = false;
-      if (!esExplicita && n.fecha_evento && m.fecha_evento && n.fecha_evento === m.fecha_evento) {
+      if (!esExplicita && n.fecha_evento && n.fecha_evento.length > 0 &&
+          m.fecha_evento && m.fecha_evento === n.fecha_evento) {
         var latN = parseFloat(n.lat), lngN = parseFloat(n.lng);
         var latM = parseFloat(m.lat), lngM = parseFloat(m.lng);
-        if (latN && latM && latN !== 20.6795 && latM !== 20.6795) {
+        // Solo si ambas tienen coordenadas no genéricas
+        if (!isNaN(latN) && !isNaN(latM) &&
+            Math.abs(latN - 20.6795) > 0.0001 && Math.abs(latM - 20.6795) > 0.0001) {
           if (distanciaMetros(latN, lngN, latM, lngM) < 100) esAutomatica = true;
         }
       }
@@ -4756,11 +4755,11 @@ function agruparNoticias(lista) {
       }
     }
 
-    // Si hay relacionadas, elegir la principal: la de resumen más largo
+    // Elegir principal: resumen más largo
     if (grupo.relacionadas.length > 0) {
       var todas = [n].concat(grupo.relacionadas);
       todas.sort(function(a, b) {
-        return (b.resumen||'').length - (a.resumen||'').length;
+        return (b.resumen || '').length - (a.resumen || '').length;
       });
       grupo.principal = todas[0];
       grupo.relacionadas = todas.slice(1);
@@ -5238,24 +5237,8 @@ function guardarEditBD(id) {
   if (latBD && lngBD) { updates.lat = latBD; updates.lng = lngBD; }
   db.collection('noticias-fase1').doc(id).update(updates)
   .then(function() {
-    toast('Cambios guardados', 'ok');
-    for (var i = 0; i < noticias.length; i++) {
-      if (noticias[i].id === id) {
-        noticias[i].tipo = updates.tipo;
-        noticias[i].titulo = updates.titulo;
-        noticias[i].calle = updates.calle;
-        noticias[i].calle2 = updates.calle2;
-        noticias[i].colonia = updates.colonia;
-        noticias[i].comunidad = updates.comunidad;
-        noticias[i].nombres = updates.nombres;
-        noticias[i].resumen = updates.resumen;
-        noticias[i].tiempo_dia = updates.tiempo_dia;
-        noticias[i].fecha_evento = updates.fecha_evento;
-        if (updates.url !== undefined) noticias[i].url = updates.url;
-        break;
-      }
-    }
-    renderBD();
+    toast('✓ Cambios guardados', 'ok');
+    // onSnapshot detecta el cambio y actualiza noticias[] + renderBD() automáticamente
   })
   .catch(function(e) { toast('Error: ' + e.message, 'err'); });
 }
