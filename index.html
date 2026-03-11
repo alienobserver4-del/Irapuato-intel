@@ -5243,11 +5243,36 @@ function guardarEditBD(id) {
     });
   }
 
-  var updates = usuario_edicion;
-  updates.usuario_edicion = usuario_edicion;
-  updates.aprendizaje_diff = diff_edicion;
-  updates.aprendizaje_campos_corregidos = Object.keys(diff_edicion);
-  updates.ultima_edicion_usuario = new Date().toISOString();
+  // Copiar usuario_edicion para evitar referencia circular al asignarlo como propiedad
+  var updates = {
+    tipo:            usuario_edicion.tipo,
+    titulo:          usuario_edicion.titulo,
+    calle:           usuario_edicion.calle,
+    calle2:          usuario_edicion.calle2,
+    colonia:         usuario_edicion.colonia,
+    comunidad:       usuario_edicion.comunidad,
+    nombres:         usuario_edicion.nombres,
+    fecha_evento:    usuario_edicion.fecha_evento,
+    tiempo_dia:      usuario_edicion.tiempo_dia,
+    resumen:         usuario_edicion.resumen,
+    url:             usuario_edicion.url,
+    usuario_edicion: {
+      tipo:         usuario_edicion.tipo,
+      titulo:       usuario_edicion.titulo,
+      calle:        usuario_edicion.calle,
+      calle2:       usuario_edicion.calle2,
+      colonia:      usuario_edicion.colonia,
+      comunidad:    usuario_edicion.comunidad,
+      nombres:      usuario_edicion.nombres,
+      fecha_evento: usuario_edicion.fecha_evento,
+      tiempo_dia:   usuario_edicion.tiempo_dia,
+      resumen:      usuario_edicion.resumen,
+      url:          usuario_edicion.url
+    },
+    aprendizaje_diff:              diff_edicion,
+    aprendizaje_campos_corregidos: Object.keys(diff_edicion),
+    ultima_edicion_usuario:        new Date().toISOString()
+  };
   if (latBD && lngBD) { updates.lat = latBD; updates.lng = lngBD; }
   db.collection('noticias-fase1').doc(id).update(updates)
   .then(function() {
