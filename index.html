@@ -122,7 +122,7 @@ header {
   background:rgba(0,8,20,.96); border-bottom:1px solid #0d2040; flex-shrink:0; overflow-x:auto; }
 .ec-filtros-bar::-webkit-scrollbar { height:2px; } .ec-filtros-bar::-webkit-scrollbar-thumb { background:#1a3a5a; }
 
-.ec-stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:8px 10px; flex-shrink:0; }
+.ec-stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:8px 10px; flex-shrink:0; }
 .ec-stat-card { background:#060d18; border:1px solid #0d2040; border-radius:4px; padding:7px 8px; text-align:center; }
 .ec-stat-n { font-family:var(--title); font-size:15px; font-weight:900; color:#ffcc00; line-height:1.1; }
 .ec-stat-l { font-size:5.5px; color:var(--muted); letter-spacing:.8px; font-family:var(--title); margin-top:2px; }
@@ -139,6 +139,23 @@ header {
 .ec-badge { font-family:var(--title); font-size:5px; padding:1px 4px; border-radius:2px; letter-spacing:.5px; }
 .ec-sort-btn { background:none; border:none; cursor:pointer; color:#3a6a9a; font-size:8px; padding:0 2px; }
 .ec-sort-btn.asc::after { content:' ▲'; } .ec-sort-btn.desc::after { content:' ▼'; }
+
+/* ── Autocomplete DENUE Análisis ── */
+.ec-autocomplete-wrap { position:relative; flex:1; }
+.ec-autocomplete-list {
+  position:absolute; top:100%; left:0; right:0; z-index:9999;
+  background:#040c1a; border:1px solid #0d2040; border-top:none;
+  border-radius:0 0 4px 4px; overflow:hidden;
+  box-shadow:0 8px 20px rgba(0,0,0,.6);
+}
+.ec-ac-item {
+  padding:7px 10px; cursor:pointer; display:flex; align-items:center; gap:8px;
+  border-bottom:1px solid #080f1e; transition:background .1s;
+}
+.ec-ac-item:hover { background:rgba(255,204,0,.06); }
+.ec-ac-name { font-size:8px; color:#c0e8ff; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ec-ac-giro { font-size:6.5px; color:#4a7a9a; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ec-ac-emp { font-family:var(--title); font-size:6px; color:#ffcc00; white-space:nowrap; }
 
 /* ── SUB-TABS GOBIERNO ── */
 .gob-stab {
@@ -1109,7 +1126,10 @@ header {
     <!-- filtros análisis -->
     <div class="ec-filtros-bar" id="ec-anal-cats"></div>
     <div class="ec-filtros-bar" style="gap:6px;padding:4px 10px;">
-      <input id="ec-anal-search" type="text" class="denue-search-input" style="flex:1;font-size:8px;" placeholder="🔍 Buscar nombre o giro…" oninput="ecAnalFiltrar()">
+      <div class="ec-autocomplete-wrap">
+        <input id="ec-anal-search" type="text" class="denue-search-input" style="width:100%;font-size:8px;" placeholder="🔍 Buscar nombre o giro…" oninput="ecAnalAutocompletar(this.value)" onblur="setTimeout(ecAnalCerrarAC,200)" autocomplete="off">
+        <div id="ec-ac-list" class="ec-autocomplete-list" style="display:none;"></div>
+      </div>
       <select id="ec-anal-size" onchange="ecAnalFiltrar()" style="background:#020810;border:1px solid #0d2040;color:var(--text);font-family:var(--mono);font-size:8px;padding:4px 6px;border-radius:3px;">
         <option value="0">Todos los tamaños</option>
         <option value="1">Micro 0-5</option>
@@ -1145,13 +1165,14 @@ header {
 
 <!-- INTEL: fuera de #panel para tener altura real -->
     <div id="sec-intel">
+      <div id="intel-container" style="display:flex;flex-direction:column;width:100%;height:100%;">
+        <div class="intel-barra-tipo" style="display:flex;align-items:center;gap:4px;padding:5px 10px;flex-shrink:0;overflow-x:auto;">
           <button class="mapa-filtro-btn acc activo" onclick="filtrarIntel('accidente',this)">ACC</button>
           <button class="mapa-filtro-btn eve activo" onclick="filtrarIntel('evento',this)">EVE</button>
           <button class="mapa-filtro-btn gob activo" onclick="filtrarIntel('gobierno',this)">GOB</button>
           <button class="mapa-filtro-btn activo" style="color:#c040ff;border-color:#c040ff;" onclick="filtrarIntel('politica',this)">POL</button>
           <button class="mapa-filtro-btn rum activo" onclick="filtrarIntel('rumor',this)">RUMOR</button>
           <button class="mapa-heat-btn" id="intel-btn-heat" onclick="toggleIntelHeat(this)">&#x1F525; CALOR</button>
-          <button class="intel-denue-btn" id="intel-btn-denue" onclick="toggleIntelDenue(this)">📍 DENUE</button>
         </div>
         <div class="intel-barra-tiempo" id="intel-tiempo-bar">
           <span style="color:#3a5a7a;font-family:var(--title);font-size:6px;letter-spacing:1px;white-space:nowrap;padding:2px 0;">🕐</span>
@@ -1978,21 +1999,21 @@ function renderDenueMapa(extraFn) {
   if (modoEfectivo === 'heat') {
     var pts = items.map(function(r){ return [r[5], r[6], Math.min(r[4] / 7, 1)]; });
     if (typeof L.heatLayer === 'function') {
-      // Gradiente azul económico con menos saturación/opacidad
+      // Gradiente azul-morado muy sutil: las calles deben verse claramente
       denueHeatLayer = L.heatLayer(pts, {
-        radius: 22,
-        blur: 20,
+        radius: 28,
+        blur: 30,
         maxZoom: 17,
-        minOpacity: 0.25,
+        minOpacity: 0.0,
         max: 1.0,
         gradient: {
-          0.0: 'rgba(0,0,0,0)',
-          0.15: 'rgba(0,20,60,0.45)',
-          0.35: 'rgba(0,60,150,0.55)',
-          0.55: 'rgba(0,100,220,0.62)',
-          0.75: 'rgba(30,160,255,0.68)',
-          0.90: 'rgba(120,210,255,0.72)',
-          1.0:  'rgba(200,240,255,0.78)'
+          0.0:  'rgba(0,0,0,0)',
+          0.20: 'rgba(10,15,60,0.08)',
+          0.40: 'rgba(20,30,120,0.18)',
+          0.60: 'rgba(40,60,180,0.28)',
+          0.78: 'rgba(80,40,200,0.36)',
+          0.90: 'rgba(120,60,220,0.42)',
+          1.0:  'rgba(160,80,255,0.48)'
         }
       }).addTo(denueMapaObj);
     }
@@ -2005,9 +2026,17 @@ function renderDenueMapa(extraFn) {
     var grupo = L.layerGroup();
     muestra.forEach(function(r) {
       var color = DENUE_COLORS[r[1]] || '#aaaaaa';
-      var sz = 7 + Math.min(r[4], 4) * 1.5;
-      var ic = L.divIcon({ className:'', iconSize:[sz,sz], iconAnchor:[sz/2,sz/2],
-        html: '<div style="width:'+sz+'px;height:'+sz+'px;background:'+color+';border-radius:50%;border:1.5px solid rgba(255,255,255,.4);box-shadow:0 0 4px '+color+'88;opacity:.9;cursor:pointer;"></div>'
+      var sz = 14 + Math.min(r[4], 5) * 2; // tamaño total del div (incluye halo)
+      var core = Math.round(sz * 0.35);     // núcleo sólido
+      var ic = L.divIcon({
+        className: '',
+        iconSize: [sz, sz],
+        iconAnchor: [sz/2, sz/2],
+        html: '<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;' +
+              'background:radial-gradient(circle, '+color+'cc 0%, '+color+'66 35%, '+color+'22 65%, transparent 100%);' +
+              'display:flex;align-items:center;justify-content:center;">' +
+              '<div style="width:'+core+'px;height:'+core+'px;border-radius:50%;background:'+color+';' +
+              'box-shadow:0 0 3px '+color+',0 0 6px '+color+'88;"></div></div>'
       });
       var catLabel = DENUE_LABELS[r[1]] || r[1];
       var empLabel = DENUE_PER[r[4]] || 'N/D';
@@ -2173,23 +2202,6 @@ function ecAnalSort(col) {
 }
 window.ecAnalSort = ecAnalSort;
 
-function ecAnalRenderStats(items) {
-  var grid = document.getElementById('ec-stat-grid');
-  if (!grid) return;
-  // Conteos por categoría top 3
-  var catCount = {};
-  var totalEmp = 0;
-  items.forEach(function(r){ catCount[r[1]] = (catCount[r[1]]||0)+1; totalEmp += (r[4]||0); });
-  var top = Object.keys(catCount).sort(function(a,b){ return catCount[b]-catCount[a]; }).slice(0,3);
-  var html = '<div class="ec-stat-card"><div class="ec-stat-n" style="color:#00ccff;">'+items.length.toLocaleString()+'</div><div class="ec-stat-l">ESTABLECIMIENTOS</div></div>';
-  top.forEach(function(k){
-    var color = DENUE_COLORS[k]||'#aaaaaa';
-    var label = (DENUE_LABELS[k]||k).replace(/[🛒✂🍽🏭🏥📦🎓💼🏠🏦🎭🔧🏛🚛🏗📡⚡🌱⛏]/u,'').trim();
-    html += '<div class="ec-stat-card"><div class="ec-stat-n" style="color:'+color+';">'+catCount[k].toLocaleString()+'</div><div class="ec-stat-l">'+label+'</div></div>';
-  });
-  grid.innerHTML = html;
-}
-
 function ecAnalRenderTabla(items) {
   var tbody = document.getElementById('ec-tabla-body');
   var footer = document.getElementById('ec-tabla-footer');
@@ -2241,6 +2253,160 @@ function ecAnalExportar() {
   URL.revokeObjectURL(url);
 }
 window.ecAnalExportar = ecAnalExportar;
+
+// ── Autocomplete ──
+var _acTimer = null;
+function ecAnalAutocompletar(q) {
+  ecAnalFiltrar(); // actualizar tabla también
+  clearTimeout(_acTimer);
+  var list = document.getElementById('ec-ac-list');
+  if (!q || q.trim().length < 2 || !DENUE_DATA) { if (list) list.style.display='none'; return; }
+  _acTimer = setTimeout(function() {
+    var qL = q.trim().toLowerCase();
+    // Buscar coincidencias en nombre y giro
+    var matches = DENUE_DATA.filter(function(r) {
+      return r[0].toLowerCase().indexOf(qL) >= 0 || r[2].toLowerCase().indexOf(qL) >= 0;
+    });
+    // Ordenar por relevancia: nombre exacto > nombre contiene > giro; luego por tamaño desc
+    matches.sort(function(a,b) {
+      var sa = (a[0].toLowerCase().indexOf(qL) === 0 ? 3 : a[0].toLowerCase().indexOf(qL) >= 0 ? 2 : 1);
+      var sb = (b[0].toLowerCase().indexOf(qL) === 0 ? 3 : b[0].toLowerCase().indexOf(qL) >= 0 ? 2 : 1);
+      if (sb !== sa) return sb - sa;
+      return b[4] - a[4]; // mayor tamaño primero
+    });
+    var top4 = matches.slice(0, 4);
+    if (!top4.length) { list.style.display='none'; return; }
+    list.innerHTML = top4.map(function(r, i) {
+      var color = DENUE_COLORS[r[1]] || '#aaaaaa';
+      var emp = DENUE_PER[r[4]] || 'N/D';
+      return '<div class="ec-ac-item" onclick="ecAcSeleccionar(' + JSON.stringify(r[0]) + ',' + r[5] + ',' + r[6] + ')">' +
+        '<span class="ec-cat-dot" style="background:'+color+';flex-shrink:0;"></span>' +
+        '<span class="ec-ac-name">' + r[0] + '</span>' +
+        '<span class="ec-ac-giro">' + r[2] + '</span>' +
+        '<span class="ec-ac-emp">👥 ' + emp + '</span>' +
+        '</div>';
+    }).join('');
+    list.style.display = 'block';
+  }, 180);
+}
+window.ecAnalAutocompletar = ecAnalAutocompletar;
+
+function ecAcSeleccionar(nombre, lat, lng) {
+  var input = document.getElementById('ec-anal-search');
+  if (input) input.value = nombre;
+  ecAnalCerrarAC();
+  ecAnalFiltrar();
+}
+window.ecAcSeleccionar = ecAcSeleccionar;
+
+function ecAnalCerrarAC() {
+  var list = document.getElementById('ec-ac-list');
+  if (list) list.style.display = 'none';
+}
+window.ecAnalCerrarAC = ecAnalCerrarAC;
+
+// ── Gráficas circulares ──
+function ecAnalRenderStats(items) {
+  var grid = document.getElementById('ec-stat-grid');
+  if (!grid) return;
+
+  // Conteos
+  var catCount = {}, tamCount = {};
+  var totalEmp = 0;
+  items.forEach(function(r) {
+    catCount[r[1]] = (catCount[r[1]]||0) + 1;
+    var tk = DENUE_PER[r[4]] || 'N/D';
+    tamCount[tk] = (tamCount[tk]||0) + 1;
+    totalEmp += (r[4] || 0);
+  });
+
+  // Card total
+  var html = '<div class="ec-stat-card" style="grid-column:1/-1;display:flex;align-items:center;gap:10px;text-align:left;">' +
+    '<div style="flex:1;">' +
+    '<div class="ec-stat-n" style="color:#00ccff;">'+items.length.toLocaleString()+'</div>' +
+    '<div class="ec-stat-l">ESTABLECIMIENTOS</div></div>' +
+    '<div style="font-family:var(--mono);font-size:7px;color:#3a6a9a;">Empleados (estimado): ' +
+    (totalEmp * 5).toLocaleString() + '–' + (totalEmp * 8).toLocaleString() + '</div>' +
+    '</div>';
+
+  // Gráfica por giro
+  html += '<div class="ec-stat-card" style="grid-column:1/2;">' +
+    '<div style="font-family:var(--title);font-size:5.5px;letter-spacing:1px;color:#3a6a9a;margin-bottom:6px;">POR GIRO</div>' +
+    ecDonutSVG(catCount, DENUE_COLORS, DENUE_LABELS) +
+    '</div>';
+
+  // Gráfica por tamaño
+  var tamColors = {'0-5':'#4466ff','6-10':'#44aaff','11-30':'#44ffcc','31-50':'#ffcc00','51-100':'#ff8844','101-250':'#ff4488','251+':'#cc44ff','N/D':'#3a5a7a'};
+  html += '<div class="ec-stat-card" style="grid-column:2/3;">' +
+    '<div style="font-family:var(--title);font-size:5.5px;letter-spacing:1px;color:#3a6a9a;margin-bottom:6px;">POR TAMAÑO</div>' +
+    ecDonutSVG(tamCount, tamColors, null) +
+    '</div>';
+
+  // Top 5 colonias
+  var colCount = {};
+  items.forEach(function(r){ if(r[3]) colCount[r[3]] = (colCount[r[3]]||0)+1; });
+  var topCols = Object.keys(colCount).sort(function(a,b){return colCount[b]-colCount[a];}).slice(0,5);
+  html += '<div class="ec-stat-card" style="grid-column:1/-1;">' +
+    '<div style="font-family:var(--title);font-size:5.5px;letter-spacing:1px;color:#3a6a9a;margin-bottom:6px;">TOP 5 COLONIAS</div>' +
+    topCols.map(function(c) {
+      var pct = Math.round(colCount[c]/items.length*100);
+      return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">' +
+        '<div style="font-size:7px;color:#c0e8ff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+c+'</div>' +
+        '<div style="width:60px;height:4px;background:#0d2040;border-radius:2px;overflow:hidden;">' +
+          '<div style="width:'+pct+'%;height:100%;background:#ffcc00;border-radius:2px;"></div>' +
+        '</div>' +
+        '<div style="font-family:var(--title);font-size:6px;color:#ffcc00;width:28px;text-align:right;">'+colCount[c]+'</div>' +
+        '</div>';
+    }).join('') +
+    '</div>';
+
+  grid.innerHTML = html;
+}
+
+function ecDonutSVG(countObj, colors, labels) {
+  var total = Object.keys(countObj).reduce(function(s,k){ return s+countObj[k]; }, 0);
+  if (!total) return '<div style="font-size:7px;color:#3a5a7a;">Sin datos</div>';
+  var sorted = Object.keys(countObj).sort(function(a,b){ return countObj[b]-countObj[a]; });
+  var top6 = sorted.slice(0, 6);
+  var otrosTotal = sorted.slice(6).reduce(function(s,k){ return s+countObj[k]; }, 0);
+
+  // SVG Donut
+  var cx=40, cy=40, r=28, inner=16;
+  var startAngle = -Math.PI/2;
+  var paths = '';
+  var legendItems = '';
+  var allKeys = top6.slice();
+  var allCounts = top6.map(function(k){ return countObj[k]; });
+  if (otrosTotal > 0) { allKeys.push('…otros'); allCounts.push(otrosTotal); }
+
+  allKeys.forEach(function(k, i) {
+    var cnt = allCounts[i];
+    var angle = (cnt / total) * 2 * Math.PI;
+    var endAngle = startAngle + angle;
+    var x1 = cx + r * Math.cos(startAngle), y1 = cy + r * Math.sin(startAngle);
+    var x2 = cx + r * Math.cos(endAngle),   y2 = cy + r * Math.sin(endAngle);
+    var xi1= cx + inner*Math.cos(startAngle), yi1=cy+inner*Math.sin(startAngle);
+    var xi2= cx + inner*Math.cos(endAngle),   yi2=cy+inner*Math.sin(endAngle);
+    var lg = angle > Math.PI ? 1 : 0;
+    var color = (colors[k] || '#3a5a7a');
+    var pct = Math.round(cnt/total*100);
+    paths += '<path d="M'+x1+' '+y1+' A'+r+' '+r+' 0 '+lg+' 1 '+x2+' '+y2+' L'+xi2+' '+yi2+' A'+inner+' '+inner+' 0 '+lg+' 0 '+xi1+' '+yi1+' Z" fill="'+color+'" opacity="0.85" stroke="#030508" stroke-width="0.5"/>';
+    var lbl = labels ? ((labels[k]||k).replace(/[^\x00-\x7F]/g,'').trim().slice(0,12)) : k;
+    legendItems += '<div style="display:flex;align-items:center;gap:3px;font-size:6px;color:#c0e8ff;margin-bottom:1px;">' +
+      '<span style="display:inline-block;width:6px;height:6px;border-radius:1px;background:'+color+';flex-shrink:0;"></span>' +
+      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+lbl+'</span>' +
+      '<span style="color:#ffcc00;font-family:var(--title);font-size:5.5px;">'+pct+'%</span>' +
+      '</div>';
+    startAngle = endAngle;
+  });
+
+  return '<div style="display:flex;align-items:center;gap:8px;">' +
+    '<svg width="80" height="80" viewBox="0 0 80 80" style="flex-shrink:0;">' + paths + '</svg>' +
+    '<div style="flex:1;overflow:hidden;">' + legendItems + '</div>' +
+    '</div>';
+}
+window.ecAnalRenderStats = ecAnalRenderStats;
+
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -4371,6 +4537,15 @@ function renderBD() {
         (n.nombres ? '<span style="color:#ffa500;font-size:7px;">Implicados: ' + n.nombres + '</span>' : '') +
         '<span style="color:var(--muted);font-size:7px;">Captura: ' + fecha + (n.fecha_evento ? ' | Evento: ' + n.fecha_evento : '') + '</span>' +
         ((n.url||n.link) ? '<div style="margin-top:6px;"><a href="' + (n.url||n.link) + '" target="_blank" rel="noopener" style="font-family:var(--title);font-size:7px;font-weight:700;color:#00f5ff;text-decoration:none;border:1px solid #00f5ff44;padding:3px 8px;border-radius:2px;background:rgba(0,245,255,.08);letter-spacing:1px;">&#128279; VER NOTICIA</a></div>' : '') +
+        (n.lat && n.lat !== 20.6795 ?
+          '<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">' +
+            '<span style="font-family:var(--title);font-size:5.5px;color:#3a5a7a;letter-spacing:1px;align-self:center;">📍 VER EN:</span>' +
+            '<button onclick="verEnMapa(\'mapa\',' + n.lat + ',' + n.lng + ')" style="padding:3px 7px;font-family:var(--title);font-size:6px;letter-spacing:.5px;border-radius:3px;cursor:pointer;border:1px solid #00ff8855;background:rgba(0,255,136,.06);color:#00ff88;">🗺 MAPA</button>' +
+            '<button onclick="verEnMapa(\'intel\',' + n.lat + ',' + n.lng + ')" style="padding:3px 7px;font-family:var(--title);font-size:6px;letter-spacing:.5px;border-radius:3px;cursor:pointer;border:1px solid #ff225555;background:rgba(255,34,85,.06);color:#ff6688;">⚡ INTEL</button>' +
+            '<button onclick="verEnMapa(\'denue\',' + n.lat + ',' + n.lng + ')" style="padding:3px 7px;font-family:var(--title);font-size:6px;letter-spacing:.5px;border-radius:3px;cursor:pointer;border:1px solid #ffcc0055;background:rgba(255,204,0,.06);color:#ffcc00;">💰 ECON.</button>' +
+            '<button onclick="verEnMapa(\'gobierno\',' + n.lat + ',' + n.lng + ')" style="padding:3px 7px;font-family:var(--title);font-size:6px;letter-spacing:.5px;border-radius:3px;cursor:pointer;border:1px solid #00ccff55;background:rgba(0,204,255,.06);color:#00ccff;">🏛 GOB.</button>' +
+          '</div>'
+        : '') +
       '</div>' +
       '<div id="bd-edit-' + n.id + '" style="display:none;margin-top:8px;border-top:1px solid #0d2040;padding-top:8px;">' +
         '<select id="bde-tipo-' + n.id + '" class="nc-select" style="margin-bottom:4px;">' +
@@ -4414,6 +4589,24 @@ function renderBD() {
     lista.appendChild(div);
   }
 }
+
+// ── Navegar desde tarjeta BD a un mapa en coordenadas específicas ──
+function verEnMapa(tab, lat, lng) {
+  verTab(tab);
+  var zoom = 16;
+  setTimeout(function() {
+    if (tab === 'mapa' && mapaObj) {
+      mapaObj.setView([lat, lng], zoom);
+    } else if (tab === 'intel' && intelObj) {
+      intelObj.setView([lat, lng], zoom);
+    } else if (tab === 'denue' && denueMapaObj) {
+      denueMapaObj.setView([lat, lng], zoom);
+    } else if (tab === 'gobierno' && gobMapaObj) {
+      gobMapaObj.setView([lat, lng], zoom);
+    }
+  }, 600);
+}
+window.verEnMapa = verEnMapa;
 
 function verDetallesBD(id) {
   var n = null;
