@@ -510,6 +510,73 @@ header {
 }
 .bd-del:hover { color:var(--red); }
 
+/* ── NOTICIAS RELACIONADAS ── */
+.rel-btn {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:4px 10px; margin-top:6px;
+  font-family:var(--title); font-size:6.5px; letter-spacing:.8px;
+  border-radius:3px; cursor:pointer;
+  border:1px solid #b060ff55; color:#b060ff;
+  background:rgba(176,96,255,.07);
+  transition:all .15s;
+}
+.rel-btn:hover { border-color:#b060ff; background:rgba(176,96,255,.14); }
+.rel-badge { background:#b060ff; color:#000; border-radius:50%; width:13px; height:13px; display:inline-flex; align-items:center; justify-content:center; font-size:7px; font-weight:900; }
+
+.rel-lista {
+  margin-top:6px; border-top:1px solid #b060ff22;
+  padding-top:6px; display:none;
+}
+.rel-lista.visible { display:block; }
+.rel-item {
+  display:flex; align-items:center; gap:6px;
+  padding:5px 8px; border-radius:3px; cursor:pointer;
+  border-left:2px solid #b060ff44; margin-bottom:4px;
+  background:rgba(176,96,255,.04);
+  transition:background .12s;
+}
+.rel-item:hover { background:rgba(176,96,255,.12); border-left-color:#b060ff; }
+.rel-item-tit { font-size:8px; color:var(--text); flex:1; line-height:1.3; }
+.rel-item-meta { font-size:6.5px; color:var(--muted); white-space:nowrap; text-align:right; }
+
+/* Modal flotante de relacionada */
+.rel-modal {
+  display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,5,15,.82); z-index:600; overflow-y:auto;
+}
+.rel-modal.visible { display:block; }
+.rel-modal-box {
+  background:#07101f; border:1px solid #b060ff55;
+  border-radius:6px; padding:18px; max-width:460px;
+  width:90%; margin:40px auto; position:relative;
+}
+.rel-modal-close { position:absolute; top:10px; right:12px; background:none; border:none; color:#5a8aaa; font-size:15px; cursor:pointer; }
+.rel-modal-tit { font-family:var(--title); font-size:10px; color:#b060ff; margin-bottom:10px; line-height:1.4; padding-right:24px; }
+.rel-modal-fuente { font-size:8px; color:var(--muted); margin-bottom:8px; }
+.rel-modal-res { font-size:9px; color:var(--text); line-height:1.6; }
+.rel-modal-link { display:inline-block; margin-top:10px; padding:6px 14px; font-family:var(--title); font-size:7px; letter-spacing:1px; color:#ffc800; border:1px solid #ffc80066; border-radius:3px; background:rgba(255,200,0,.08); text-decoration:none; }
+
+/* Campo relacionadas en panel de edición */
+.rel-edit-wrap { margin-top:8px; }
+.rel-edit-label { font-family:var(--mono); font-size:7px; color:#3a5a7a; margin-bottom:4px; }
+.rel-edit-list { display:flex; flex-direction:column; gap:3px; margin-bottom:6px; }
+.rel-edit-item { display:flex; align-items:center; gap:5px; background:#060d18; border:1px solid #0d2040; border-radius:3px; padding:4px 7px; }
+.rel-edit-item-tit { font-size:7.5px; color:var(--text); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rel-edit-rm { background:none; border:none; color:#ff4455; cursor:pointer; font-size:11px; flex-shrink:0; }
+
+/* Botón relacionadas en popup del mapa Intel */
+.intel-rel-btn {
+  width:100%; margin-top:6px; padding:5px;
+  font-family:'Orbitron',monospace; font-size:6.5px; letter-spacing:.8px;
+  background:rgba(176,96,255,.12); color:#b060ff;
+  border:1px solid #b060ff55; border-radius:3px; cursor:pointer;
+}
+.intel-rel-btn:hover { background:rgba(176,96,255,.22); }
+.intel-rel-expand { margin-top:5px; border-top:1px solid #b060ff22; padding-top:5px; display:none; }
+.intel-rel-expand.visible { display:block; }
+.intel-rel-link { display:block; padding:4px 6px; font-size:8px; color:#c0d8ff; cursor:pointer; border-radius:2px; border-left:2px solid #b060ff44; margin-bottom:3px; line-height:1.3; }
+.intel-rel-link:hover { background:rgba(176,96,255,.1); color:#b060ff; }
+
 /* ── TOAST ── */
 #toast {
   position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
@@ -899,6 +966,14 @@ header {
   <div class="bd-modal-box">
     <button class="bd-modal-close" onclick="cerrarModalBDBtn()">&#10005; CERRAR</button>
     <div id="bd-modal-contenido"></div>
+  </div>
+</div>
+
+<!-- MODAL NOTICIA RELACIONADA -->
+<div id="rel-modal" class="rel-modal" onclick="cerrarRelModal(event)">
+  <div class="rel-modal-box">
+    <button class="rel-modal-close" onclick="cerrarRelModalBtn()">&#10005;</button>
+    <div id="rel-modal-contenido"></div>
   </div>
 </div>
 
@@ -1585,6 +1660,7 @@ function escucharBD() {
     renderBD();
     actualizarBadge();
     if (mapaIniciado) renderMapa();
+    if (intelIniciado) renderIntel();
     if (gobMapaIniciado) renderGobMapaMarkers();
     renderGobNoticias();
   }, function(err) {
@@ -4630,10 +4706,76 @@ function filtrarBD(tipo, el) {
 }
 window.filtrarBD = filtrarBD;
 
+// ── Distancia en metros entre dos coordenadas (Haversine simplificado) ──
+function distanciaMetros(lat1, lng1, lat2, lng2) {
+  var R = 6371000;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLng = (lng2 - lng1) * Math.PI / 180;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── Agrupar noticias que cubren el mismo hecho ──
+// Criterio: misma fecha_evento + coordenadas < 100m (≈1 calle) O relacionadas_ids explícitas
+function agruparNoticias(lista) {
+  var usadas = {};
+  var grupos = []; // [{principal: noticia, relacionadas: [noticia, ...]}]
+
+  for (var i = 0; i < lista.length; i++) {
+    var n = lista[i];
+    if (usadas[n.id]) continue;
+
+    var grupo = { principal: n, relacionadas: [] };
+    usadas[n.id] = true;
+
+    // Noticias ya vinculadas explícitamente (campo relacionadas_ids)
+    var explicitasIds = Array.isArray(n.relacionadas_ids) ? n.relacionadas_ids : [];
+
+    for (var j = 0; j < lista.length; j++) {
+      var m = lista[j];
+      if (m.id === n.id || usadas[m.id]) continue;
+
+      // Vinculación explícita
+      var esExplicita = explicitasIds.indexOf(m.id) >= 0;
+      var mIds = Array.isArray(m.relacionadas_ids) ? m.relacionadas_ids : [];
+      if (!esExplicita) esExplicita = mIds.indexOf(n.id) >= 0;
+
+      // Vinculación automática: misma fecha_evento + coordenadas < 100m
+      var esAutomatica = false;
+      if (!esExplicita && n.fecha_evento && m.fecha_evento && n.fecha_evento === m.fecha_evento) {
+        var latN = parseFloat(n.lat), lngN = parseFloat(n.lng);
+        var latM = parseFloat(m.lat), lngM = parseFloat(m.lng);
+        if (latN && latM && latN !== 20.6795 && latM !== 20.6795) {
+          if (distanciaMetros(latN, lngN, latM, lngM) < 100) esAutomatica = true;
+        }
+      }
+
+      if (esExplicita || esAutomatica) {
+        grupo.relacionadas.push(m);
+        usadas[m.id] = true;
+      }
+    }
+
+    // Si hay relacionadas, elegir la principal: la de resumen más largo
+    if (grupo.relacionadas.length > 0) {
+      var todas = [n].concat(grupo.relacionadas);
+      todas.sort(function(a, b) {
+        return (b.resumen||'').length - (a.resumen||'').length;
+      });
+      grupo.principal = todas[0];
+      grupo.relacionadas = todas.slice(1);
+    }
+
+    grupos.push(grupo);
+  }
+  return grupos;
+}
+window.agruparNoticias = agruparNoticias;
+
 function renderBD() {
   var lista = document.getElementById('lista-bd');
-  var mostrar = (filtroBD === 'todos' ? noticias.slice() : noticias.filter(function(n) { return n.tipo === filtroBD; }));
-  mostrar.sort(comparadorBD);
+  var base = (filtroBD === 'todos' ? noticias.slice() : noticias.filter(function(n) { return n.tipo === filtroBD; }));
+  base.sort(comparadorBD);
 
   // Stats
   document.getElementById('stat-tot').textContent = noticias.length;
@@ -4643,14 +4785,19 @@ function renderBD() {
   var statDesp = document.getElementById('stat-desp');
   if (statDesp) statDesp.textContent = noticias.filter(function(n){ return n.tipo==='desaparecido'; }).length;
 
-  if (mostrar.length === 0) {
+  if (base.length === 0) {
     lista.innerHTML = '<div class="vacio"><div class="vacio-ico">base</div>Sin noticias ' + (filtroBD !== 'todos' ? 'de tipo ' + filtroBD : 'aprobadas') + ' aun.</div>';
     return;
   }
 
+  // Agrupar
+  var grupos = agruparNoticias(base);
   lista.innerHTML = '';
-  for (var i = 0; i < mostrar.length; i++) {
-    var n = mostrar[i];
+
+  for (var gi = 0; gi < grupos.length; gi++) {
+    var g = grupos[gi];
+    var n = g.principal;
+    var relacionadas = g.relacionadas;
     var fecha = n.fechaCaptura || '';
     if (!fecha && n.fechaGuardado && n.fechaGuardado.toDate) {
       fecha = n.fechaGuardado.toDate().toLocaleDateString('es-MX', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
@@ -4665,6 +4812,56 @@ function renderBD() {
     if (n.comunidad) extraInfo += '<span class="nc-lugar">Com: ' + n.comunidad + '</span>';
     if (n.nombres) extraInfo += '<span style="color:#ffa500;font-size:7px;">Nombres: ' + n.nombres + '</span>';
 
+    // HTML de sección "noticias relacionadas" para BD
+    var relHtml = '';
+    if (relacionadas.length > 0) {
+      var relItems = '';
+      for (var ri = 0; ri < relacionadas.length; ri++) {
+        var r = relacionadas[ri];
+        var rfecha = r.fechaCaptura ? r.fechaCaptura.split(' ')[0] : (r.fecha_evento || '');
+        relItems +=
+          '<div class="rel-item" onclick="abrirRelModal(\'' + r.id + '\')">' +
+            '<div class="rel-item-tit">' + (r.titulo||'Sin título') + '</div>' +
+            '<div class="rel-item-meta">' + (r.fuente||'') + '<br>' + rfecha + '</div>' +
+          '</div>';
+      }
+      relHtml =
+        '<div style="margin-top:6px;">' +
+          '<button class="rel-btn" onclick="toggleRelLista(\'' + n.id + '\')">' +
+            '<span class="rel-badge">' + relacionadas.length + '</span>' +
+            '&#128240; VER NOTICIAS RELACIONADAS' +
+          '</button>' +
+          '<div class="rel-lista" id="rel-lista-' + n.id + '">' + relItems + '</div>' +
+        '</div>';
+    }
+
+    // Campo de gestión manual de relacionadas en el panel de edición
+    var relEditItems = '';
+    var todasRel = relacionadas.concat();
+    // Agregar las que están explícitamente vinculadas a otras no en este grupo visual
+    var idsExplicitas = Array.isArray(n.relacionadas_ids) ? n.relacionadas_ids : [];
+    for (var rei = 0; rei < todasRel.length; rei++) {
+      var re = todasRel[rei];
+      relEditItems +=
+        '<div class="rel-edit-item">' +
+          '<span class="rel-edit-item-tit">' + (re.titulo||'').slice(0,50) + '</span>' +
+          '<span style="font-size:6.5px;color:var(--muted);margin:0 4px;">' + (re.fuente||'') + '</span>' +
+          '<button class="rel-edit-rm" onclick="quitarRelacionada(\'' + n.id + '\',\'' + re.id + '\')" title="Quitar vinculación">&#10005;</button>' +
+        '</div>';
+    }
+    var relEditHtml =
+      '<div class="rel-edit-wrap">' +
+        '<div class="rel-edit-label">NOTICIAS RELACIONADAS</div>' +
+        '<div class="rel-edit-list" id="rel-edit-list-' + n.id + '">' +
+          (relEditItems || '<div style="font-size:7px;color:#2a4a6a;padding:3px 0;">Sin relacionadas vinculadas</div>') +
+        '</div>' +
+        '<div style="display:flex;gap:4px;margin-top:2px;">' +
+          '<input id="rel-add-id-' + n.id + '" class="nc-input" placeholder="ID de noticia a vincular" style="flex:1;font-size:7.5px;">' +
+          '<button onclick="agregarRelacionada(\'' + n.id + '\')" style="padding:4px 8px;font-family:var(--title);font-size:6.5px;letter-spacing:.5px;background:rgba(176,96,255,.1);color:#b060ff;border:1px solid #b060ff55;border-radius:3px;cursor:pointer;white-space:nowrap;">+ VINCULAR</button>' +
+        '</div>' +
+        '<div id="rel-edit-status-' + n.id + '" style="font-size:7px;color:#3a7ab8;min-height:10px;margin-top:2px;"></div>' +
+      '</div>';
+
     div.innerHTML =
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">' +
         '<button style="padding:8px;font-family:var(--title);font-size:8px;font-weight:700;background:rgba(0,200,255,.1);color:#00c8ff;border:1px solid #00c8ff;border-radius:3px;cursor:pointer;" onclick="editarBD(\'' + n.id + '\')">EDITAR</button>' +
@@ -4675,6 +4872,7 @@ function renderBD() {
       (n.tiempo_dia && n.tiempo_dia !== 'desconocido' ? ' <span class="bd-tiempo ' + n.tiempo_dia + '">' + n.tiempo_dia.toUpperCase() + '</span>' : '') +
       '<div class="bd-card-tit" onclick="verDetallesBD(\'' + n.id + '\')" style="cursor:pointer;text-decoration:underline;text-decoration-color:#00c8ff44;margin-top:4px;">' + (n.titulo||'Sin titulo') + '</div>' +
       (n.resumen ? '<div style="font-size:8px;color:#5a8aaa;line-height:1.5;margin-top:4px;padding-top:4px;border-top:1px solid #0d2040;">' + n.resumen + '</div>' : '') +
+      relHtml +
       '<div class="bd-card-meta" style="margin-top:4px;">' +
         '<span class="nc-fuente">' + (n.fuente||'') + '</span>' +
         (n.calle ? '<span class="nc-lugar">&#128205; ' + n.calle + (n.calle2 ? ' / ' + n.calle2 : '') + '</span>' : '') +
@@ -4725,7 +4923,8 @@ function renderBD() {
         '<script>document.getElementById(\'bde-url-' + n.id + '\').value=' + JSON.stringify(n.url||n.link||'') + ';<\/script>' +
         '<div style="font-family:var(--mono);font-size:7px;color:#3a5a7a;padding:4px 0 2px;">COORDENADAS MANUALES (lat, lng) — sobreescribe autubicación</div>' +
         '<input id="bde-coords-' + n.id + '" class="nc-input" value="' + (n.lat && n.lat !== 20.6795 ? (n.lat + ', ' + n.lng) : '') + '" placeholder="Ej: 20.6510, -101.3780" style="margin-bottom:6px;font-size:8px;">' +
-        '<button onclick="guardarEditBD(\'' + n.id + '\')" style="width:100%;padding:8px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88;font-family:var(--title);font-size:8px;cursor:pointer;margin-bottom:4px;">GUARDAR CAMBIOS</button>' +
+        relEditHtml +
+        '<button onclick="guardarEditBD(\'' + n.id + '\')" style="width:100%;padding:8px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff88;font-family:var(--title);font-size:8px;cursor:pointer;margin-bottom:4px;margin-top:8px;">GUARDAR CAMBIOS</button>' +
         '<div style="display:flex;gap:4px;">' +
           '<button id="bde-btn-pos-' + n.id + '" onclick="posicionarBDEnIntel(\'' + n.id + '\')" style="flex:1;padding:6px;background:rgba(0,200,100,.08);color:#00c864;border:1px solid #00c864;font-family:var(--title);font-size:7px;cursor:pointer;letter-spacing:.5px;">📍 AUTO-UBICAR</button>' +
           '<button id="bde-btn-del-' + n.id + '" onclick="quitarDeIntel(\'' + n.id + '\')" style="flex:1;padding:6px;background:rgba(255,34,85,.06);color:#ff2255;border:1px solid #ff2255;font-family:var(--title);font-size:7px;cursor:pointer;letter-spacing:.5px;">🗑 QUITAR MAPA</button>' +
@@ -4753,6 +4952,108 @@ function verEnMapa(tab, lat, lng) {
   }, 600);
 }
 window.verEnMapa = verEnMapa;
+
+// ── Toggle desplegable de lista de relacionadas en BD ──
+function toggleRelLista(id) {
+  var lista = document.getElementById('rel-lista-' + id);
+  if (!lista) return;
+  lista.classList.toggle('visible');
+}
+window.toggleRelLista = toggleRelLista;
+
+// ── Abrir modal flotante con resumen de una noticia relacionada ──
+function abrirRelModal(id) {
+  var n = null;
+  for (var i = 0; i < noticias.length; i++) { if (noticias[i].id === id) { n = noticias[i]; break; } }
+  if (!n) return;
+  var html =
+    '<div class="rel-modal-tit">' + (n.titulo||'Sin título') + '</div>' +
+    '<div class="rel-modal-fuente">&#128240; ' + (n.fuente||'Fuente desconocida') + (n.fecha_evento ? ' &nbsp;|&nbsp; ' + n.fecha_evento : '') + '</div>' +
+    '<div class="rel-modal-res">' + (n.resumen || '<span style="color:#2a4a6a;font-style:italic;">Sin resumen disponible</span>') + '</div>' +
+    ((n.url||n.link) ? '<a class="rel-modal-link" href="' + (n.url||n.link) + '" target="_blank" rel="noopener">&#128279; ENLACE</a>' : '');
+  document.getElementById('rel-modal-contenido').innerHTML = html;
+  document.getElementById('rel-modal').className = 'rel-modal visible';
+}
+window.abrirRelModal = abrirRelModal;
+
+function cerrarRelModal(e) {
+  if (e && e.target && e.target.id !== 'rel-modal') return;
+  document.getElementById('rel-modal').className = 'rel-modal';
+}
+window.cerrarRelModal = cerrarRelModal;
+
+function cerrarRelModalBtn() {
+  document.getElementById('rel-modal').className = 'rel-modal';
+}
+window.cerrarRelModalBtn = cerrarRelModalBtn;
+
+// ── Vincular manualmente dos noticias como relacionadas ──
+function agregarRelacionada(id) {
+  var input = document.getElementById('rel-add-id-' + id);
+  var status = document.getElementById('rel-edit-status-' + id);
+  if (!input || !input.value.trim()) { if (status) { status.textContent = 'Introduce el ID de la noticia'; status.style.color = '#ff4455'; } return; }
+  var idB = input.value.trim();
+  // Verificar que existe
+  var existe = false;
+  for (var i = 0; i < noticias.length; i++) { if (noticias[i].id === idB) { existe = true; break; } }
+  if (!existe) { if (status) { status.textContent = 'ID no encontrado en BD local'; status.style.color = '#ff4455'; } return; }
+  if (idB === id) { if (status) { status.textContent = 'No puedes vincular una noticia consigo misma'; status.style.color = '#ff4455'; } return; }
+
+  if (!db) { if (status) { status.textContent = 'Firebase no disponible'; status.style.color = '#ff4455'; } return; }
+
+  // Actualizar los relacionadas_ids de ambas noticias en Firebase
+  var notA = null, notB = null;
+  for (var j = 0; j < noticias.length; j++) {
+    if (noticias[j].id === id) notA = noticias[j];
+    if (noticias[j].id === idB) notB = noticias[j];
+  }
+  var idsA = Array.isArray(notA.relacionadas_ids) ? notA.relacionadas_ids.slice() : [];
+  var idsB = Array.isArray(notB.relacionadas_ids) ? notB.relacionadas_ids.slice() : [];
+  if (idsA.indexOf(idB) < 0) idsA.push(idB);
+  if (idsB.indexOf(id) < 0) idsB.push(id);
+
+  if (status) { status.textContent = 'Guardando...'; status.style.color = '#ffcc00'; }
+  var batch = db.batch();
+  batch.update(db.collection('noticias-fase1').doc(id), { relacionadas_ids: idsA });
+  batch.update(db.collection('noticias-fase1').doc(idB), { relacionadas_ids: idsB });
+  batch.commit()
+    .then(function() {
+      notA.relacionadas_ids = idsA;
+      notB.relacionadas_ids = idsB;
+      input.value = '';
+      if (status) { status.textContent = '✓ Vinculadas'; status.style.color = '#00ff88'; }
+      renderBD();
+      toast('Noticias vinculadas como relacionadas', 'ok');
+    })
+    .catch(function(e) {
+      if (status) { status.textContent = 'Error: ' + e.message; status.style.color = '#ff4455'; }
+    });
+}
+window.agregarRelacionada = agregarRelacionada;
+
+// ── Quitar vínculo de noticia relacionada ──
+function quitarRelacionada(idA, idB) {
+  if (!db) return;
+  var notA = null, notB = null;
+  for (var j = 0; j < noticias.length; j++) {
+    if (noticias[j].id === idA) notA = noticias[j];
+    if (noticias[j].id === idB) notB = noticias[j];
+  }
+  if (!notA) return;
+  var idsA = Array.isArray(notA.relacionadas_ids) ? notA.relacionadas_ids.filter(function(x){ return x !== idB; }) : [];
+  var batch = db.batch();
+  batch.update(db.collection('noticias-fase1').doc(idA), { relacionadas_ids: idsA });
+  if (notB) {
+    var idsB = Array.isArray(notB.relacionadas_ids) ? notB.relacionadas_ids.filter(function(x){ return x !== idA; }) : [];
+    batch.update(db.collection('noticias-fase1').doc(idB), { relacionadas_ids: idsB });
+    notB.relacionadas_ids = idsB;
+  }
+  notA.relacionadas_ids = idsA;
+  batch.commit()
+    .then(function() { renderBD(); toast('Vínculo eliminado', 'ok'); })
+    .catch(function(e) { toast('Error: ' + e.message, 'err'); });
+}
+window.quitarRelacionada = quitarRelacionada;
 
 function verDetallesBD(id) {
   var n = null;
@@ -5985,24 +6286,100 @@ function renderIntel() {
     }
   }
 
+  // Filtrar noticias candidatas
+  var candidatas = [];
   for (var i = 0; i < noticias.length; i++) {
     var n = noticias[i];
     if (!n.lat || !n.lng) continue;
     var tipo = n.tipo || 'rumor';
     if (!intelFiltros[tipo]) continue;
-    // Filtro de tiempo
     if (limiteMs) {
       var fechaN = parsearFechaNoticia(n);
-      if (fechaN) {
-        if ((ahora - fechaN) > limiteMs) continue;
-      }
-      // Si no tiene fecha parseable, incluir solo si intelDias <= 30 (recientes probables)
+      if (fechaN && (ahora - fechaN) > limiteMs) continue;
     }
+    candidatas.push(n);
+  }
+
+  // ── Deduplicación geográfica: agrupar las que son el mismo hecho ──
+  // Criterio: misma fecha_evento + coordenadas < 100m
+  var usadasIntel = {};
+  var grupos = []; // [{principal: n, relacionadas: [n, ...]}]
+
+  for (var i = 0; i < candidatas.length; i++) {
+    var n = candidatas[i];
+    if (usadasIntel[n.id]) continue;
+    usadasIntel[n.id] = true;
+    var grupo = { principal: n, relacionadas: [] };
+
+    // Explícitas
+    var explicitasIds = Array.isArray(n.relacionadas_ids) ? n.relacionadas_ids : [];
+
+    for (var j = 0; j < candidatas.length; j++) {
+      var m = candidatas[j];
+      if (m.id === n.id || usadasIntel[m.id]) continue;
+      var esExp = explicitasIds.indexOf(m.id) >= 0;
+      if (!esExp) {
+        var mIds = Array.isArray(m.relacionadas_ids) ? m.relacionadas_ids : [];
+        esExp = mIds.indexOf(n.id) >= 0;
+      }
+      var esAuto = false;
+      if (!esExp && n.fecha_evento && m.fecha_evento && n.fecha_evento === m.fecha_evento) {
+        var latN = parseFloat(n.lat), lngN = parseFloat(n.lng);
+        var latM = parseFloat(m.lat), lngM = parseFloat(m.lng);
+        if (latN && latM && latN !== 20.6795 && latM !== 20.6795) {
+          if (distanciaMetros(latN, lngN, latM, lngM) < 100) esAuto = true;
+        }
+      }
+      if (esExp || esAuto) {
+        grupo.relacionadas.push(m);
+        usadasIntel[m.id] = true;
+      }
+    }
+
+    // Elegir la principal: resumen más largo
+    if (grupo.relacionadas.length > 0) {
+      var todas = [n].concat(grupo.relacionadas);
+      todas.sort(function(a, b) {
+        return (b.resumen||'').length - (a.resumen||'').length;
+      });
+      grupo.principal = todas[0];
+      grupo.relacionadas = todas.slice(1);
+    }
+
+    grupos.push(grupo);
+  }
+
+  // ── Renderizar un marker por grupo ──
+  for (var gi = 0; gi < grupos.length; gi++) {
+    var g = grupos[gi];
+    var n = g.principal;
+    var tipo = n.tipo || 'rumor';
+    var lat = parseFloat(n.lat), lng = parseFloat(n.lng);
     cuentas[tipo] = (cuentas[tipo] || 0) + 1;
 
-    var marker = crearIconoMapa ? L.marker([n.lat, n.lng], {icon: crearIconoMapa(tipo)}) : L.marker([n.lat, n.lng]);
+    var marker = crearIconoMapa ? L.marker([lat, lng], {icon: crearIconoMapa(tipo)}) : L.marker([lat, lng]);
     var _nId = n.id || '';
     var _colorT = COLORES_TIPO[tipo] || '#3a5a7a';
+
+    // Sección de relacionadas en el popup (si hay)
+    var relPopupHtml = '';
+    if (g.relacionadas.length > 0) {
+      var relLinks = '';
+      for (var ri = 0; ri < g.relacionadas.length; ri++) {
+        var r = g.relacionadas[ri];
+        relLinks += '<div class="intel-rel-link" onclick="irABD(\'' + r.id + '\')">' +
+          (r.titulo || 'Sin título').slice(0, 70) +
+          '<span style="display:block;font-size:6.5px;color:#4a6a8a;margin-top:1px;">' + (r.fuente||'') + '</span>' +
+          '</div>';
+      }
+      var relGrupoId = 'intel-rel-' + n.id;
+      relPopupHtml =
+        '<button class="intel-rel-btn" onclick="toggleIntelRel(\'' + relGrupoId + '\')">' +
+          '&#128240; RELACIONADAS (' + g.relacionadas.length + ')' +
+        '</button>' +
+        '<div class="intel-rel-expand" id="' + relGrupoId + '">' + relLinks + '</div>';
+    }
+
     var popup =
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
         '<div style="font-family:\'Orbitron\',monospace;font-size:7px;padding:2px 5px;border-radius:2px;background:' + _colorT + '22;color:' + _colorT + ';border:1px solid ' + _colorT + '44;">' + tipo.toUpperCase() + '</div>' +
@@ -6017,12 +6394,14 @@ function renderIntel() {
         (n.calle ? '&#128205; ' + n.calle + (n.calle2 ? ' / ' + n.calle2 : '') + '<br>' : '') +
         (n.colonia ? '&#127968; ' + n.colonia : '') +
       '</div>' +
-      (n.resumen ? '<div style="font-size:8px;color:#7a9ab8;margin-top:4px;border-top:1px solid #0d2040;padding-top:4px;">' + n.resumen + '</div>' : '');
+      (n.resumen ? '<div style="font-size:8px;color:#7a9ab8;margin-top:4px;border-top:1px solid #0d2040;padding-top:4px;">' + n.resumen + '</div>' : '') +
+      relPopupHtml;
+
     marker.noticiaId = _nId;
     marker.bindPopup(popup, {maxWidth:300, minWidth:200, className:'mapa-popup-custom'});
     marker.addTo(intelObj);
     intelMarkers.push(marker);
-    heatData.push([n.lat, n.lng, 1]);
+    heatData.push([lat, lng, 1]);
   }
 
   // Heatmap
@@ -6043,6 +6422,52 @@ function renderIntel() {
   if (totEl) totEl.textContent = tot + ' noticias';
 }
 window.renderIntel = renderIntel;
+
+// ── Ir al tab BD y mostrar la tarjeta que agrupa una noticia relacionada ──
+// La noticia puede ser la principal o una relacionada; en ambos casos buscamos su grupo
+function irABD(id) {
+  // Cerrar el popup del mapa
+  if (intelObj) intelObj.closePopup();
+  verTab('bd');
+  setTimeout(function() {
+    // Buscar la tarjeta en DOM — puede estar directamente o bajo su principal
+    var card = document.getElementById('bd-' + id);
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.style.outline = '2px solid #b060ff';
+      setTimeout(function() { card.style.outline = ''; }, 2000);
+      return;
+    }
+    // Si no tiene tarjeta propia (es secundaria del grupo), buscar cuál grupo la contiene
+    // Para eso buscamos en los grupos actuales
+    var grupos = agruparNoticias(noticias);
+    for (var gi = 0; gi < grupos.length; gi++) {
+      var g = grupos[gi];
+      var esRel = false;
+      for (var ri = 0; ri < g.relacionadas.length; ri++) {
+        if (g.relacionadas[ri].id === id) { esRel = true; break; }
+      }
+      if (esRel) {
+        var cardPrincipal = document.getElementById('bd-' + g.principal.id);
+        if (cardPrincipal) {
+          cardPrincipal.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          cardPrincipal.style.outline = '2px solid #b060ff';
+          // Abrir automáticamente la lista de relacionadas
+          var relLista = document.getElementById('rel-lista-' + g.principal.id);
+          if (relLista) relLista.classList.add('visible');
+          setTimeout(function() { cardPrincipal.style.outline = ''; }, 2500);
+        }
+        break;
+      }
+    }
+  }, 350);
+}
+window.irABD = irABD;
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('visible');
+}
+window.toggleIntelRel = toggleIntelRel;
 
 function filtrarIntel(tipo, btn) {
   if (tipo === 'todos') {
