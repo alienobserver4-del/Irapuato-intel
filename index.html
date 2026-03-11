@@ -4772,7 +4772,14 @@ function agruparNoticias(lista) {
 }
 window.agruparNoticias = agruparNoticias;
 
+var _renderBDActivo = false;
 function renderBD() {
+  if (_renderBDActivo) return; // evitar re-entrancia
+  _renderBDActivo = true;
+  try { _renderBDImpl(); } finally { _renderBDActivo = false; }
+}
+
+function _renderBDImpl() {
   var lista = document.getElementById('lista-bd');
   var base = (filtroBD === 'todos' ? noticias.slice() : noticias.filter(function(n) { return n.tipo === filtroBD; }));
   base.sort(comparadorBD);
@@ -4919,8 +4926,7 @@ function renderBD() {
           '<option value="madrugada"' + (n.tiempo_dia==='madrugada'?' selected':'') + '>Madrugada (0-6h)</option>' +
         '</select>' +
         '<div style="font-family:var(--mono);font-size:7px;color:#3a5a7a;padding:4px 0 2px;">ENLACE / URL</div>' +
-        '<input id="bde-url-' + n.id + '" class="nc-input" placeholder="https://..." style="margin-bottom:6px;font-size:8px;">' +
-        '<script>document.getElementById(\'bde-url-' + n.id + '\').value=' + JSON.stringify(n.url||n.link||'') + ';<\/script>' +
+        '<input id="bde-url-' + n.id + '" class="nc-input" placeholder="https://..." style="margin-bottom:6px;font-size:8px;" value="">' +
         '<div style="font-family:var(--mono);font-size:7px;color:#3a5a7a;padding:4px 0 2px;">COORDENADAS MANUALES (lat, lng) — sobreescribe autubicación</div>' +
         '<input id="bde-coords-' + n.id + '" class="nc-input" value="' + (n.lat && n.lat !== 20.6795 ? (n.lat + ', ' + n.lng) : '') + '" placeholder="Ej: 20.6510, -101.3780" style="margin-bottom:6px;font-size:8px;">' +
         relEditHtml +
@@ -4932,6 +4938,9 @@ function renderBD() {
         '<div id="bde-geo-status-' + n.id + '" style="font-size:7px;color:#3a7ab8;margin-top:3px;min-height:12px;"></div>' +
       '</div>';
     lista.appendChild(div);
+    // Setear URL después de insertar al DOM (evita script inline problemático en móvil)
+    var urlInput = document.getElementById('bde-url-' + n.id);
+    if (urlInput) urlInput.value = n.url || n.link || '';
   }
 }
 
@@ -5149,7 +5158,7 @@ function editarBD(id) {
 window.editarBD = editarBD;
 
 function guardarEditBD(id) {
-  if (!db) return;
+  if (typeof db === 'undefined' || !db) { toast('Firebase no disponible — verifica conexión', 'err'); return; }
   var tit = document.getElementById('bde-tit-' + id);
   var cal = document.getElementById('bde-cal-' + id);
   var col = document.getElementById('bde-col-' + id);
