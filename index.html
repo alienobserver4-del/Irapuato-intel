@@ -6367,14 +6367,16 @@ function renderIntel() {
       var relLinks = '';
       for (var ri = 0; ri < g.relacionadas.length; ri++) {
         var r = g.relacionadas[ri];
-        relLinks += '<div class="intel-rel-link" onclick="irABD(\'' + r.id + '\')">' +
-          (r.titulo || 'Sin título').slice(0, 70) +
-          '<span style="display:block;font-size:6.5px;color:#4a6a8a;margin-top:1px;">' + (r.fuente||'') + '</span>' +
+        var tituloSafe = (r.titulo || 'Sin título').slice(0, 70).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        var fuenteSafe = (r.fuente||'').replace(/"/g, '&quot;');
+        relLinks += '<div class="intel-rel-link" data-rel-id="' + r.id + '">' +
+          tituloSafe +
+          '<span style="display:block;font-size:6.5px;color:#4a6a8a;margin-top:1px;">' + fuenteSafe + '</span>' +
           '</div>';
       }
       var relGrupoId = 'intel-rel-' + n.id;
       relPopupHtml =
-        '<button class="intel-rel-btn" onclick="toggleIntelRel(\'' + relGrupoId + '\')">' +
+        '<button class="intel-rel-btn" data-rel-grupo="' + relGrupoId + '">' +
           '&#128240; RELACIONADAS (' + g.relacionadas.length + ')' +
         '</button>' +
         '<div class="intel-rel-expand" id="' + relGrupoId + '">' + relLinks + '</div>';
@@ -6463,11 +6465,22 @@ function irABD(id) {
   }, 350);
 }
 window.irABD = irABD;
+
+// ── Toggle del panel de relacionadas dentro del popup de Intel ──
+function toggleIntelRel(id) {
   var el = document.getElementById(id);
   if (!el) return;
   el.classList.toggle('visible');
 }
 window.toggleIntelRel = toggleIntelRel;
+
+// ── Event delegation para popups de Intel (data-attributes evitan problemas con IDs) ──
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest ? e.target.closest('[data-rel-grupo]') : null;
+  if (btn) { toggleIntelRel(btn.getAttribute('data-rel-grupo')); return; }
+  var link = e.target.closest ? e.target.closest('[data-rel-id]') : null;
+  if (link) { irABD(link.getAttribute('data-rel-id')); return; }
+});
 
 function filtrarIntel(tipo, btn) {
   if (tipo === 'todos') {
