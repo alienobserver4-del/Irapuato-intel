@@ -607,6 +607,25 @@ function _renderBDImpl() {
           '<option value="politica"' + (n.tipo==='politica'?' selected':'') + '>Política</option>' +
           '<option value="salud"' + (n.tipo==='salud'?' selected':'') + '>Salud</option>' +
           '<option value="transporte"' + (n.tipo==='transporte'?' selected':'') + '>Transporte/Vialidad</option>' +
+          '<option value="ambiental"' + (n.tipo==='ambiental'?' selected':'') + '>Ambiental</option>' +
+          '<option value="corrupcion"' + (n.tipo==='corrupcion'?' selected':'') + '>Corrupción</option>' +
+          '<option value="crimen_organizado"' + (n.tipo==='crimen_organizado'?' selected':'') + '>Crimen Organizado</option>' +
+        '</select>' +
+        '<div style="font-family:var(--mono);font-size:7px;color:#3a5a7a;padding:2px 0;">TIPO SECUNDARIO (opcional)</div>' +
+        '<select id="bde-tipo2-' + n.id + '" class="nc-select" style="margin-bottom:4px;">' +
+          '<option value=""' + (!n.tipo2?' selected':'') + '>— ninguno —</option>' +
+          '<option value="seguridad"' + (n.tipo2==='seguridad'?' selected':'') + '>Seguridad</option>' +
+          '<option value="accidente"' + (n.tipo2==='accidente'?' selected':'') + '>Accidente</option>' +
+          '<option value="evento"' + (n.tipo2==='evento'?' selected':'') + '>Evento</option>' +
+          '<option value="rumor"' + (n.tipo2==='rumor'?' selected':'') + '>Rumor</option>' +
+          '<option value="desaparecido"' + (n.tipo2==='desaparecido'?' selected':'') + '>Desaparecido</option>' +
+          '<option value="gobierno"' + (n.tipo2==='gobierno'?' selected':'') + '>Gobierno</option>' +
+          '<option value="politica"' + (n.tipo2==='politica'?' selected':'') + '>Política</option>' +
+          '<option value="salud"' + (n.tipo2==='salud'?' selected':'') + '>Salud</option>' +
+          '<option value="transporte"' + (n.tipo2==='transporte'?' selected':'') + '>Transporte/Vialidad</option>' +
+          '<option value="ambiental"' + (n.tipo2==='ambiental'?' selected':'') + '>Ambiental</option>' +
+          '<option value="corrupcion"' + (n.tipo2==='corrupcion'?' selected':'') + '>Corrupción</option>' +
+          '<option value="crimen_organizado"' + (n.tipo2==='crimen_organizado'?' selected':'') + '>Crimen Organizado</option>' +
         '</select>' +
         '<input id="bde-tit-' + n.id + '" class="nc-input" value="' + (n.titulo||'').replace(/"/g,'') + '" placeholder="Titulo" style="margin-bottom:4px;">' +
         '<input id="bde-cal-' + n.id + '" class="nc-input" value="' + (n.calle||'').replace(/"/g,'') + '" placeholder="Calle 1" style="margin-bottom:4px;">' +
@@ -900,6 +919,7 @@ function guardarEditBD(id) {
   }
 
   var urlEl2 = document.getElementById('bde-url-' + id);
+  var tipo2El2 = document.getElementById('bde-tipo2-' + id);
   // Snapshot de edición del usuario en BD
   var usuario_edicion = {
     tipo: tipoEl2 ? tipoEl2.value : 'rumor',
@@ -912,7 +932,8 @@ function guardarEditBD(id) {
     fecha_evento: fevEl2 ? fevEl2.value.trim() : '',
     tiempo_dia: tdiaEl2 ? tdiaEl2.value : 'desconocido',
     resumen: resEl2 ? resEl2.value.trim() : '',
-    url: urlEl2 ? urlEl2.value.trim() : ''
+    url: urlEl2 ? urlEl2.value.trim() : '',
+    tipo2: tipo2El2 ? tipo2El2.value : ''
   };
 
   // Recalcular diff contra ia_raw si existe en el registro
@@ -941,6 +962,7 @@ function guardarEditBD(id) {
     tiempo_dia:      usuario_edicion.tiempo_dia,
     resumen:         usuario_edicion.resumen,
     url:             usuario_edicion.url,
+    tipo2:           usuario_edicion.tipo2,
     usuario_edicion: {
       tipo:         usuario_edicion.tipo,
       titulo:       usuario_edicion.titulo,
@@ -952,7 +974,8 @@ function guardarEditBD(id) {
       fecha_evento: usuario_edicion.fecha_evento,
       tiempo_dia:   usuario_edicion.tiempo_dia,
       resumen:      usuario_edicion.resumen,
-      url:          usuario_edicion.url
+      url:          usuario_edicion.url,
+      tipo2:        usuario_edicion.tipo2
     },
     aprendizaje_diff:              diff_edicion,
     aprendizaje_campos_corregidos: Object.keys(diff_edicion),

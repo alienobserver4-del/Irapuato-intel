@@ -416,7 +416,11 @@ function clasificarLocal(txt) {
   var pol = ['eleccion','candidato','partido','votacion','campaña','diputado','senador','congreso','ine','proceso electoral','participacion ciudadana','plebiscito','referendum'];
   var sal = ['hospital','clinica','imss','issste','salud','enfermedad','brote','vacuna'];
   var trans = ['transporte publico','camion urbano','vialidad','cierre vial','bache','pavimento','semaforo'];
+  var amb = ['contaminacion','rio turbio','residuos','basura ilegal','deforestacion','tala','medio ambiente','ecologia','inundacion','sequía','fauna','flora'];
+  var cor = ['corrupcion','desvio','malversacion','soborno','mordida','abuso de cargo','enriquecimiento','cohecho','peculado','fraude municipal'];
+  var co = ['cartel','crimen organizado','celula delictiva','plaza','extorsion','piso','huachicol','combustible robado','narco','cjng','sinaloa'];
   for (var i = 0; i < desp.length; i++) { if (t.indexOf(desp[i]) >= 0) { tipo = 'desaparecido'; break; } }
+  if (tipo==='rumor') { for (var i = 0; i < co.length; i++) { if (t.indexOf(co[i]) >= 0) { tipo = 'crimen_organizado'; break; } } }
   if (tipo==='rumor') { for (var i = 0; i < seg.length; i++) { if (t.indexOf(seg[i]) >= 0) { tipo = 'seguridad'; break; } } }
   if (tipo==='rumor') { for (var i = 0; i < acc.length; i++) { if (t.indexOf(acc[i]) >= 0) { tipo = 'accidente'; break; } } }
   if (tipo==='rumor') { for (var i = 0; i < eve.length; i++) { if (t.indexOf(eve[i]) >= 0) { tipo = 'evento'; break; } } }
@@ -424,6 +428,8 @@ function clasificarLocal(txt) {
   if (tipo==='rumor') { for (var i = 0; i < pol.length; i++) { if (t.indexOf(pol[i]) >= 0) { tipo = 'politica'; break; } } }
   if (tipo==='rumor') { for (var i = 0; i < sal.length; i++) { if (t.indexOf(sal[i]) >= 0) { tipo = 'salud'; break; } } }
   if (tipo==='rumor') { for (var i = 0; i < trans.length; i++) { if (t.indexOf(trans[i]) >= 0) { tipo = 'transporte'; break; } } }
+  if (tipo==='rumor') { for (var i = 0; i < amb.length; i++) { if (t.indexOf(amb[i]) >= 0) { tipo = 'ambiental'; break; } } }
+  if (tipo==='rumor') { for (var i = 0; i < cor.length; i++) { if (t.indexOf(cor[i]) >= 0) { tipo = 'corrupcion'; break; } } }
     var partes = txt.split('.');
   var titulo = (partes[0] || txt).trim().slice(0, 80);
   return { titulo: titulo, tipo: tipo, calle1: '', calle2: '', colonia: '', comunidad: '', nombres: '', resumen: txt.slice(0, 300), lat: 20.6795, lng: -101.3540, confianza: 'baja' };
@@ -480,7 +486,7 @@ function buildPrompt(texto) {
   p += '3. calle1: Cualquier via: calle, avenida, carretera, periferico, bulevar, camino, corredor. NUNCA vacio si hay referencia vial.\n';
   p += '4. calle2: Segunda via, esquina, cruce o referencia ("altura del hospital", "frente a la plaza").\n';
   p += '5. tiempo_dia: manana=6-12h o dice "manana". tarde=12-19h. noche=19-24h. madrugada=0-6h. desconocido=sin hora.\n';
-  p += '6. tipo: seguridad=violencia/robos/disparos. accidente=choques/volcaduras/caidas. gobierno=autoridades/obras municipales/programas de gobierno. politica=elecciones/candidatos/partidos/proceso electoral/participacion ciudadana/diputados.\n';
+  p += '6. tipo: seguridad=violencia/robos/disparos/agresiones. accidente=choques/volcaduras/caidas/incendios. gobierno=autoridades/obras municipales/programas. politica=elecciones/candidatos/partidos/diputados. crimen_organizado=carteles/extorsion/huachicol/celulas/plaza. corrupcion=desvio/soborno/malversacion/cohecho. ambiental=contaminacion/basura/rio turbio/inundacion/fauna. desaparecido=personas no localizadas. salud=brotes/clinicas/hospital. transporte=vialidad/cierre vial/camion.\n';
   p += '7. comunidad: rancho, ejido, comunidad rural (NO colonias urbanas).\n';
   p += '8. titulo: MAXIMO 80 caracteres. Es el TITULAR periodistico: corto, accionable, sin repetir detalles del resumen. INCORRECTO: "Localizan cuerpo en el Trebol del Libramiento Sur a metros del reten de la GN". CORRECTO: "Hallan cuerpo de mujer en Avenida Insurgentes". NUNCA empieces el titulo igual que el resumen.\n';
   p += '9. resumen: 2-3 oraciones. Comienza diferente al titulo. Amplifica detalles: donde exactamente, quienes intervinieron, que encontraron. Ej: "El cuerpo de una mujer fue localizado en un baldio de Av. Insurgentes, a la altura del Trebol del Libramiento Sur. Personal de la FGE inicio investigacion por huellas de violencia."\n';

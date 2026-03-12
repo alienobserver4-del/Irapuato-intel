@@ -923,20 +923,25 @@ var miniMapaObj = null;
 var mapaFiltrosActivos = { seguridad:true, accidente:true, evento:true, gobierno:true, rumor:true, desaparecido:true, salud:true, transporte:true };
 
 var COLORES_TIPO = {
-  seguridad:   '#ff2255',
-  accidente:   '#ff8800',
-  evento:      '#00ccff',
-  gobierno:    '#0096ff',
-  salud:       '#00c864',
-  transporte:  '#b464ff',
-  desaparecido:'#ffa500',
-  rumor:       '#3a5a7a'
+  seguridad:        '#ff2255',
+  accidente:        '#ff8800',
+  evento:           '#00ccff',
+  gobierno:         '#0096ff',
+  salud:            '#00c864',
+  transporte:       '#b464ff',
+  desaparecido:     '#ffa500',
+  rumor:            '#3a5a7a',
+  politica:         '#c040ff',
+  ambiental:        '#00aa44',
+  corrupcion:       '#ffcc00',
+  crimen_organizado:'#cc0022'
 };
 
 // Intensidad de cada tipo en el heatmap (seguridad pesa mas)
 var HEAT_PESO = {
-  seguridad:1.0, desaparecido:0.9, accidente:0.7,
-  transporte:0.5, salud:0.5, rumor:0.4, gobierno:0.3, evento:0.2
+  seguridad:1.0, crimen_organizado:0.95, desaparecido:0.9, accidente:0.7,
+  corrupcion:0.6, transporte:0.5, salud:0.5, rumor:0.4,
+  gobierno:0.3, politica:0.3, ambiental:0.2, evento:0.2
 };
 
 

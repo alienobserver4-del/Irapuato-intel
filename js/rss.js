@@ -39,39 +39,70 @@ function cargarRSS(fuente) {
   setEstadoRSS('⏳ Cargando ' + src.nombre + '...', 'cargando');
   document.getElementById('lista-rss').innerHTML = '';
 
-  // Intentar con proxy1, si falla usar proxy2
-  var url1 = src.proxy;
-  var url2 = url1.replace('https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?');
+  // Cola de proxies a intentar en orden
+  // OEM bloquea allorigins → para OEM usar corsproxy primero, luego proxies alternativos
+  var urlBase = src.url || src.proxy.replace(/https?:\/\/(api\.allorigins\.win\/raw\?url=|corsproxy\.io\/\?)/,'').replace(/^https?:\/\/[^/]+\/raw\?url=/,'');
+  // Extraer URL real desde el proxy configurado
+  var urlReal = '';
+  var m1 = src.proxy.match(/raw\?url=(.+)/);
+  var m2 = src.proxy.match(/corsproxy\.io\/\?(.+)/);
+  if (m1) urlReal = decodeURIComponent(m1[1]);
+  else if (m2) urlReal = decodeURIComponent(m2[1]);
+  else urlReal = src.proxy; // fallback
 
-  function intentarFetch(url, esReintentoFallback) {
+  var esOEM = src.tipo === 'scraping_oem';
+
+  var proxies = esOEM ? [
+    'https://corsproxy.io/?' + encodeURIComponent(urlReal),
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(urlReal),
+    'https://thingproxy.freeboard.io/fetch/' + urlReal,
+    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(urlReal)
+  ] : [
+    src.proxy,
+    src.proxy.indexOf('allorigins') >= 0
+      ? src.proxy.replace('https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?')
+      : src.proxy.replace('https://corsproxy.io/?', 'https://api.allorigins.win/raw?url='),
+    'https://thingproxy.freeboard.io/fetch/' + urlReal
+  ];
+
+  var intentoActual = 0;
+
+  function intentarFetch() {
+    if (intentoActual >= proxies.length) {
+      setEstadoRSS('❌ No se pudo cargar ' + src.nombre + ' — todos los proxies fallaron. Intenta más tarde.', 'error');
+      return;
+    }
+    var url = proxies[intentoActual];
+    intentoActual++;
+
+    if (intentoActual > 1) {
+      setEstadoRSS('⏳ Reintentando con proxy alternativo ' + intentoActual + '/' + proxies.length + '...', 'cargando');
+    }
+
     fetch(url)
     .then(function(res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.text();
     })
     .then(function(txt) {
+      if (!txt || txt.trim().length < 100) throw new Error('Respuesta vacía');
       if (src.tipo === 'rss') {
         procesarRSS(txt, src.nombre);
       } else if (src.tipo === 'scraping_oem') {
-        procesarScrapingOEM(txt, src.nombre, src.proxy);
+        procesarScrapingOEM(txt, src.nombre, url);
       } else if (src.tipo === 'scraping_zf') {
-        procesarScrapingZF(txt, src.nombre, src.proxy);
+        procesarScrapingZF(txt, src.nombre, url);
       } else if (src.tipo === 'scraping_silla') {
-        procesarScrapingSilla(txt, src.nombre, src.proxy);
+        procesarScrapingSilla(txt, src.nombre, url);
       } else {
-        procesarScraping(txt, src.nombre, src.proxy);
+        procesarScraping(txt, src.nombre, url);
       }
     })
-    .catch(function(e) {
-      if (!esReintentoFallback) {
-        setEstadoRSS('Reintentando con proxy alternativo...', 'cargando');
-        intentarFetch(url2, true);
-      } else {
-        setEstadoRSS('Error al cargar ' + src.nombre + '. Intenta entrada manual.', 'error');
-      }
+    .catch(function() {
+      intentarFetch();
     });
   }
-  intentarFetch(url1, false);
+  intentarFetch();
 }
 
 function procesarScrapingOEM(html, nombreFuente, proxyUrl) {
@@ -288,32 +319,52 @@ function procesarScraping(html, nombreFuente, proxyUrl) {
 window.cargarRSS = cargarRSS;
 
 function cargarTodas() {
-  var fuentes = ['sol_policiaca', 'am_irapuato', 'am_policia', 'correo_seg', 'silla_rota', 'zona_franca'];
+  var fuentes = ['sol_local', 'sol_policiaca', 'am_irapuato', 'am_policia', 'correo_seg', 'silla_rota', 'zona_franca'];
   var idx = 0;
   document.getElementById('lista-rss').innerHTML = '';
+
   var siguiente = function() {
-    if (idx < fuentes.length) {
-      var f = fuentes[idx];
-      idx++;
-      var src = FUENTES_RSS[f];
-      if (!src) { siguiente(); return; }
-      setEstadoRSS('⏳ Cargando ' + src.nombre + ' (' + idx + '/' + fuentes.length + ')...', 'cargando');
-      var proxyFallbackUrl = src.proxy.indexOf('corsproxy.io') >= 0
-        ? src.proxy.replace('https://corsproxy.io/?', 'https://api.allorigins.win/raw?url=')
-        : src.proxy.replace('https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?');
-      fetch(src.proxy)
-      .then(function(res) { if (!res.ok) throw new Error('status ' + res.status); return res.text(); })
-      .catch(function() { return fetch(proxyFallbackUrl).then(function(r) { return r.text(); }); })
-      .then(function(txt) {
-        if (src.tipo === 'rss') { procesarRSSAcumulado(txt, src.nombre); }
-        else { procesarScrapingAcumulado(txt, src.nombre, src.proxy); }
-        setTimeout(siguiente, 1500);
-      })
-      .catch(function() { setTimeout(siguiente, 1500); });
-    } else {
+    if (idx >= fuentes.length) {
       var count = document.getElementById('lista-rss').children.length;
       setEstadoRSS(count + ' noticias cargadas de todas las fuentes', 'ok');
+      return;
     }
+    var f = fuentes[idx]; idx++;
+    var src = FUENTES_RSS[f];
+    if (!src) { siguiente(); return; }
+    setEstadoRSS('⏳ Cargando ' + src.nombre + ' (' + idx + '/' + fuentes.length + ')...', 'cargando');
+
+    var m1 = src.proxy.match(/raw\?url=(.+)/);
+    var m2 = src.proxy.match(/corsproxy\.io\/\?(.+)/);
+    var urlReal = m1 ? decodeURIComponent(m1[1]) : m2 ? decodeURIComponent(m2[1]) : src.proxy;
+    var esOEM = src.tipo === 'scraping_oem';
+
+    var proxies = esOEM ? [
+      'https://corsproxy.io/?' + encodeURIComponent(urlReal),
+      'https://api.allorigins.win/raw?url=' + encodeURIComponent(urlReal),
+      'https://thingproxy.freeboard.io/fetch/' + urlReal
+    ] : [
+      src.proxy,
+      src.proxy.indexOf('allorigins') >= 0
+        ? src.proxy.replace('https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?')
+        : src.proxy.replace('https://corsproxy.io/?', 'https://api.allorigins.win/raw?url=')
+    ];
+
+    var pi = 0;
+    var intentar = function() {
+      if (pi >= proxies.length) { setTimeout(siguiente, 1000); return; }
+      var url = proxies[pi++];
+      fetch(url)
+      .then(function(res) { if (!res.ok) throw new Error('status ' + res.status); return res.text(); })
+      .then(function(txt) {
+        if (!txt || txt.trim().length < 100) throw new Error('vacio');
+        if (src.tipo === 'rss') { procesarRSSAcumulado(txt, src.nombre); }
+        else { procesarScrapingAcumulado(txt, src.nombre, url); }
+        setTimeout(siguiente, 1500);
+      })
+      .catch(function() { intentar(); });
+    };
+    intentar();
   };
   siguiente();
 }

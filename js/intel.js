@@ -6,7 +6,11 @@ var intelIniciado = false;
 var intelMarkers = [];
 var intelHeatLayer = null;
 var intelHeatActivo = false;
-var intelFiltros = {seguridad:true, accidente:true, evento:true, gobierno:true, rumor:true};
+var intelFiltros = {
+  seguridad:true, accidente:true, evento:true, gobierno:true, rumor:true,
+  desaparecido:true, salud:true, transporte:true, politica:true,
+  ambiental:true, corrupcion:true, crimen_organizado:true
+};
 var intelDias = 14; // por defecto 2 semanas
 
 // Base interna de geo-relaciones calle→colonia (se nutre con cada corrección manual)
@@ -45,14 +49,73 @@ function iniciarIntel() {
 }
 window.iniciarIntel = iniciarIntel;
 
+// Definición de colores y etiquetas para Intel (incluye nuevas categorías)
+var INTEL_META = {
+  seguridad:        { color: '#ff2255', label: 'SEG' },
+  accidente:        { color: '#ff8800', label: 'ACC' },
+  evento:           { color: '#00ccff', label: 'EVE' },
+  gobierno:         { color: '#0096ff', label: 'GOB' },
+  rumor:            { color: '#3a5a7a', label: 'RUM' },
+  desaparecido:     { color: '#ffa500', label: 'DES' },
+  salud:            { color: '#00c864', label: 'SAL' },
+  transporte:       { color: '#b464ff', label: 'VIA' },
+  politica:         { color: '#c040ff', label: 'POL' },
+  ambiental:        { color: '#00aa44', label: 'AMB' },
+  corrupcion:       { color: '#ffcc00', label: 'COR' },
+  crimen_organizado:{ color: '#cc0022', label: 'C.O.' }
+};
+
+function renderIntelFiltros() {
+  var bar = document.getElementById('intel-filtros');
+  if (!bar) return;
+  bar.innerHTML = '';
+  Object.keys(intelFiltros).forEach(function(tipo) {
+    var meta = INTEL_META[tipo] || { color: '#3a5a7a', label: tipo.substring(0,3).toUpperCase() };
+    var btn = document.createElement('button');
+    btn.className = 'mapa-filtro-btn' + (intelFiltros[tipo] ? ' activo' : ' inactivo');
+    btn.style.color = meta.color;
+    btn.style.borderColor = meta.color;
+    btn.textContent = meta.label;
+    btn.onclick = function() { filtrarIntel(tipo, btn); };
+    bar.appendChild(btn);
+  });
+  // Botón TODOS
+  var btnTodos = document.createElement('button');
+  btnTodos.className = 'mapa-filtro-btn activo';
+  btnTodos.style.cssText = 'color:#00f5ff;border-color:#00f5ff;';
+  btnTodos.textContent = 'TODOS';
+  btnTodos.onclick = function() { filtrarIntel('todos', null); };
+  bar.appendChild(btnTodos);
+}
+
+function renderIntelContadores(cuentas, tot) {
+  var bar = document.getElementById('intel-contadores');
+  if (!bar) return;
+  bar.innerHTML = '';
+  Object.keys(cuentas).forEach(function(tipo) {
+    if (!cuentas[tipo]) return; // ocultar tipos con 0
+    var meta = INTEL_META[tipo] || { color: '#3a5a7a', label: tipo.substring(0,3).toUpperCase() };
+    var div = document.createElement('div');
+    div.className = 'mapa-stat';
+    div.innerHTML = '<div class="mapa-dot" style="background:' + meta.color + '"></div>' +
+      '<span>' + cuentas[tipo] + '</span> ' + meta.label;
+    bar.appendChild(div);
+  });
+  var totEl = document.getElementById('intel-cnt-tot');
+  if (totEl) totEl.textContent = tot + ' noticias';
+}
+
 function renderIntel() {
   if (!intelObj) return;
+  renderIntelFiltros();
   // Limpiar markers anteriores
   for (var i = 0; i < intelMarkers.length; i++) {
     intelObj.removeLayer(intelMarkers[i]);
   }
   intelMarkers = [];
-  var cuentas = {seguridad:0, accidente:0, evento:0, gobierno:0, rumor:0};
+  // Construir cuentas dinámicamente con todos los tipos posibles
+  var cuentas = {};
+  Object.keys(intelFiltros).forEach(function(k){ cuentas[k] = 0; });
   var heatData = [];
 
   var ahora = new Date();
@@ -74,7 +137,8 @@ function renderIntel() {
     var n = noticias[i];
     if (!n.lat || !n.lng) continue;
     var tipo = n.tipo || 'rumor';
-    if (!intelFiltros[tipo]) continue;
+    // Si el tipo no está en filtros, se trata como activo (categoría nueva)
+    if (intelFiltros.hasOwnProperty(tipo) && !intelFiltros[tipo]) continue;
     if (limiteMs) {
       var fechaN = parsearFechaNoticia(n);
       if (fechaN && (ahora - fechaN) > limiteMs) continue;
@@ -197,13 +261,8 @@ function renderIntel() {
 
   // Contadores
   var tot = 0;
-  for (var k in cuentas) {
-    var el = document.getElementById('intel-cnt-' + k.substring(0,3));
-    if (el) el.textContent = cuentas[k] || 0;
-    tot += cuentas[k] || 0;
-  }
-  var totEl = document.getElementById('intel-cnt-tot');
-  if (totEl) totEl.textContent = tot + ' noticias';
+  for (var k in cuentas) { tot += cuentas[k] || 0; }
+  renderIntelContadores(cuentas, tot);
 }
 window.renderIntel = renderIntel;
 
