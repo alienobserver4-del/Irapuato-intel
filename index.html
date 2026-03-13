@@ -251,6 +251,7 @@
       <button class="mapa-filtro-btn todos activo" id="gpol-btn-todos" onclick="filtrarGobMapa('todos',this)">TODOS</button>
       <!-- Layer distritos -->
       <button class="mapa-heat-btn" id="gob-btn-ageb" onclick="geoToggleAgebs(gobMapaObj,this)">📊 POBREZA</button>
+      <button class="mapa-heat-btn" id="gob-btn-riesgo" onclick="analisisChoroToggle(gobMapaObj,this)">⚠ RIESGO</button>
       <button id="btn-distritos" onclick="toggleDistritosLayer()" style="margin-left:auto;padding:5px 9px;font-family:var(--title);font-size:6px;letter-spacing:1px;border-radius:3px;cursor:pointer;border:1px solid #ffcc00;background:rgba(3,5,10,.88);color:#ffcc00;white-space:nowrap;flex-shrink:0;">⬡ DISTRITOS OFF</button>
     </div>
     <div id="gob-mapa-leaflet" style="flex:1;width:100%;background:#060d18;"></div>
@@ -471,6 +472,7 @@
       <button class="denue-search-btn" onclick="denueSearch(document.getElementById('denue-search').value)">BUSCAR</button>
       <button class="denue-modo-btn on" id="denue-modo-btn" onclick="denueChoroToggle(denueMapaObj, this)">🔵 MACRO</button>
       <button class="mapa-heat-btn" id="denue-btn-ageb" onclick="geoToggleAgebs(denueMapaObj,this)">📊 POBREZA</button>
+      <button class="mapa-heat-btn" id="denue-btn-riesgo" onclick="analisisChoroToggle(denueMapaObj,this)">⚠ RIESGO</button>
     </div>
     <!-- filtros categoría -->
     <div class="denue-barra" id="denue-cats-bar"></div>
@@ -551,6 +553,7 @@
           <div id="intel-filtros" style="display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;flex:1;"></div>
           <button class="mapa-heat-btn" id="intel-btn-heat" onclick="toggleIntelHeat(this)" style="flex-shrink:0;">&#x1F525; CALOR</button>
           <button class="mapa-heat-btn" id="intel-btn-ageb" onclick="geoToggleAgebs(intelObj,this)" style="flex-shrink:0;">📊 POBREZA</button>
+          <button class="mapa-heat-btn" id="intel-btn-riesgo" onclick="analisisChoroToggle(intelObj,this)" style="flex-shrink:0;">⚠ RIESGO</button>
         </div>
         <div class="intel-barra-tiempo" id="intel-tiempo-bar">
           <span style="color:#3a5a7a;font-family:var(--title);font-size:6px;letter-spacing:1px;white-space:nowrap;padding:2px 0;">🕐</span>
@@ -583,6 +586,7 @@
           <button class="mapa-filtro-btn" style="color:#ffaa00;border-color:#ffaa00;" onclick="filtrarMapaFijo('transporte',this)">🚌 TRANS</button>
           <button class="mapa-heat-btn" id="btn-editar-mapa" onclick="toggleEditarMapa()">✏️ EDITAR</button>
           <button class="mapa-heat-btn" id="btn-ageb-pobreza" onclick="geoToggleAgebs(mapaObj,this)" title="Capa CONEVAL: pobreza por AGEB 2015">📊 POBREZA</button>
+          <button class="mapa-heat-btn" id="btn-riesgo" onclick="analisisChoroToggle(mapaObj,this)" title="Índice de Riesgo Zonal por AGEB">⚠ RIESGO</button>
         </div>
         <div id="mapa-leaflet"></div>
         <!-- Panel edición flotante -->
@@ -712,6 +716,7 @@ function simpleheat(canvas){if(!(this instanceof simpleheat)){return new simpleh
 <script src="js/config.js" defer></script>
 <script src="js/datos.js" defer></script>
   <script src="js/geo.js" defer></script>
+<script src="js/analisis.js" defer></script>
 <script src="js/ia.js" defer></script>
 <script src="js/bd.js" defer></script>
 <script src="js/intel.js" defer></script>
