@@ -4,7 +4,7 @@ var DENUE_LOADED    = false;
 var denueMapaObj    = null;
 var denueHeatLayer  = null;
 var denueMarkersLayer = null;
-var denueModo       = 'heat';   // 'heat' | 'markers'
+var denueModo       = 'dots';   // 'dots' | 'markers'  (heat eliminado)
 var denueCatFiltro  = 'todos';
 var denueSizeFiltro = 0;
 var denueIntelLayer = null;
@@ -80,11 +80,11 @@ function filtrarDenueSize(nivel, btn) {
 window.filtrarDenueSize = filtrarDenueSize;
 
 function toggleDenueModo() {
-  denueModo = denueModo === 'heat' ? 'markers' : 'heat';
+  denueModo = denueModo === 'dots' ? 'markers' : 'dots';
   var btn = document.getElementById('denue-modo-btn');
   var lbl = document.getElementById('denue-modo-label');
-  if (btn) { btn.textContent = denueModo === 'heat' ? '🔥 CALOR' : '📍 PUNTOS'; btn.classList.toggle('on', denueModo === 'heat'); }
-  if (lbl) lbl.textContent = denueModo === 'heat' ? 'HEATMAP' : 'MARKERS';
+  if (btn) { btn.textContent = denueModo === 'dots' ? '🔵 MACRO' : '📍 PUNTOS'; btn.classList.toggle('on', denueModo === 'dots'); }
+  if (lbl) lbl.textContent = denueModo === 'dots' ? 'MACRO · densidad visual' : 'MARKERS · detalle';
   renderDenueMapa();
 }
 window.toggleDenueModo = toggleDenueModo;
@@ -94,7 +94,7 @@ function denueSearch(q) {
   q = (q || '').trim().toLowerCase();
   if (!q) { denueCatFiltro = 'todos'; renderDenueCatBtns(); renderDenueMapa(); return; }
   // Forzar markers en búsqueda
-  if (denueModo === 'heat') {
+  if (denueModo === 'dots') {
     denueModo = 'markers';
     var b = document.getElementById('denue-modo-btn'); if (b){ b.textContent='📍 PUNTOS'; b.classList.remove('on'); }
     var l = document.getElementById('denue-modo-label'); if (l) l.textContent='MARKERS';
@@ -120,67 +120,75 @@ function renderDenueMapa(extraFn) {
   if (items.length === 0) { if (lbl) lbl.textContent = '0 establecimientos encontrados'; return; }
 
   var zoom = denueMapaObj.getZoom();
-  // Auto-switch: zoom >= 15 = puntos detallados, zoom < 15 = heatmap (salvo modo forzado)
+  // Auto-switch: zoom >= 15 = markers con popup, zoom < 15 = dots macro sin click
   var modoEfectivo = denueModo;
-  if (denueModo === 'heat' && zoom >= 15) modoEfectivo = 'markers';
+  if (denueModo === 'dots' && zoom >= 15) modoEfectivo = 'markers';
 
-  if (modoEfectivo === 'heat') {
-    // simpleheat SOLO acepta colores CSS sin rgba en gradient.
-    // La transparencia se controla con minOpacity y el canvas del layer.
-    // Normalizamos pesos por densidad real de celdas de grid para usar el rango completo.
-    var gridSize = 0.003; // ~330m por celda
-    var cellCount = {};
+  if (modoEfectivo === 'dots') {
+    // ── MODO MACRO: canvas de puntos agrupados, sin interacción individual ──
+    // Sistema de binning: agrupa establecimientos en celdas de cuadrícula
+    // y dibuja un punto por celda cuyo tamaño y opacidad reflejan densidad local.
+    // Sin popup, sin hover, sin heatmap — solo información visual de distribución.
+    var zoom = denueMapaObj.getZoom();
+    // Tamaño de celda adaptativo: más zoom = más granular
+    var gridSize = zoom >= 14 ? 0.0008
+                 : zoom >= 13 ? 0.0015
+                 : zoom >= 12 ? 0.003
+                 : zoom >= 11 ? 0.005
+                 : 0.008;
+
+    // Agrupar por celda — conservar categoría dominante y conteo
+    var celdas = {};
     items.forEach(function(r) {
-      var cx = Math.round(r[5] / gridSize);
-      var cy = Math.round(r[6] / gridSize);
-      var k = cx + ',' + cy;
-      cellCount[k] = (cellCount[k] || 0) + 1;
-    });
-    var counts = Object.keys(cellCount).map(function(k){ return cellCount[k]; });
-    var maxCount = Math.max.apply(null, counts);
-    var minCount = Math.min.apply(null, counts);
-    var range = maxCount - minCount || 1;
-
-    var pts = items.map(function(r) {
-      var cx = Math.round(r[5] / gridSize);
-      var cy = Math.round(r[6] / gridSize);
-      var k = cx + ',' + cy;
-      // Peso normalizado 0..1 según densidad de celda
-      var w = (cellCount[k] - minCount) / range;
-      return [r[5], r[6], w];
-    });
-
-    if (typeof L.heatLayer === 'function') {
-      denueHeatLayer = L.heatLayer(pts, {
-        radius: 22,
-        blur: 18,
-        maxZoom: 17,
-        minOpacity: 0.04,
-        max: 1.0,
-        gradient: {
-          0.0:  '#000000',
-          0.15: '#030818',
-          0.35: '#051535',
-          0.55: '#0a2a6e',
-          0.72: '#1050b8',
-          0.86: '#1a7ae0',
-          1.0:  '#40b0ff'
-        }
-      }).addTo(denueMapaObj);
-      // Reducir opacidad global del canvas del layer
-      if (denueHeatLayer._canvas) {
-        denueHeatLayer._canvas.style.opacity = '0.55';
+      var cx = Math.round(r[5] / gridSize) * gridSize;
+      var cy = Math.round(r[6] / gridSize) * gridSize;
+      var k = cx.toFixed(7) + ',' + cy.toFixed(7);
+      if (!celdas[k]) celdas[k] = { lat: cx, lng: cy, count: 0, cats: {}, maxCat: null, maxN: 0 };
+      celdas[k].count++;
+      celdas[k].cats[r[1]] = (celdas[k].cats[r[1]] || 0) + 1;
+      if (celdas[k].cats[r[1]] > celdas[k].maxN) {
+        celdas[k].maxN = celdas[k].cats[r[1]];
+        celdas[k].maxCat = r[1];
       }
-      // Esperar a que el canvas se cree y aplicar opacidad
-      setTimeout(function() {
-        if (denueHeatLayer && denueHeatLayer._canvas) {
-          denueHeatLayer._canvas.style.opacity = '0.55';
-        }
-      }, 100);
-    }
-    if (lbl) lbl.textContent = items.length.toLocaleString() + ' establecimientos · HEATMAP';
+    });
+
+    var celdaList = Object.values(celdas);
+    var counts = celdaList.map(function(c){ return c.count; });
+    var maxDens = Math.max.apply(null, counts) || 1;
+    // Percentil 90 para escala robusta (evita que un outlier aplaste todo)
+    counts.sort(function(a,b){ return a-b; });
+    var p90 = counts[Math.floor(counts.length * 0.90)] || maxDens;
+
+    var grupo = L.layerGroup();
+    celdaList.forEach(function(celda) {
+      // Escala logarítmica suave: sqrt da mejor percepción visual de densidad
+      var ratio = Math.min(1, Math.sqrt(celda.count / p90));
+      // Tamaño: 3px vacío → 20px zona densa
+      var sz = Math.round(3 + ratio * 17);
+      var color = (typeof DENUE_COLORS !== 'undefined' && DENUE_COLORS[celda.maxCat]) || '#40b0ff';
+      // Opacidad: baja densidad más transparente, alta densidad más sólido
+      var op = (0.30 + ratio * 0.60).toFixed(2);
+      // Halo exterior muy sutil para las zonas de alta densidad
+      var glow = ratio > 0.6 ? 'box-shadow:0 0 ' + Math.round(sz * 0.8) + 'px ' + color + '55;' : '';
+
+      var ic = L.divIcon({
+        className: '',
+        iconSize: [sz, sz],
+        iconAnchor: [sz/2, sz/2],
+        html: '<div style="width:' + sz + 'px;height:' + sz + 'px;border-radius:50%;' +
+              'background:' + color + ';opacity:' + op + ';' + glow + '"></div>'
+      });
+      // interactive: false → sin click, sin hover, sin cursor pointer
+      L.marker([celda.lat, celda.lng], { icon: ic, interactive: false }).addTo(grupo);
+    });
+
+    denueMarkersLayer = grupo;
+    grupo.addTo(denueMapaObj);
+
+    var nCeldas = celdaList.length;
+    if (lbl) lbl.textContent = items.length.toLocaleString() + ' establecimientos · macro';
     var modlbl = document.getElementById('denue-modo-label');
-    if (modlbl) modlbl.textContent = 'HEATMAP — acércate para ver detalle';
+    if (modlbl) modlbl.textContent = zoom >= 14 ? 'MACRO fino · acércate más para puntos' : 'MACRO · acerca para ver detalle';
   } else {
     var MAX = 1200;
     var muestra = items.slice(0, MAX);
@@ -227,7 +235,18 @@ function _denueBindZoom() {
   if (!denueMapaObj || denueMapaObj._denueZoomBound) return;
   denueMapaObj._denueZoomBound = true;
   denueMapaObj.on('zoomend', function() {
-    if (denueModo === 'heat') renderDenueMapa();
+    // Re-render en modo dots para adaptar gridSize al zoom actual
+    if (denueModo === 'dots') renderDenueMapa();
+    // Al llegar a zoom 15+ en modo dots, auto-switch visible a markers
+    var z = denueMapaObj.getZoom();
+    var btn = document.getElementById('denue-modo-btn');
+    var lbl2 = document.getElementById('denue-modo-label');
+    if (denueModo === 'dots' && z >= 15) {
+      if (btn) btn.textContent = '📍 PUNTOS (auto)';
+      if (lbl2) lbl2.textContent = 'PUNTOS · toca para detalle';
+    } else if (denueModo === 'dots') {
+      if (btn) btn.textContent = '🔵 MACRO';
+    }
   });
 }
 
