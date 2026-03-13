@@ -498,3 +498,152 @@ function _renderResumenConeval() {
 // ── Auto-inicializar cuando el DOM esté listo ──
 // No cargamos automáticamente para no consumir recursos si no se usa
 // Llamar geoCargar() desde mapa.js cuando se active la capa
+
+// ═══════════════════════════════════════════════════════════════
+// CHOROPLETH DENUE — densidad de establecimientos por AGEB
+// Carga instantánea: datos precalculados en denue_density.json
+// ═══════════════════════════════════════════════════════════════
+
+var DENUE_DENSITY     = null;
+var denueChoroLayer   = null;
+var denueChoroActivo  = false;
+var denueChoroLeyenda = null;
+
+// Escala de azules: 6 niveles, de casi transparente a azul intenso
+var CHORO_ESCALA = [
+  { min: 1,    max: 5,    fill: '#0a1f3a', label: '1–5',      opac: 0.35 },
+  { min: 6,    max: 21,   fill: '#0d3a6e', label: '6–21',     opac: 0.50 },
+  { min: 22,   max: 96,   fill: '#1060b8', label: '22–96',    opac: 0.60 },
+  { min: 97,   max: 438,  fill: '#1a8ae0', label: '97–438',   opac: 0.72 },
+  { min: 439,  max: 1000, fill: '#40c0ff', label: '439–1000', opac: 0.82 },
+  { min: 1001, max: 9999, fill: '#80e0ff', label: '1001+',    opac: 0.90 }
+];
+
+function _choroColor(n) {
+  for (var i = CHORO_ESCALA.length - 1; i >= 0; i--) {
+    if (n >= CHORO_ESCALA[i].min) return CHORO_ESCALA[i];
+  }
+  return null;
+}
+
+function denueChoroCargar(callback) {
+  if (DENUE_DENSITY) { if (callback) callback(); return; }
+  fetch('denue_density.json')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      DENUE_DENSITY = d;
+      if (callback) callback();
+    })
+    .catch(function(e) {
+      console.warn('[GEO] denue_density.json no encontrado', e);
+      if (typeof toast === 'function') toast('⚠ denue_density.json faltante', 'warn');
+    });
+}
+
+function denueChoroRender(mapaLeaflet) {
+  if (!mapaLeaflet) return;
+  if (!GEO.geojson || !DENUE_DENSITY) return;
+
+  // Limpiar capa anterior
+  if (denueChoroLayer) { try { mapaLeaflet.removeLayer(denueChoroLayer); } catch(e) {} denueChoroLayer = null; }
+
+  var density = DENUE_DENSITY.density;
+
+  denueChoroLayer = L.geoJSON(GEO.geojson, {
+    style: function(feature) {
+      var clave = feature.properties.CVEGEO;
+      var d = density[clave];
+      if (!d || d.n === 0) return { fillOpacity: 0, opacity: 0, weight: 0 };
+      var c = _choroColor(d.n);
+      if (!c) return { fillOpacity: 0, opacity: 0, weight: 0 };
+      return {
+        fillColor:   c.fill,
+        fillOpacity: c.opac,
+        color:       '#0a2a4a',
+        weight:      0.6,
+        opacity:     0.5
+      };
+    },
+    onEachFeature: function(feature, layer) {
+      var clave = feature.properties.CVEGEO;
+      var d = density[clave];
+      if (!d) return;
+      var c = _choroColor(d.n);
+      var topCat = d.top || '';
+      var topN   = d.cats ? (d.cats[topCat] || 0) : 0;
+      layer.bindPopup(
+        '<div style="font-family:monospace;background:#060d18;color:#c0e8ff;padding:8px 10px;border-radius:4px;min-width:160px;">' +
+        '<div style="font-size:7px;color:#3a6a9a;letter-spacing:1px;margin-bottom:4px;">AGEB · ' + clave + '</div>' +
+        '<div style="font-size:14px;font-weight:900;color:' + (c ? c.fill : '#fff') + ';margin-bottom:2px;">' + d.n.toLocaleString() + '</div>' +
+        '<div style="font-size:8px;color:#7a9ab8;margin-bottom:4px;">establecimientos</div>' +
+        (topCat ? '<div style="font-size:7px;color:#ffcc00;">Sector dominante: ' + topCat + ' (' + topN + ')</div>' : '') +
+        '</div>',
+        { maxWidth: 200 }
+      );
+      layer.on('mouseover', function() { this.setStyle({ fillOpacity: Math.min((c ? c.opac : 0.5) + 0.15, 1), weight: 1.2 }); });
+      layer.on('mouseout',  function() { denueChoroLayer && denueChoroLayer.resetStyle(this); });
+    }
+  });
+
+  denueChoroLayer.addTo(mapaLeaflet);
+  _denueChoroLeyenda(mapaLeaflet);
+}
+
+function _denueChoroLeyenda(mapaLeaflet) {
+  if (denueChoroLeyenda) { try { mapaLeaflet.removeControl(denueChoroLeyenda); } catch(e) {} }
+  denueChoroLeyenda = L.control({ position: 'bottomleft' });
+  denueChoroLeyenda.onAdd = function() {
+    var div = L.DomUtil.create('div', '');
+    div.style.cssText = 'background:rgba(6,13,24,0.92);border:1px solid #0d2040;border-radius:4px;padding:8px 10px;font-family:monospace;font-size:8px;color:#c0e8ff;';
+    div.innerHTML =
+      '<div style="font-size:7px;color:#3a6a9a;letter-spacing:1px;margin-bottom:6px;">ESTABLECIMIENTOS POR AGEB · DENUE</div>' +
+      '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;"><div style="width:14px;height:10px;background:#0d2040;border:1px solid #1a3050;border-radius:1px;"></div><span style="color:#3a5a7a;">0</span></div>' +
+      CHORO_ESCALA.map(function(c) {
+        return '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">' +
+          '<div style="width:14px;height:10px;background:' + c.fill + ';opacity:' + c.opac + ';border-radius:1px;flex-shrink:0;"></div>' +
+          '<span>' + c.label + '</span></div>';
+      }).join('') +
+      '<div style="margin-top:5px;border-top:1px solid #1a3050;padding-top:4px;font-size:7px;color:#3a5a7a;">Toca un AGEB para detalles</div>';
+    return div;
+  };
+  denueChoroLeyenda.addTo(mapaLeaflet);
+}
+
+function denueChoroToggle(mapaLeaflet, btnEl) {
+  // Cargar GeoJSON y density si no están
+  var doToggle = function() {
+    if (denueChoroActivo) {
+      if (denueChoroLayer)   { try { mapaLeaflet.removeLayer(denueChoroLayer); }   catch(e) {} denueChoroLayer = null; }
+      if (denueChoroLeyenda) { try { mapaLeaflet.removeControl(denueChoroLeyenda); } catch(e) {} denueChoroLeyenda = null; }
+      denueChoroActivo = false;
+      if (btnEl) { btnEl.textContent = '🔵 MACRO'; btnEl.classList.remove('on'); }
+      var lbl = document.getElementById('denue-modo-label');
+      if (lbl) lbl.textContent = 'MACRO desactivado';
+    } else {
+      denueChoroRender(mapaLeaflet);
+      denueChoroActivo = true;
+      if (btnEl) { btnEl.textContent = '🔵 MACRO ON'; btnEl.classList.add('on'); }
+      var lbl2 = document.getElementById('denue-modo-label');
+      if (lbl2) lbl2.textContent = 'MACRO · densidad por AGEB';
+      if (typeof toast === 'function') toast('📊 Densidad DENUE por AGEB · ' + Object.keys(DENUE_DENSITY.density).length + ' zonas', 'ok');
+    }
+  };
+
+  // Asegurarse de tener ambos datasets
+  var needGeo  = !GEO.geojson;
+  var needDens = !DENUE_DENSITY;
+
+  if (!needGeo && !needDens) { doToggle(); return; }
+
+  if (typeof toast === 'function') toast('⏳ Cargando capas…', 'ok');
+
+  var loaded = 0;
+  var total  = (needGeo ? 1 : 0) + (needDens ? 1 : 0);
+  var check  = function() { loaded++; if (loaded === total) doToggle(); };
+
+  if (needGeo)  geoCargar(check);
+  if (needDens) denueChoroCargar(check);
+  if (!needGeo)  check();  // ya tenía geo
+  if (!needDens) check();  // ya tenía density — nunca ocurre aquí pero por seguridad
+}
+window.denueChoroToggle = denueChoroToggle;

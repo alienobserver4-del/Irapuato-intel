@@ -4,7 +4,7 @@ var DENUE_LOADED    = false;
 var denueMapaObj    = null;
 var denueHeatLayer  = null;
 var denueMarkersLayer = null;
-var denueModo       = 'dots';   // 'dots' | 'markers'  (heat eliminado)
+var denueModo       = 'markers';  // 'markers' es el único modo; MACRO es capa independiente (choropleth)
 var denueCatFiltro  = 'todos';
 var denueSizeFiltro = 0;
 var denueIntelLayer = null;
@@ -80,12 +80,8 @@ function filtrarDenueSize(nivel, btn) {
 window.filtrarDenueSize = filtrarDenueSize;
 
 function toggleDenueModo() {
-  denueModo = denueModo === 'dots' ? 'markers' : 'dots';
-  var btn = document.getElementById('denue-modo-btn');
-  var lbl = document.getElementById('denue-modo-label');
-  if (btn) { btn.textContent = denueModo === 'dots' ? '🔵 MACRO' : '📍 PUNTOS'; btn.classList.toggle('on', denueModo === 'dots'); }
-  if (lbl) lbl.textContent = denueModo === 'dots' ? 'MACRO · densidad visual' : 'MARKERS · detalle';
-  renderDenueMapa();
+  // Modo MACRO ahora es choropleth independiente (denueChoroToggle en geo.js)
+  // Esta función se mantiene por compatibilidad pero el botón ya no la llama directamente
 }
 window.toggleDenueModo = toggleDenueModo;
 
@@ -121,10 +117,9 @@ function renderDenueMapa(extraFn) {
 
   var zoom = denueMapaObj.getZoom();
   // Auto-switch: zoom >= 15 = markers con popup, zoom < 15 = dots macro sin click
-  var modoEfectivo = denueModo;
-  if (denueModo === 'dots' && zoom >= 15) modoEfectivo = 'markers';
+  var modoEfectivo = 'markers'; // MACRO es choropleth independiente
 
-  if (modoEfectivo === 'dots') {
+  if (false) { // bloque dots eliminado
     // ── MODO MACRO: canvas de puntos agrupados, sin interacción individual ──
     // Sistema de binning: agrupa establecimientos en celdas de cuadrícula
     // y dibuja un punto por celda cuyo tamaño y opacidad reflejan densidad local.
@@ -236,7 +231,8 @@ function _denueBindZoom() {
   denueMapaObj._denueZoomBound = true;
   denueMapaObj.on('zoomend', function() {
     // Re-render en modo dots para adaptar gridSize al zoom actual
-    if (denueModo === 'dots') renderDenueMapa();
+    // auto-switch solo en modo markers cuando el choropleth no está activo
+  if (!window.denueChoroActivo) renderDenueMapa();
     // Al llegar a zoom 15+ en modo dots, auto-switch visible a markers
     var z = denueMapaObj.getZoom();
     var btn = document.getElementById('denue-modo-btn');
