@@ -484,68 +484,59 @@ function buildPrompt(texto) {
   var frag = texto.slice(0, 3000);
   var p = 'Eres extractor de datos estructurados de noticias locales de Irapuato, Guanajuato, Mexico.\n';
   p += 'Responde UNICAMENTE con el objeto JSON valido. Sin texto antes, sin texto despues, sin markdown.\n\n';
-  p += 'EJEMPLOS (aprende el patron):\n\n';
-  p += 'TEXTO: "Reportan herido tras ataque armado en la colonia El Cantador de Irapuato. El hecho ocurrio la tarde del jueves."\n';
-  p += 'JSON: {"titulo":"Herido tras ataque armado en colonia El Cantador","tipo":"seguridad","calle1":"","calle2":"","colonia":"El Cantador","comunidad":"","nombres":"","resumen":"Un hombre resulto herido en un ataque armado en la colonia El Cantador. El hecho ocurrio en la tarde del jueves.","fecha_evento":"","tiempo_dia":"tarde","lat":20.68,"lng":-101.35,"confianza":"media","tematica":["ataque armado","herido","colonia el cantador"],"verbos":["resultar","atacar","ocurrir"],"sustantivos":["hombre","colonia","ataque"]}\n\n';
-  p += 'TEXTO: "Una camioneta volco en la carretera Irapuato-Leon a la altura del ITESI. Aproximadamente a las 9:15 de la manana de este viernes."\n';
-  p += 'JSON: {"titulo":"Camioneta vuelca en carretera Irapuato-Leon frente a ITESI","tipo":"accidente","calle1":"Carretera Irapuato-Leon","calle2":"Altura del ITESI","colonia":"","comunidad":"","nombres":"","resumen":"Una camioneta volco en la carretera Irapuato-Leon a la altura del ITESI el viernes por la manana.","fecha_evento":"","tiempo_dia":"manana","lat":20.68,"lng":-101.41,"confianza":"alta","tematica":["accidentes","carreteras","vialidad"],"sustantivos":["camioneta","carretera","ITESI"],"verbos":["volcar","ocurrir"]}\n\n';
-  p += 'TEXTO: "Refuerzan formacion policial. El director Andres Clemente Carrillo Marrot destaco los beneficios otorgados en la Academia de Seguridad Publica."\n';
-  p += 'JSON: {"titulo":"Refuerzan formacion policial con becas y prestaciones","tipo":"gobierno","calle1":"","calle2":"","colonia":"","comunidad":"","nombres":"Andres Clemente Carrillo Marrot","resumen":"El director de la Academia de Seguridad, Andres Clemente Carrillo Marrot, destaco mejoras en la formacion policial con becas y salarios.","fecha_evento":"","tiempo_dia":"desconocido","lat":20.6795,"lng":-101.354,"confianza":"alta"}\n\n';
-  p += 'REGLAS CRITICAS:\n';
-  p += '1. colonia: Si el texto dice "colonia X", "col. X", "fraccionamiento X", "barrio X" => pon X en colonia. SIEMPRE.\n';
-  p += '2. nombres: Extrae TODOS los nombres propios de personas mencionadas (funcionarios, victimas, testigos). Separados por coma.\n';
-  p += '3. calle1: Cualquier via: calle, avenida, carretera, periferico, bulevar, camino, corredor. NUNCA vacio si hay referencia vial.\n';
-  p += '4. calle2: Segunda via, esquina, cruce o referencia ("altura del hospital", "frente a la plaza").\n';
-  p += '5. tiempo_dia: manana=6-12h o dice "manana". tarde=12-19h. noche=19-24h. madrugada=0-6h. desconocido=sin hora.\n';
-  p += '6. tipo: seguridad=violencia/robos/disparos/agresiones. accidente=choques/volcaduras/caidas/incendios. gobierno=autoridades/obras municipales/programas. politica=elecciones/candidatos/partidos/diputados. crimen_organizado=carteles/extorsion/huachicol/celulas/plaza. corrupcion=desvio/soborno/malversacion/cohecho. ambiental=contaminacion/basura/rio turbio/inundacion/fauna. desaparecido=personas no localizadas. salud=brotes/clinicas/hospital. transporte=vialidad/cierre vial/camion.\n';
-  p += '7. comunidad: rancho, ejido, comunidad rural (NO colonias urbanas).\n';
-  p += '8. titulo: MAXIMO 80 caracteres. Es el TITULAR periodistico: corto, accionable, sin repetir detalles del resumen. INCORRECTO: "Localizan cuerpo sin vida a metros del reten de la Guardia Nacional en avenida principal". CORRECTO: "Hallan cuerpo de mujer en avenida principal". NUNCA empieces el titulo igual que el resumen.\n';
-  p += '9. resumen: 2-3 oraciones. Comienza diferente al titulo. Amplifica detalles: donde exactamente, quienes intervinieron, que encontraron. Ej: "Un vehiculo choco de frente en la carretera, el conductor resulto herido de gravedad. Paramédicos del IMSS atendieron al lesionado en el lugar.". NUNCA copies el contenido de los ejemplos de entrenamiento.\n';
-  p += '10. TEXTO BASURA: Si el texto parece ser menu de navegacion, footer o publicidad (repite el nombre del sitio, dice "Aviso de Privacidad", "Contacto", "Siguenos", "Lo mas leido") => pon titulo="SIN CONTENIDO" y tipo="rumor".\n';
-  p += '11. tematica: Array de 3-5 sustantivos/temas clave de la noticia (ej: ["robo","policia","colonia el cantador"]). Palabras en minúsculas sin acentos.\n';
-  p += '12. verbos: Array de hasta 8 verbos en infinitivo que describen las acciones principales (ej: ["robar","disparar","detener","investigar"]). Solo infinitivos, sin conjugar.\n';
-  p += '13. sustantivos: Array de hasta 8 sustantivos más relevantes del texto (personas, lugares, objetos, instituciones). En minúsculas.\n\n';
-  p += '11. tematica: Array de 3-5 strings. Temas o conceptos clave de la noticia (violencia, robo, obra publica, salud). Minusculas.\n';
-  p += '12. sustantivos: Array de 5-10 sustantivos relevantes del texto (personas, lugares, objetos). Sin articulos ni preposiciones.\n';
-  p += '13. verbos: Array de 5-10 verbos en INFINITIVO que describen acciones principales (hallar, disparar, detener, volcar).\n\n';
+
+  p += 'EJEMPLOS (aprende el patron, NO copies estos datos en tu respuesta):\n\n';
+
+  p += 'TEXTO: "Reportan herido tras ataque armado en la colonia El Cantador. El hecho ocurrio la tarde del jueves."\n';
+  p += 'JSON: {"titulo":"Herido en ataque armado en colonia El Cantador","tipo":"seguridad","calle1":"","calle2":"","colonia":"El Cantador","comunidad":"","nombres":"","resumen":"Un hombre resulto herido en un ataque armado registrado en la colonia El Cantador la tarde del jueves.","fecha_evento":"","tiempo_dia":"tarde","lat":20.68,"lng":-101.35,"confianza":"media","tematica":["ataque armado","herido"],"verbos":["resultar","atacar","ocurrir"],"sustantivos":["hombre","colonia","ataque"]}\n\n';
+
+  p += 'TEXTO: "Camioneta vuelca en carretera Irapuato-Leon frente al ITESI. Aproximadamente a las 9:15 de la manana de este viernes."\n';
+  p += 'JSON: {"titulo":"Camioneta vuelca en carretera Irapuato-Leon frente a ITESI","tipo":"accidente","calle1":"Carretera Irapuato-Leon","calle2":"ITESI","colonia":"","comunidad":"","nombres":"","resumen":"Una camioneta volco en la carretera Irapuato-Leon a la altura del ITESI el viernes por la manana.","fecha_evento":"","tiempo_dia":"manana","lat":20.68,"lng":-101.41,"confianza":"alta","tematica":["accidente","volcadura","carretera"],"verbos":["volcar","ocurrir"],"sustantivos":["camioneta","carretera","ITESI"]}\n\n';
+
   p += 'TEXTO: "Zona Franca Zona Franca es un producto de Fabrica de Contenidos. Aviso de PrivacidadContacto Siguenos"\n';
   p += 'JSON: {"titulo":"SIN CONTENIDO","tipo":"rumor","calle1":"","calle2":"","colonia":"","comunidad":"","nombres":"","resumen":"El texto capturado no contiene una noticia valida.","fecha_evento":"","tiempo_dia":"desconocido","lat":20.6795,"lng":-101.354,"confianza":"baja","tematica":[],"sustantivos":[],"verbos":[]}\n\n';
-  p += 'TEXTO: "Encuentran a una persona lesionada en bulevar Arandas. Irapuato, Gto. Una persona del sexo masculino fue localizada con heridas de bala en bulevar Arandas esquina con calle Fresno, la madrugada del lunes. Elementos de la Policia Municipal acordonaron la zona."\n';
-  p += 'JSON: {"titulo":"Hombre baleado en bulevar Arandas esquina Fresno","tipo":"seguridad","calle1":"Bulevar Arandas","calle2":"Calle Fresno","colonia":"","comunidad":"","nombres":"","resumen":"Una persona del sexo masculino fue localizada con heridas de bala en bulevar Arandas. Elementos de la Policia Municipal acordonaron la zona mientras se esperaba la llegada de la FGE.","fecha_evento":"","tiempo_dia":"madrugada","lat":20.68,"lng":-101.34,"confianza":"alta","tematica":["violencia","disparos","policia"],"verbos":["localizar","acordonar","esperar","llegar"],"sustantivos":["persona","heridas","bala","bulevar","policia"]}\n\n';
-  // Inyectar contexto territorial CONEVAL si geo.js está disponible
+
+  p += 'REGLAS:\n';
+  p += '1. colonia: Si el texto dice "colonia X", "col. X", "fraccionamiento X", "barrio X" => pon X. SIEMPRE.\n';
+  p += '2. nombres: Extrae TODOS los nombres propios de personas (funcionarios, victimas, testigos). Separados por coma.\n';
+  p += '3. calle1: Cualquier via: calle, avenida, carretera, periferico, bulevar, camino. NUNCA vacio si hay referencia vial.\n';
+  p += '4. calle2: Segunda via, esquina, cruce o referencia geografica secundaria.\n';
+  p += '5. tiempo_dia: manana=6-12h. tarde=12-19h. noche=19-24h. madrugada=0-6h. desconocido=sin hora.\n';
+  p += '6. tipo: seguridad=violencia/robos/disparos/agresiones. accidente=choques/volcaduras/incendios. gobierno=autoridades/obras/programas. politica=elecciones/candidatos/partidos. crimen_organizado=carteles/extorsion/huachicol. corrupcion=desvio/soborno. ambiental=contaminacion/inundacion/fauna. desaparecido=personas no localizadas. salud=brotes/clinicas/hospital. transporte=vialidad/cierre vial.\n';
+  p += '7. comunidad: rancho, ejido, comunidad rural (NO colonias urbanas).\n';
+  p += '8. titulo: MAXIMO 80 caracteres. Titular periodistico corto y accionable. NUNCA igual al inicio del resumen.\n';
+  p += '9. resumen: 2-3 oraciones. Comienza distinto al titulo. Amplifica detalles: lugar exacto, quienes intervinieron.\n';
+  p += '10. TEXTO BASURA: Si el texto parece menu de navegacion, footer o publicidad => titulo="SIN CONTENIDO", tipo="rumor".\n';
+  p += '11. tematica: Array de 3-5 temas clave en minusculas (ej: ["robo","policia","colonia"]).\n';
+  p += '12. verbos: Array de hasta 8 verbos en infinitivo de las acciones principales (ej: ["robar","disparar","detener"]).\n';
+  p += '13. sustantivos: Array de hasta 8 sustantivos relevantes del texto (personas, lugares, objetos, instituciones).\n\n';
+
+  // Contexto territorial CONEVAL/IRZ
   if (typeof geoTextoParaIA === 'function' && window._iaGeoLat && window._iaGeoLng) {
     var geoCtx = geoTextoParaIA(window._iaGeoLat, window._iaGeoLng);
-    // Enriquecer con índice de riesgo IRZ si analisis.js está disponible
-    var irzCtx = '';
-    if (typeof analisisContextoIA === 'function') {
-      irzCtx = analisisContextoIA(window._iaGeoLat, window._iaGeoLng);
-    }
+    var irzCtx = (typeof analisisContextoIA === 'function') ? analisisContextoIA(window._iaGeoLat, window._iaGeoLng) : '';
     if (geoCtx || irzCtx) {
-      var ctxTotal = [geoCtx, irzCtx].filter(Boolean).join(' ');
-      p += 'CONTEXTO TERRITORIAL DE LA ZONA DEL EVENTO: ' + ctxTotal + '\n';
-      p += 'Usa este contexto para enriquecer el análisis y resumen si es relevante.\n\n';
+      p += 'CONTEXTO TERRITORIAL: ' + [geoCtx, irzCtx].filter(Boolean).join(' ') + '\n\n';
     }
   }
-  p += 'IMPORTANTE: Analiza UNICAMENTE el texto que sigue. NO uses datos de los ejemplos de entrenamiento como respuesta. El JSON debe corresponder 100% al texto de abajo.\n\n';
-  p += 'TEXTO A ANALIZAR:\n' + frag + '\n\nJSON:';
 
-  // Inyectar reglas de aprendizaje automático si existen
+  p += '=== ANALIZA SOLO EL SIGUIENTE TEXTO. IGNORA LOS EJEMPLOS ANTERIORES COMO RESPUESTA. ===\n';
+  p += 'TEXTO:\n' + frag + '\n\nJSON:';
+
+  // Reglas de aprendizaje automático
   if (_promptRules && _promptRules.length > 0) {
     var reglasActivas = _promptRules.filter(function(r){ return r.activa !== false; });
     if (reglasActivas.length > 0) {
-      p = p.replace('REGLAS CRITICAS:\n', 'REGLAS CRITICAS (ajustadas por aprendizaje automático):\n');
-      var extra = '\n// APRENDIDO DE CORRECCIONES REALES:\n';
-      reglasActivas.forEach(function(r) {
-        extra += r.regla + '\n';
-      });
-      p = p.replace('TEXTO A ANALIZAR:', extra + 'TEXTO A ANALIZAR:');
+      var extra = '\nAPRENDIDO DE CORRECCIONES REALES:\n';
+      reglasActivas.forEach(function(r) { extra += r.regla + '\n'; });
+      p = p.replace('=== ANALIZA SOLO', extra + '=== ANALIZA SOLO');
     }
   }
 
   return p;
 }
 
-// ── Gestor de keys (fuera del DOMContentLoaded para acceso global) ──
+
 function renderKeysList() {
   var lista = document.getElementById('keys-lista');
   if (!lista) return;
