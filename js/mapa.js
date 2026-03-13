@@ -141,20 +141,17 @@ function _renderDenueColonias(items, lbl) {
 
       var color = (typeof DENUE_COLORS !== 'undefined' && DENUE_COLORS[cd.top]) || '#40b0ff';
 
-      // Tamaño del marcador: logarítmico entre 10px y 32px
-      var sz = Math.round(10 + Math.log(nMostrar + 1) / Math.log(1300) * 22);
-      sz = Math.max(10, Math.min(34, sz));
-      var core = Math.round(sz * 0.42);
-
+      // Punto fijo 10px — suficiente para toque en Android, sin opacar el mapa
+      var sz = 10;
       var ic = L.divIcon({
         className: '',
         iconSize: [sz, sz],
         iconAnchor: [sz/2, sz/2],
-        html: '<div style="width:' + sz + 'px;height:' + sz + 'px;border-radius:50%;' +
-              'background:radial-gradient(circle,' + color + 'dd 0%,' + color + '77 50%,transparent 100%);' +
-              'display:flex;align-items:center;justify-content:center;">' +
-              '<div style="width:' + core + 'px;height:' + core + 'px;border-radius:50%;background:' + color + ';' +
-              'box-shadow:0 0 4px ' + color + ',0 0 8px ' + color + '66;"></div></div>'
+        // Hit area invisible de 32px para facilitar toque en móvil
+        html: '<div style="width:32px;height:32px;border-radius:50%;position:absolute;top:-11px;left:-11px;"></div>' +
+              '<div style="width:' + sz + 'px;height:' + sz + 'px;border-radius:50%;' +
+              'background:' + color + ';opacity:0.85;' +
+              'box-shadow:0 0 3px ' + color + '88;"></div>'
       });
 
       // Popup con estadísticas completas
