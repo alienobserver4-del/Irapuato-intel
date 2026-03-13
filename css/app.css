@@ -420,6 +420,34 @@ header {
   color:var(--muted); transition:all .2s;
 }
 .fuente-opt.sel { border-color:var(--magenta); color:var(--magenta); background:rgba(255,0,170,.06); }
+.fb-sugg-item {
+  padding:9px 12px; font-family:'Share Tech Mono',monospace; font-size:9px;
+  color:#c0e8ff; cursor:pointer; border-bottom:1px solid #0d2040; transition:background .15s;
+}
+.fb-sugg-item:hover { background:#0d2040; color:#fff; }
+.fb-sugg-item:last-child { border-bottom:none; }
+/* Sub-tabs BD */
+.bd-subtabs { display:flex; border-bottom:1px solid var(--border); background:#060d18; flex-shrink:0; }
+.bd-stab { padding:8px 14px; font-family:var(--title); font-size:7px; letter-spacing:1px; color:var(--muted);
+  border:none; background:none; cursor:pointer; border-bottom:2px solid transparent; transition:all .2s; }
+.bd-stab.activo { color:#00f5ff; border-bottom-color:#00f5ff; }
+/* Data tab layout */
+.data-seccion { padding:12px; }
+.data-bloque { background:#060d18; border:1px solid #0d2040; border-radius:4px; padding:12px; margin-bottom:12px; }
+.data-bloque-titulo { font-family:var(--title); font-size:7px; color:#3a6a9a; letter-spacing:1.5px; margin-bottom:10px; border-bottom:1px solid #0d2040; padding-bottom:6px; }
+.data-stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.data-stat { background:#030810; border-radius:3px; padding:10px; text-align:center; }
+.data-stat-n { font-family:var(--title); font-size:20px; font-weight:900; color:#00f5ff; }
+.data-stat-l { font-family:var(--mono); font-size:6px; color:#3a5a7a; letter-spacing:1px; margin-top:3px; }
+.data-fuente-row { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.data-fuente-bar { flex:1; height:5px; background:#0d2040; border-radius:2px; overflow:hidden; }
+.data-fuente-fill { height:100%; background:#1877f2; border-radius:2px; transition:width .4s; }
+.data-tag { display:inline-block; padding:3px 8px; margin:2px; border-radius:12px; font-size:7.5px;
+  font-family:var(--mono); background:#0d2040; color:#c0e8ff; border:1px solid #1a3050; cursor:default; }
+.data-verbo-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px; }
+.data-verbo { padding:4px 6px; font-family:var(--mono); font-size:7.5px; color:#7ab8d8;
+  background:#030810; border:1px solid #0d2040; border-radius:2px; display:flex; justify-content:space-between; }
+.data-verbo span { color:#3a6a9a; font-size:6.5px; }
 .btn-analizar {
   width:100%; padding:12px; font-family:var(--title); font-size:9px; font-weight:700;
   background:rgba(255,0,170,.12); color:var(--magenta); border:1px solid var(--magenta);
