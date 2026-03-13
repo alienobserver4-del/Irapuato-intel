@@ -509,8 +509,14 @@ function buildPrompt(texto) {
   // Inyectar contexto territorial CONEVAL si geo.js está disponible
   if (typeof geoTextoParaIA === 'function' && window._iaGeoLat && window._iaGeoLng) {
     var geoCtx = geoTextoParaIA(window._iaGeoLat, window._iaGeoLng);
-    if (geoCtx) {
-      p += 'CONTEXTO TERRITORIAL DE LA ZONA DEL EVENTO: ' + geoCtx + '\n';
+    // Enriquecer con índice de riesgo IRZ si analisis.js está disponible
+    var irzCtx = '';
+    if (typeof analisisContextoIA === 'function') {
+      irzCtx = analisisContextoIA(window._iaGeoLat, window._iaGeoLng);
+    }
+    if (geoCtx || irzCtx) {
+      var ctxTotal = [geoCtx, irzCtx].filter(Boolean).join(' ');
+      p += 'CONTEXTO TERRITORIAL DE LA ZONA DEL EVENTO: ' + ctxTotal + '\n';
       p += 'Usa este contexto para enriquecer el análisis y resumen si es relevante.\n\n';
     }
   }

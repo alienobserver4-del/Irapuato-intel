@@ -236,7 +236,8 @@ function renderIntel() {
           '<button onclick="verDetallesBD(\'' + _nId + '\')" style="font-family:\'Orbitron\',monospace;font-size:7px;padding:3px 7px;background:rgba(0,245,255,.15);color:#00f5ff;border:1px solid #00f5ff66;border-radius:2px;cursor:pointer;letter-spacing:1px;">DETALLE &#9654;</button>' +
         '</div>' +
       '</div>' +
-      '<div style="font-size:10px;color:#c0e8ff;margin-bottom:4px;line-height:1.3;">' + (n.titulo||'') + '</div>' +
+      (lat && lat !== 20.6795 && typeof analisisBadgeHTML === 'function' ? analisisBadgeHTML(lat, lng) + ' ' : '') +
+      '<div style="font-size:10px;color:#c0e8ff;margin-bottom:4px;line-height:1.3;margin-top:4px;">' + (n.titulo||'') + '</div>' +
       '<div style="font-size:7px;color:#5a8aaa;line-height:1.8;">' +
         (n.fuente ? '&#128240; ' + n.fuente + '<br>' : '') +
         (n.calle ? '&#128205; ' + n.calle + (n.calle2 ? ' / ' + n.calle2 : '') + '<br>' : '') +

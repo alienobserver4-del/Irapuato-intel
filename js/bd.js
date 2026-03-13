@@ -23,6 +23,7 @@ function escucharBD() {
         var tb = b.ts || (b.fechaGuardado && b.fechaGuardado.seconds ? b.fechaGuardado.seconds * 1000 : 0);
         return tb - ta;
       });
+      if (typeof analisisInvalidar === 'function') analisisInvalidar();
       renderBD();
       actualizarBadge();
       if (mapaIniciado) renderMapa();
@@ -575,6 +576,7 @@ function _renderBDImpl() {
       '<span class="bd-tipo ' + (n.tipo||'rumor') + '">' + (n.tipo||'rumor').toUpperCase() + '</span>' +
       (n.tipo2 ? ' <span class="bd-tipo ' + n.tipo2 + '" style="margin-left:4px;opacity:.7;">' + n.tipo2.toUpperCase() + '</span>' : '') +
       (n.tiempo_dia && n.tiempo_dia !== 'desconocido' ? ' <span class="bd-tiempo ' + n.tiempo_dia + '">' + n.tiempo_dia.toUpperCase() + '</span>' : '') +
+      (n.lat && n.lat !== 20.6795 && typeof analisisBadgeHTML === 'function' ? analisisBadgeHTML(n.lat, n.lng) : '') +
       '<div class="bd-card-tit" onclick="verDetallesBD(\'' + n.id + '\')" style="cursor:pointer;text-decoration:underline;text-decoration-color:#00c8ff44;margin-top:4px;">' + (n.titulo||'Sin titulo') + '</div>' +
       (n.resumen ? '<div style="font-size:8px;color:#5a8aaa;line-height:1.5;margin-top:4px;padding-top:4px;border-top:1px solid #0d2040;">' + n.resumen + '</div>' : '') +
       relHtml +
