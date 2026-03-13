@@ -1504,7 +1504,8 @@ function iniciarMiniMapa(lat, lng, tipo) {
   }, 120);
 }
 
-escucharMake();
+// escucharMake se llama desde app.js (carga despues de mapa.js)
+if (typeof escucharMake === 'function') escucharMake();
 
 // Indicador de que JS cargó correctamente
 document.getElementById('rss-estado').textContent = 'Sistema listo. Elige una fuente.';

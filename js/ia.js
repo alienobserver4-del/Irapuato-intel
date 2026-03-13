@@ -499,8 +499,8 @@ function buildPrompt(texto) {
   p += '5. tiempo_dia: manana=6-12h o dice "manana". tarde=12-19h. noche=19-24h. madrugada=0-6h. desconocido=sin hora.\n';
   p += '6. tipo: seguridad=violencia/robos/disparos/agresiones. accidente=choques/volcaduras/caidas/incendios. gobierno=autoridades/obras municipales/programas. politica=elecciones/candidatos/partidos/diputados. crimen_organizado=carteles/extorsion/huachicol/celulas/plaza. corrupcion=desvio/soborno/malversacion/cohecho. ambiental=contaminacion/basura/rio turbio/inundacion/fauna. desaparecido=personas no localizadas. salud=brotes/clinicas/hospital. transporte=vialidad/cierre vial/camion.\n';
   p += '7. comunidad: rancho, ejido, comunidad rural (NO colonias urbanas).\n';
-  p += '8. titulo: MAXIMO 80 caracteres. Es el TITULAR periodistico: corto, accionable, sin repetir detalles del resumen. INCORRECTO: "Localizan cuerpo en el Trebol del Libramiento Sur a metros del reten de la GN". CORRECTO: "Hallan cuerpo de mujer en Avenida Insurgentes". NUNCA empieces el titulo igual que el resumen.\n';
-  p += '9. resumen: 2-3 oraciones. Comienza diferente al titulo. Amplifica detalles: donde exactamente, quienes intervinieron, que encontraron. Ej: "El cuerpo de una mujer fue localizado en un baldio de Av. Insurgentes, a la altura del Trebol del Libramiento Sur. Personal de la FGE inicio investigacion por huellas de violencia."\n';
+  p += '8. titulo: MAXIMO 80 caracteres. Es el TITULAR periodistico: corto, accionable, sin repetir detalles del resumen. INCORRECTO: "Localizan cuerpo sin vida a metros del reten de la Guardia Nacional en avenida principal". CORRECTO: "Hallan cuerpo de mujer en avenida principal". NUNCA empieces el titulo igual que el resumen.\n';
+  p += '9. resumen: 2-3 oraciones. Comienza diferente al titulo. Amplifica detalles: donde exactamente, quienes intervinieron, que encontraron. Ej: "Un vehiculo choco de frente en la carretera, el conductor resulto herido de gravedad. Paramédicos del IMSS atendieron al lesionado en el lugar.". NUNCA copies el contenido de los ejemplos de entrenamiento.\n';
   p += '10. TEXTO BASURA: Si el texto parece ser menu de navegacion, footer o publicidad (repite el nombre del sitio, dice "Aviso de Privacidad", "Contacto", "Siguenos", "Lo mas leido") => pon titulo="SIN CONTENIDO" y tipo="rumor".\n';
   p += '11. tematica: Array de 3-5 sustantivos/temas clave de la noticia (ej: ["robo","policia","colonia el cantador"]). Palabras en minúsculas sin acentos.\n';
   p += '12. verbos: Array de hasta 8 verbos en infinitivo que describen las acciones principales (ej: ["robar","disparar","detener","investigar"]). Solo infinitivos, sin conjugar.\n';
@@ -510,8 +510,8 @@ function buildPrompt(texto) {
   p += '13. verbos: Array de 5-10 verbos en INFINITIVO que describen acciones principales (hallar, disparar, detener, volcar).\n\n';
   p += 'TEXTO: "Zona Franca Zona Franca es un producto de Fabrica de Contenidos. Aviso de PrivacidadContacto Siguenos"\n';
   p += 'JSON: {"titulo":"SIN CONTENIDO","tipo":"rumor","calle1":"","calle2":"","colonia":"","comunidad":"","nombres":"","resumen":"El texto capturado no contiene una noticia valida.","fecha_evento":"","tiempo_dia":"desconocido","lat":20.6795,"lng":-101.354,"confianza":"baja","tematica":[],"sustantivos":[],"verbos":[]}\n\n';
-  p += 'TEXTO: "Localizan cuerpo en el Trebol del Libramiento Sur. Irapuato, Gto. El cuerpo de una mujer sin vida fue localizado en la avenida Insurgentes, a la altura del Trebol del Libramiento Sur, a metros del reten de la Guardia Nacional, la tarde del martes 3 de marzo."\n';
-  p += 'JSON: {"titulo":"Hallan cuerpo de mujer con huellas de violencia en Av. Insurgentes","tipo":"seguridad","calle1":"Avenida Insurgentes","calle2":"Trebol del Libramiento Sur","colonia":"","comunidad":"","nombres":"","resumen":"El cuerpo de una mujer sin vida fue encontrado en un baldio de Av. Insurgentes, a metros del reten de la Guardia Nacional. Paramédicos confirmaron ausencia de signos vitales y el cuerpo presentaba huellas de violencia. La FGE inicio investigacion.","fecha_evento":"03/03/2026","tiempo_dia":"tarde","lat":20.65,"lng":-101.37,"confianza":"alta","tematica":["homicidio","cuerpo","guardia nacional","fge"],"verbos":["hallar","localizar","iniciar","confirmar","investigar"],"sustantivos":["cuerpo","mujer","baldio","reten","paramédicos"]}\n\n';
+  p += 'TEXTO: "Encuentran a una persona lesionada en bulevar Arandas. Irapuato, Gto. Una persona del sexo masculino fue localizada con heridas de bala en bulevar Arandas esquina con calle Fresno, la madrugada del lunes. Elementos de la Policia Municipal acordonaron la zona."\n';
+  p += 'JSON: {"titulo":"Hombre baleado en bulevar Arandas esquina Fresno","tipo":"seguridad","calle1":"Bulevar Arandas","calle2":"Calle Fresno","colonia":"","comunidad":"","nombres":"","resumen":"Una persona del sexo masculino fue localizada con heridas de bala en bulevar Arandas. Elementos de la Policia Municipal acordonaron la zona mientras se esperaba la llegada de la FGE.","fecha_evento":"","tiempo_dia":"madrugada","lat":20.68,"lng":-101.34,"confianza":"alta","tematica":["violencia","disparos","policia"],"verbos":["localizar","acordonar","esperar","llegar"],"sustantivos":["persona","heridas","bala","bulevar","policia"]}\n\n';
   // Inyectar contexto territorial CONEVAL si geo.js está disponible
   if (typeof geoTextoParaIA === 'function' && window._iaGeoLat && window._iaGeoLng) {
     var geoCtx = geoTextoParaIA(window._iaGeoLat, window._iaGeoLng);
@@ -526,6 +526,7 @@ function buildPrompt(texto) {
       p += 'Usa este contexto para enriquecer el análisis y resumen si es relevante.\n\n';
     }
   }
+  p += 'IMPORTANTE: Analiza UNICAMENTE el texto que sigue. NO uses datos de los ejemplos de entrenamiento como respuesta. El JSON debe corresponder 100% al texto de abajo.\n\n';
   p += 'TEXTO A ANALIZAR:\n' + frag + '\n\nJSON:';
 
   // Inyectar reglas de aprendizaje automático si existen
