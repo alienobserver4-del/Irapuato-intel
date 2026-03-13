@@ -579,6 +579,7 @@
           <button class="mapa-filtro-btn gob" onclick="filtrarMapaFijo('politico',this)">🏅 POL</button>
           <button class="mapa-filtro-btn" style="color:#ffaa00;border-color:#ffaa00;" onclick="filtrarMapaFijo('transporte',this)">🚌 TRANS</button>
           <button class="mapa-heat-btn" id="btn-editar-mapa" onclick="toggleEditarMapa()">✏️ EDITAR</button>
+          <button class="mapa-heat-btn" id="btn-ageb-pobreza" onclick="geoToggleAgebs(mapaObj,this)" title="Capa CONEVAL: pobreza por AGEB 2015">📊 POBREZA</button>
         </div>
         <div id="mapa-leaflet"></div>
         <!-- Panel edición flotante -->
@@ -707,6 +708,7 @@ function simpleheat(canvas){if(!(this instanceof simpleheat)){return new simpleh
 <!-- App modules (orden de dependencias) -->
 <script src="js/config.js" defer></script>
 <script src="js/datos.js" defer></script>
+  <script src="js/geo.js" defer></script>
 <script src="js/ia.js" defer></script>
 <script src="js/bd.js" defer></script>
 <script src="js/intel.js" defer></script>
