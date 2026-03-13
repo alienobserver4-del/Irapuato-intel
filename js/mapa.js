@@ -1,6 +1,7 @@
 var DENUE_DATA      = null;
 var DENUE_LOADING   = false;
 var DENUE_LOADED    = false;
+var DENUE_COLONIAS  = null;   // datos precalculados por colonia
 var denueMapaObj    = null;
 var denueHeatLayer  = null;
 var denueMarkersLayer = null;
@@ -99,6 +100,138 @@ function denueSearch(q) {
 }
 window.denueSearch = denueSearch;
 
+// ── Render modo colonia: 1 punto por colonia con popup de estadísticas ──
+var _denueColoniasLayer = null;
+
+function _cargarDenueColonias(callback) {
+  if (DENUE_COLONIAS) { callback(); return; }
+  fetch('denue_colonias.json')
+    .then(function(r) { return r.json(); })
+    .then(function(d) { DENUE_COLONIAS = d; callback(); })
+    .catch(function() { DENUE_COLONIAS = { colonias: {} }; callback(); });
+}
+
+function _renderDenueColonias(items, lbl) {
+  _cargarDenueColonias(function() {
+    if (_denueColoniasLayer) {
+      try { denueMapaObj.removeLayer(_denueColoniasLayer); } catch(e) {}
+      _denueColoniasLayer = null;
+    }
+
+    // Construir filtro activo: qué colonias sobreviven al filtro de cat/tamaño
+    var coloniasFiltradas = {};
+    items.forEach(function(r) {
+      var col = (r[3] || 'SIN COLONIA').trim().toUpperCase();
+      if (!coloniasFiltradas[col]) coloniasFiltradas[col] = 0;
+      coloniasFiltradas[col]++;
+    });
+
+    var grupo = L.layerGroup();
+    var rendered = 0;
+
+    Object.keys(DENUE_COLONIAS.colonias).forEach(function(col) {
+      var cd = DENUE_COLONIAS.colonias[col];
+      // Si hay filtro activo, usar el conteo filtrado; si no, el total
+      var nMostrar = coloniasFiltradas[col] || 0;
+      if (denueCatFiltro !== 'todos' || denueSizeFiltro > 0) {
+        if (nMostrar === 0) return; // colonia no pasa el filtro
+      } else {
+        nMostrar = cd.n;
+      }
+
+      var color = (typeof DENUE_COLORS !== 'undefined' && DENUE_COLORS[cd.top]) || '#40b0ff';
+
+      // Tamaño del marcador: logarítmico entre 10px y 32px
+      var sz = Math.round(10 + Math.log(nMostrar + 1) / Math.log(1300) * 22);
+      sz = Math.max(10, Math.min(34, sz));
+      var core = Math.round(sz * 0.42);
+
+      var ic = L.divIcon({
+        className: '',
+        iconSize: [sz, sz],
+        iconAnchor: [sz/2, sz/2],
+        html: '<div style="width:' + sz + 'px;height:' + sz + 'px;border-radius:50%;' +
+              'background:radial-gradient(circle,' + color + 'dd 0%,' + color + '77 50%,transparent 100%);' +
+              'display:flex;align-items:center;justify-content:center;">' +
+              '<div style="width:' + core + 'px;height:' + core + 'px;border-radius:50%;background:' + color + ';' +
+              'box-shadow:0 0 4px ' + color + ',0 0 8px ' + color + '66;"></div></div>'
+      });
+
+      // Popup con estadísticas completas
+      var popup = _denueColoniaPopup(col, cd, nMostrar, color);
+      L.marker([cd.lat, cd.lng], { icon: ic })
+        .bindPopup(popup, { maxWidth: 260, className: 'denue-popup-custom' })
+        .addTo(grupo);
+      rendered++;
+    });
+
+    _denueColoniasLayer = grupo;
+    grupo.addTo(denueMapaObj);
+
+    if (lbl) lbl.textContent = rendered + ' colonias · ' + items.length.toLocaleString() + ' estab';
+    var modlbl = document.getElementById('denue-modo-label');
+    if (modlbl) modlbl.textContent = 'COLONIAS · acércate para detalle individual';
+  });
+}
+
+function _denueColoniaPopup(col, cd, nMostrar, colorTop) {
+  var TLABELS = typeof DENUE_LABELS !== 'undefined' ? DENUE_LABELS : {};
+  var TCOLORS = typeof DENUE_COLORS !== 'undefined' ? DENUE_COLORS : {};
+  var TAM_LABEL = { micro: '0-10 emp', pequeño: '11-30 emp', mediano: '31-100 emp', grande: '100+ emp' };
+
+  // Ordenar cats por conteo desc
+  var catEntries = Object.keys(cd.cats).map(function(k) {
+    return { k: k, n: cd.cats[k], pct: Math.round(cd.cats[k] / cd.n * 100) };
+  }).sort(function(a,b) { return b.n - a.n; }).slice(0, 6);
+
+  var tamEntries = Object.keys(cd.tams).map(function(k) {
+    return { k: k, n: cd.tams[k], pct: Math.round(cd.tams[k] / cd.n * 100) };
+  }).sort(function(a,b) { return b.n - a.n; });
+
+  var html = '<div style="font-family:monospace;background:#060d18;color:#c0e8ff;padding:10px 12px;border-radius:4px;min-width:200px;">';
+
+  // Header
+  html += '<div style="font-size:7px;color:#3a6a9a;letter-spacing:1px;margin-bottom:3px;">COLONIA</div>';
+  html += '<div style="font-size:11px;font-weight:900;color:#fff;margin-bottom:2px;">' + col + '</div>';
+  html += '<div style="font-size:14px;font-weight:900;color:' + colorTop + ';margin-bottom:6px;">' + nMostrar.toLocaleString() + ' <span style="font-size:8px;color:#7a9ab8;">establecimientos</span></div>';
+
+  // Barra top cats
+  html += '<div style="font-size:6.5px;color:#3a6a9a;letter-spacing:1px;margin-bottom:4px;">POR SECTOR</div>';
+  catEntries.forEach(function(e) {
+    var c = TCOLORS[e.k] || '#5a8aaa';
+    var lbl = (TLABELS[e.k] || e.k).replace(/[^ -]/g,'').trim().slice(0, 14);
+    html += '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">' +
+      '<span style="width:7px;height:7px;border-radius:1px;background:' + c + ';display:inline-block;flex-shrink:0;"></span>' +
+      '<span style="flex:1;font-size:7px;color:#c0e8ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + lbl + '</span>' +
+      '<div style="width:50px;height:4px;background:#0d2040;border-radius:2px;overflow:hidden;">' +
+        '<div style="height:100%;width:' + e.pct + '%;background:' + c + ';border-radius:2px;"></div>' +
+      '</div>' +
+      '<span style="font-size:6.5px;color:#ffcc00;width:24px;text-align:right;">' + e.pct + '%</span>' +
+      '</div>';
+  });
+
+  // Barra tamaños
+  html += '<div style="font-size:6.5px;color:#3a6a9a;letter-spacing:1px;margin:6px 0 4px;">POR TAMAÑO</div>';
+  tamEntries.forEach(function(e) {
+    var tamColors = { micro:'#1a44dd', pequeño:'#2299ff', mediano:'#44bbff', grande:'#99ddff' };
+    var c = tamColors[e.k] || '#40b0ff';
+    html += '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">' +
+      '<span style="width:7px;height:7px;border-radius:1px;background:' + c + ';display:inline-block;flex-shrink:0;"></span>' +
+      '<span style="flex:1;font-size:7px;color:#c0e8ff;">' + (TAM_LABEL[e.k] || e.k) + '</span>' +
+      '<div style="width:50px;height:4px;background:#0d2040;border-radius:2px;overflow:hidden;">' +
+        '<div style="height:100%;width:' + e.pct + '%;background:' + c + ';border-radius:2px;"></div>' +
+      '</div>' +
+      '<span style="font-size:6.5px;color:#ffcc00;width:24px;text-align:right;">' + e.pct + '%</span>' +
+      '<span style="font-size:6.5px;color:#3a6a9a;width:28px;text-align:right;">' + e.n + '</span>' +
+      '</div>';
+  });
+
+  html += '<div style="margin-top:6px;border-top:1px solid #0d2040;padding-top:5px;font-size:6.5px;color:#3a5a7a;">Acércate (zoom 14+) para ver cada establecimiento</div>';
+  html += '</div>';
+  return html;
+}
+window._renderDenueColonias = _renderDenueColonias;
+
 function renderDenueMapa(extraFn) {
   // Si el choropleth MACRO está activo, no renderizar puntos individuales
   if (window.denueChoroActivo) return;
@@ -106,6 +239,7 @@ function renderDenueMapa(extraFn) {
   // Limpiar capas previas
   if (denueHeatLayer)    { try{ denueMapaObj.removeLayer(denueHeatLayer);    }catch(e){} denueHeatLayer = null; }
   if (denueMarkersLayer) { try{ denueMapaObj.removeLayer(denueMarkersLayer); }catch(e){} denueMarkersLayer = null; }
+  if (typeof _denueColoniasLayer !== 'undefined' && _denueColoniasLayer) { try{ denueMapaObj.removeLayer(_denueColoniasLayer); }catch(e){} _denueColoniasLayer = null; }
 
   var items = DENUE_DATA.filter(function(r) {
     if (denueSizeFiltro > 0 && r[4] < denueSizeFiltro) return false;
@@ -118,21 +252,16 @@ function renderDenueMapa(extraFn) {
   if (items.length === 0) { if (lbl) lbl.textContent = '0 establecimientos encontrados'; return; }
 
   var zoom = denueMapaObj.getZoom();
-  // Auto-switch: zoom >= 15 = markers con popup, zoom < 15 = dots macro sin click
-  var modoEfectivo = 'markers'; // MACRO es choropleth independiente
+  // zoom < 14 → un marcador por colonia (vista macro ligera)
+  // zoom >= 14 → puntos individuales con popup
 
-  if (false) { // bloque dots eliminado
-    // ── MODO MACRO: canvas de puntos agrupados, sin interacción individual ──
-    // Sistema de binning: agrupa establecimientos en celdas de cuadrícula
-    // y dibuja un punto por celda cuyo tamaño y opacidad reflejan densidad local.
-    // Sin popup, sin hover, sin heatmap — solo información visual de distribución.
-    var zoom = denueMapaObj.getZoom();
-    // Tamaño de celda adaptativo: más zoom = más granular
-    var gridSize = zoom >= 14 ? 0.0008
-                 : zoom >= 13 ? 0.0015
-                 : zoom >= 12 ? 0.003
-                 : zoom >= 11 ? 0.005
-                 : 0.008;
+  if (zoom < 14 && !extraFn) {
+    // ── MODO COLONIA: 1 punto por colonia, color del sector dominante, popup con stats ──
+    _renderDenueColonias(items, lbl);
+    return;
+  }
+
+  if (false) { // bloque legacy eliminado
 
     // Agrupar por celda — conservar categoría dominante y conteo
     var celdas = {};

@@ -626,12 +626,15 @@ function denueChoroToggle(mapaLeaflet, btnEl) {
       }
       if (typeof renderDenueMapa === 'function') renderDenueMapa();
     } else {
-      // Limpiar markers individuales DENUE que estuvieran activos
+      // Limpiar markers individuales y de colonia que estuvieran activos
       if (typeof denueHeatLayer !== 'undefined' && denueHeatLayer) {
         try { mapaLeaflet.removeLayer(denueHeatLayer); } catch(e) {} denueHeatLayer = null;
       }
       if (typeof denueMarkersLayer !== 'undefined' && denueMarkersLayer) {
         try { mapaLeaflet.removeLayer(denueMarkersLayer); } catch(e) {} denueMarkersLayer = null;
+      }
+      if (typeof _denueColoniasLayer !== 'undefined' && _denueColoniasLayer) {
+        try { mapaLeaflet.removeLayer(_denueColoniasLayer); } catch(e) {} _denueColoniasLayer = null;
       }
       denueChoroRender(mapaLeaflet);
       denueChoroActivo = true;
