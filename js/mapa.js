@@ -1054,6 +1054,20 @@ function renderMapa() {
     var colorTipo = COLORES_TIPO[tipo] || '#3a5a7a';
     var nId = n.id;
 
+    // Contexto CONEVAL para el popup
+    var geoBadge = '';
+    if (typeof geoLookup === 'function' && typeof GEO !== 'undefined' && GEO.loaded) {
+      var geoCtx = geoLookup(lat, lng);
+      if (geoCtx && geoCtx.rango_pobreza) {
+        var AGEB_C = typeof AGEB_COLORES !== 'undefined' ? AGEB_COLORES : {};
+        var colorInfo = AGEB_C[geoCtx.rango_pobreza] || { fill: '#374151', label: geoCtx.rango_pobreza };
+        geoBadge = '<div style="display:inline-flex;align-items:center;gap:4px;background:' + colorInfo.fill + '22;' +
+          'border:1px solid ' + colorInfo.fill + '55;border-radius:3px;padding:2px 6px;margin-bottom:4px;font-size:7px;color:' + colorInfo.fill + ';font-family:monospace;">' +
+          '<span style="width:6px;height:6px;border-radius:1px;background:' + colorInfo.fill + ';display:inline-block;"></span>' +
+          'Pobreza ' + colorInfo.label + ' · CONEVAL</div>';
+      }
+    }
+
     var popupHtml =
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
         '<div class="mapa-popup-tipo" style="background:' + colorTipo + '22;color:' + colorTipo + ';border:1px solid ' + colorTipo + '44;margin-bottom:0;">' + tipo.toUpperCase() + '</div>' +
@@ -1062,6 +1076,7 @@ function renderMapa() {
           '<button onclick="verDetallesBD(\'' + nId + '\')" style="font-family:\'Orbitron\',monospace;font-size:7px;padding:3px 7px;background:rgba(0,245,255,.15);color:#00f5ff;border:1px solid #00f5ff66;border-radius:2px;cursor:pointer;letter-spacing:1px;">DETALLE &#9654;</button>' +
         '</div>' +
       '</div>' +
+      (geoBadge ? '<div>' + geoBadge + '</div>' : '') +
       '<div class="mapa-popup-tit">' + (n.titulo || 'Sin titulo') + '</div>' +
       '<div class="mapa-popup-meta">' +
         (n.fuente ? '&#128240; ' + n.fuente + '<br>' : '') +

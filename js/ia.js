@@ -469,6 +469,17 @@ function guardarReglasPrompt(rules) {
     .catch(function(e) { console.warn('[Prompt] Error guardando reglas:', e.message); });
 }
 
+// Hook para pasar coordenadas al prompt de IA
+function iaSetGeoContext(lat, lng) {
+  window._iaGeoLat = lat;
+  window._iaGeoLng = lng;
+  // Pre-cargar datos geo si no están listos
+  if (typeof geoCargar === 'function' && !(window.GEO && window.GEO.loaded)) {
+    geoCargar(function() {});
+  }
+}
+window.iaSetGeoContext = iaSetGeoContext;
+
 function buildPrompt(texto) {
   var frag = texto.slice(0, 3000);
   var p = 'Eres extractor de datos estructurados de noticias locales de Irapuato, Guanajuato, Mexico.\n';
@@ -495,6 +506,14 @@ function buildPrompt(texto) {
   p += 'JSON: {"titulo":"SIN CONTENIDO","tipo":"rumor","calle1":"","calle2":"","colonia":"","comunidad":"","nombres":"","resumen":"El texto capturado no contiene una noticia valida.","fecha_evento":"","tiempo_dia":"desconocido","lat":20.6795,"lng":-101.354,"confianza":"baja"}\n\n';
   p += 'TEXTO: "Localizan cuerpo en el Trebol del Libramiento Sur. Irapuato, Gto. El cuerpo de una mujer sin vida fue localizado en la avenida Insurgentes, a la altura del Trebol del Libramiento Sur, a metros del reten de la Guardia Nacional, la tarde del martes 3 de marzo."\n';
   p += 'JSON: {"titulo":"Hallan cuerpo de mujer con huellas de violencia en Av. Insurgentes","tipo":"seguridad","calle1":"Avenida Insurgentes","calle2":"Trebol del Libramiento Sur","colonia":"","comunidad":"","nombres":"","resumen":"El cuerpo de una mujer sin vida fue encontrado en un baldio de Av. Insurgentes, a metros del reten de la Guardia Nacional. Paramédicos confirmaron ausencia de signos vitales y el cuerpo presentaba huellas de violencia. La FGE inicio investigacion.","fecha_evento":"03/03/2026","tiempo_dia":"tarde","lat":20.65,"lng":-101.37,"confianza":"alta"}\n\n';
+  // Inyectar contexto territorial CONEVAL si geo.js está disponible
+  if (typeof geoTextoParaIA === 'function' && window._iaGeoLat && window._iaGeoLng) {
+    var geoCtx = geoTextoParaIA(window._iaGeoLat, window._iaGeoLng);
+    if (geoCtx) {
+      p += 'CONTEXTO TERRITORIAL DE LA ZONA DEL EVENTO: ' + geoCtx + '\n';
+      p += 'Usa este contexto para enriquecer el análisis y resumen si es relevante.\n\n';
+    }
+  }
   p += 'TEXTO A ANALIZAR:\n' + frag + '\n\nJSON:';
 
   // Inyectar reglas de aprendizaje automático si existen
