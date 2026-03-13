@@ -154,6 +154,11 @@
         <div style="font-family:var(--title);font-size:8px;color:#b060ff;letter-spacing:1px;margin-bottom:8px;">// CORRECCIONES RECIENTES</div>
         <div id="apr-lista" style="display:flex;flex-direction:column;gap:6px;"></div>
 
+        <!-- Calles aprendidas -->
+        <div style="font-family:var(--title);font-size:8px;color:#00c864;letter-spacing:1px;margin-top:14px;margin-bottom:8px;">// GEO-BASE · CALLES APRENDIDAS</div>
+        <div style="font-size:7px;color:#2a4a6a;margin-bottom:8px;">Calles y colonias confirmadas por el operador. Se enriquecen automáticamente al aprobar noticias geolocalizadas.</div>
+        <div id="apr-calles"></div>
+
         <!-- Modal prompt sugerido -->
         <div id="apr-prompt-modal" style="display:none;background:#030810;border:1px solid #b060ff44;border-radius:4px;padding:12px;margin-top:12px;">
           <div style="font-family:var(--title);font-size:8px;color:#b060ff;margin-bottom:8px;">// PROMPT AJUSTADO BASADO EN TUS CORRECCIONES</div>
@@ -165,62 +170,83 @@
       </div>
     </div>
 
-    <!-- ═══════════ BASE DE DATOS ═══════════ -->
+    <!-- ═══════════ BASE DE DATOS (BD) con sub-tabs ═══════════ -->
     <div id="sec-bd" class="seccion">
-      <div class="sec-header">// BASE DE DATOS — <span>NOTICIAS APROBADAS</span></div>
-
-      <div class="bd-stats">
-        <div class="bd-stat tot">
-          <div class="bd-stat-n" id="stat-tot">0</div>
-          <div class="bd-stat-l">TOTAL</div>
-        </div>
-        <div class="bd-stat seg">
-          <div class="bd-stat-n" id="stat-seg">0</div>
-          <div class="bd-stat-l">SEGURIDAD</div>
-        </div>
-        <div class="bd-stat acc">
-          <div class="bd-stat-n" id="stat-acc">0</div>
-          <div class="bd-stat-l">ACCIDENTE</div>
-        </div>
-        <div class="bd-stat eve">
-          <div class="bd-stat-n" id="stat-eve">0</div>
-          <div class="bd-stat-l">EVENTO</div>
-        </div>
+      <!-- Sub-tabs BD -->
+      <div id="bd-subtabs" style="display:flex;background:#060d18;border-bottom:2px solid #0d2040;flex-shrink:0;">
+        <button class="bd-stab activo" id="bd-stab-corpus" onclick="verBDSubtab('corpus')">🗄 CORPUS</button>
+        <button class="bd-stab" id="bd-stab-data" onclick="verBDSubtab('data')">📊 DATA</button>
       </div>
 
-      <div class="bd-filtros">
-        <button class="filtro-btn sel" onclick="filtrarBD('todos',this)">TODOS</button>
-        <button class="filtro-btn" onclick="filtrarBD('seguridad',this)">SEGURIDAD</button>
-        <button class="filtro-btn" onclick="filtrarBD('accidente',this)">ACCIDENTE</button>
-        <button class="filtro-btn" onclick="filtrarBD('evento',this)">EVENTO</button>
-        <button class="filtro-btn" onclick="filtrarBD('rumor',this)">RUMOR</button>
-        <button class="filtro-btn" onclick="filtrarBD('desaparecido',this)">DESAPARECIDO</button>
-        <button class="filtro-btn" onclick="filtrarBD('gobierno',this)">GOBIERNO</button>
-        <button class="filtro-btn" onclick="filtrarBD('politica',this)">POLÍTICA</button>
-        <button class="filtro-btn" onclick="filtrarBD('salud',this)">SALUD</button>
-        <button class="filtro-btn" onclick="filtrarBD('transporte',this)">TRANSPORTE</button>
-        <button class="filtro-btn" onclick="filtrarBD('ambiental',this)">AMBIENTAL</button>
-        <button class="filtro-btn" onclick="filtrarBD('corrupcion',this)">CORRUPCIÓN</button>
-        <button class="filtro-btn" onclick="filtrarBD('crimen_organizado',this)">C.ORGANIZADO</button>
-      </div>
+      <!-- ── Subpestaña CORPUS ── -->
+      <div id="bd-corpus" style="display:block;">
+        <div class="sec-header">// CORPUS — <span>NOTICIAS APROBADAS</span></div>
 
-      <!-- Controles de ordenamiento -->
-      <div style="display:flex;align-items:center;gap:6px;padding:6px 0 4px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:4px;">
-        <span style="font-family:var(--title);font-size:6px;color:var(--muted);letter-spacing:1px;white-space:nowrap;">&#9650; ORDENAR:</span>
-        <button class="bd-orden-btn activo" id="orden-captura" onclick="ordenarBD('captura',this)">&#128197; CAPTURA</button>
-        <button class="bd-orden-btn" id="orden-suceso" onclick="ordenarBD('suceso',this)">&#9201; SUCESO</button>
-        <button class="bd-orden-btn" id="orden-confianza" onclick="ordenarBD('confianza',this)">&#9650; CONFIANZA</button>
-        <span id="bd-orden-label" style="margin-left:auto;font-size:7px;color:#3a7ab8;font-family:var(--mono);">fecha captura &#8595;</span>
-      </div>
-
-      <div id="lista-bd">
-        <div class="vacio">
-          <div class="vacio-ico">🗄</div>
-          Aún no hay noticias aprobadas.<br>
-          Analiza y aprueba desde las otras secciones.
+        <div class="bd-stats">
+          <div class="bd-stat tot">
+            <div class="bd-stat-n" id="stat-tot">0</div>
+            <div class="bd-stat-l">TOTAL</div>
+          </div>
+          <div class="bd-stat seg">
+            <div class="bd-stat-n" id="stat-seg">0</div>
+            <div class="bd-stat-l">SEGURIDAD</div>
+          </div>
+          <div class="bd-stat acc">
+            <div class="bd-stat-n" id="stat-acc">0</div>
+            <div class="bd-stat-l">ACCIDENTE</div>
+          </div>
+          <div class="bd-stat eve">
+            <div class="bd-stat-n" id="stat-eve">0</div>
+            <div class="bd-stat-l">EVENTO</div>
+          </div>
         </div>
-      </div>
-    </div>
+
+        <div class="bd-filtros">
+          <button class="filtro-btn sel" onclick="filtrarBD('todos',this)">TODOS</button>
+          <button class="filtro-btn" onclick="filtrarBD('seguridad',this)">SEGURIDAD</button>
+          <button class="filtro-btn" onclick="filtrarBD('accidente',this)">ACCIDENTE</button>
+          <button class="filtro-btn" onclick="filtrarBD('evento',this)">EVENTO</button>
+          <button class="filtro-btn" onclick="filtrarBD('rumor',this)">RUMOR</button>
+          <button class="filtro-btn" onclick="filtrarBD('desaparecido',this)">DESAPARECIDO</button>
+          <button class="filtro-btn" onclick="filtrarBD('gobierno',this)">GOBIERNO</button>
+          <button class="filtro-btn" onclick="filtrarBD('politica',this)">POLÍTICA</button>
+          <button class="filtro-btn" onclick="filtrarBD('salud',this)">SALUD</button>
+          <button class="filtro-btn" onclick="filtrarBD('transporte',this)">TRANSPORTE</button>
+          <button class="filtro-btn" onclick="filtrarBD('ambiental',this)">AMBIENTAL</button>
+          <button class="filtro-btn" onclick="filtrarBD('corrupcion',this)">CORRUPCIÓN</button>
+          <button class="filtro-btn" onclick="filtrarBD('crimen_organizado',this)">C.ORGANIZADO</button>
+        </div>
+
+        <!-- Controles de ordenamiento -->
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 0 4px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:4px;">
+          <span style="font-family:var(--title);font-size:6px;color:var(--muted);letter-spacing:1px;white-space:nowrap;">&#9650; ORDENAR:</span>
+          <button class="bd-orden-btn activo" id="orden-captura" onclick="ordenarBD('captura',this)">&#128197; CAPTURA</button>
+          <button class="bd-orden-btn" id="orden-suceso" onclick="ordenarBD('suceso',this)">&#9201; SUCESO</button>
+          <button class="bd-orden-btn" id="orden-confianza" onclick="ordenarBD('confianza',this)">&#9650; CONFIANZA</button>
+          <span id="bd-orden-label" style="margin-left:auto;font-size:7px;color:#3a7ab8;font-family:var(--mono);">fecha captura &#8595;</span>
+        </div>
+
+        <div id="lista-bd">
+          <div class="vacio">
+            <div class="vacio-ico">🗄</div>
+            Aún no hay noticias aprobadas.<br>
+            Analiza y aprueba desde las otras secciones.
+          </div>
+        </div>
+      </div><!-- /bd-corpus -->
+
+      <!-- ── Subpestaña DATA ── -->
+      <div id="bd-data" style="display:none;padding:12px;">
+        <div class="sec-header" style="margin:-12px -12px 12px;">// DATA — <span>ANÁLISIS DEL CORPUS</span></div>
+        <!-- El contenido es renderizado por data.js -->
+        <div id="data-contenedor">
+          <div style="text-align:center;padding:30px 0;color:#2a4a6a;font-family:var(--mono);font-size:8px;">
+            Cargando análisis...
+          </div>
+        </div>
+      </div><!-- /bd-data -->
+
+    </div><!-- /sec-bd -->
 
   </div><!-- /panel -->
 
@@ -393,23 +419,19 @@
       </a>
     </div>
 
-    <!-- Selector de fuente -->
-    <div>
-      <div style="font-family:'Orbitron',monospace;font-size:7px;color:#2a4a6a;letter-spacing:1px;margin-bottom:6px;">// FUENTE</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;" id="fb-fuentes">
-        <div class="fuente-opt sel" onclick="selFuenteFB(this,'Tinta Negra FB')">Tinta Negra</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'Gerardo Hernandez')">Gerardo H.</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'TV Consecuencias')">TV Consec.</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'El Pena')">El Pena</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'Irapuato Despierta')">Ira Despierta</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'Noticias al Momento')">Al Momento</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'Opinion Bajio')">Opinion Bajio</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'Noticias Irapuato')">Noticias Ira</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'Contacto Noticias')">Contacto</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'Hermoso Irapuato')">Hermoso Ira</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'Irapuato Alerta')">Ira Alerta</div>
-        <div class="fuente-opt" onclick="selFuenteFB(this,'Ciudadano')">Ciudadano</div>
-      </div>
+    <!-- Campo autocomplete de fuente con Firebase -->
+    <div style="position:relative;">
+      <div style="font-family:'Orbitron',monospace;font-size:7px;color:#2a4a6a;letter-spacing:1px;margin-bottom:6px;">// FUENTE <span style="color:#3a5a7a;font-size:6px;">(escribe para buscar o agregar nueva)</span></div>
+      <input
+        id="fb-fuente-input"
+        type="text"
+        autocomplete="off"
+        placeholder="Ej: Irapuato Alerta, Gerardo Hernandez..."
+        oninput="onFuenteFBInput(this)"
+        onblur="setTimeout(function(){var l=document.getElementById('fb-fuente-lista');if(l)l.style.display='none';},200)"
+        style="width:100%;background:#020810;border:1px solid #1877f2;color:#c0e8ff;font-family:'Share Tech Mono',monospace;font-size:10px;padding:9px 12px;border-radius:3px;box-sizing:border-box;outline:none;"
+      />
+      <div id="fb-fuente-lista" style="display:none;position:absolute;left:0;right:0;top:100%;background:#060d18;border:1px solid #1877f244;border-top:none;border-radius:0 0 4px 4px;z-index:999;max-height:180px;overflow-y:auto;"></div>
     </div>
 
     <!-- Textarea -->
@@ -722,6 +744,7 @@ function simpleheat(canvas){if(!(this instanceof simpleheat)){return new simpleh
 <script src="js/intel.js" defer></script>
 <script src="js/rss.js" defer></script>
 <script src="js/mapa.js" defer></script>
+<script src="js/data.js" defer></script>
 <script src="js/app.js" defer></script>
 
 </body>
