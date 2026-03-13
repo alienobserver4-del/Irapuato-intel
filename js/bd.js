@@ -26,6 +26,7 @@ function escucharBD() {
       if (typeof analisisInvalidar === 'function') analisisInvalidar();
       renderBD();
       actualizarBadge();
+      if (typeof dataOnNoticiasCambiaron === 'function') dataOnNoticiasCambiaron();
       if (mapaIniciado) renderMapa();
       if (intelIniciado) renderIntel();
       if (gobMapaIniciado) renderGobMapaMarkers();
@@ -205,10 +206,15 @@ function analizarConIA(id, texto, fuente, link) {
     var card = document.getElementById(id);
     if (card) {
       card.dataset.lat = r.lat || 20.6795;
+      // Campos lingüísticos de la IA (para subpestaña Data)
+      if (r.tematica)   card.dataset.tematica   = JSON.stringify(r.tematica   || []);
+      if (r.sustantivos) card.dataset.sustantivos = JSON.stringify(r.sustantivos || []);
+      if (r.verbos)     card.dataset.verbos     = JSON.stringify(r.verbos     || []);
       card.dataset.lng = r.lng || -101.3540;
       card.dataset.colonia = r.colonia || '';
       card.dataset.confianza = r.confianza || 'baja';
       // Guardar snapshot completo de lo que propuso la IA
+      card.dataset.texto_original = texto || '';
       card.dataset.ia_raw = JSON.stringify({
         titulo: r.titulo || '',
         tipo: r.tipo || 'rumor',
@@ -225,6 +231,10 @@ function analizarConIA(id, texto, fuente, link) {
         lat: r.lat || 20.6795,
         lng: r.lng || -101.3540
       });
+      // Guardar campos lingüísticos para Data tab
+      if (r.tematica)   card.dataset.ia_tematica   = JSON.stringify(r.tematica);
+      if (r.verbos)     card.dataset.ia_verbos      = JSON.stringify(r.verbos);
+      if (r.sustantivos) card.dataset.ia_sustantivos = JSON.stringify(r.sustantivos);
     }
 
     // Mostrar edicion automaticamente
@@ -319,6 +329,10 @@ function aprobarCard(id, fuente, link) {
     confianza: card.dataset.confianza || 'baja',
     score_veracidad: (fuente === 'El Sol - Policiaca' || fuente === 'El Sol - Local' || fuente === 'AM Irapuato' || fuente === 'Periódico Correo' || fuente === 'Tinta Negra — Irapuato') ? 0.9 : (fuente === 'Ciudadano' ? 0.5 : 0.7),
     fechaCaptura: fechaCaptura,
+    texto_original: (card && card.dataset.texto_original) ? card.dataset.texto_original : '',
+    tematica:    (card && card.dataset.tematica)    ? JSON.parse(card.dataset.tematica    || '[]') : [],
+    sustantivos: (card && card.dataset.sustantivos) ? JSON.parse(card.dataset.sustantivos || '[]') : [],
+    verbos:      (card && card.dataset.verbos)      ? JSON.parse(card.dataset.verbos      || '[]') : [],
     viaIA: true,
     ts: Date.now(),
     fechaGuardado: firebase.firestore.FieldValue.serverTimestamp(),
@@ -326,7 +340,16 @@ function aprobarCard(id, fuente, link) {
     ia_raw: ia_raw || null,
     usuario_aprobacion: usuario_aprobacion,
     aprendizaje_diff: diff,
-    aprendizaje_campos_corregidos: Object.keys(diff)
+    aprendizaje_campos_corregidos: Object.keys(diff),
+    // Texto completo original para análisis lingüístico (Data tab)
+    texto_original: (function() {
+      var c = document.getElementById(id);
+      return c ? (c.dataset.texto || '') : '';
+    })(),
+    // Campos lingüísticos generados por IA
+    tematica:    (function() { try { var c=document.getElementById(id); return c&&c.dataset.ia_tematica ? JSON.parse(c.dataset.ia_tematica) : []; } catch(e){ return []; } })(),
+    verbos:      (function() { try { var c=document.getElementById(id); return c&&c.dataset.ia_verbos ? JSON.parse(c.dataset.ia_verbos) : []; } catch(e){ return []; } })(),
+    sustantivos: (function() { try { var c=document.getElementById(id); return c&&c.dataset.ia_sustantivos ? JSON.parse(c.dataset.ia_sustantivos) : []; } catch(e){ return []; } })()
   };
 
   if (db) {
@@ -1265,6 +1288,9 @@ function renderAprendizaje() {
   var listaEl = document.getElementById('apr-lista');
   if (listaEl) {
     var conDiff = _aprData.filter(function(d){ return Object.keys(d.aprendizaje_diff||{}).length > 0; });
+    // ── Sección de calles enriquecidas por el sistema de aprendizaje ──
+    _renderCallesAprende();
+
     if (conDiff.length === 0) {
       listaEl.innerHTML = '<div style="color:#2a4a6a;font-size:8px;padding:10px 0;">Sin correcciones registradas aún. Aprueba y edita algunas noticias para comenzar.</div>';
     } else {
@@ -1297,6 +1323,43 @@ function renderAprendizaje() {
     }
   }
 }
+
+// ── Render calles en pestaña Aprende ──
+function _renderCallesAprende() {
+  var el = document.getElementById('apr-calles');
+  if (!el) return;
+  if (!db) return;
+  // Leer base de calles geo-irapuato
+  db.collection('geo-irapuato').orderBy('veces', 'desc').limit(50).get()
+    .then(function(snap) {
+      if (snap.empty) {
+        el.innerHTML = '<div style="font-size:8px;color:#2a4a6a;">Sin datos de calles aún. Se llena conforme se aprueban noticias geolocalizadas.</div>';
+        return;
+      }
+      var rows = [];
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        rows.push(d);
+      });
+      el.innerHTML = '<div style="font-family:var(--mono);font-size:7px;color:#3a6a9a;letter-spacing:1px;margin-bottom:6px;">GEO-BASE · ' + rows.length + ' entradas aprendidas</div>' +
+        '<div style="display:flex;flex-direction:column;gap:4px;">' +
+        rows.map(function(r) {
+          return '<div style="background:#060d18;border:1px solid #0d2040;border-left:3px solid #00c864;border-radius:3px;padding:6px 10px;display:flex;gap:8px;align-items:center;">' +
+            '<div style="flex:1;">' +
+              '<div style="font-size:8px;color:#c0e8ff;">' + (r.calle||'–') + (r.colonia ? ' · ' + r.colonia : '') + '</div>' +
+              (r.comunidad ? '<div style="font-size:7px;color:#3a6a9a;">' + r.comunidad + '</div>' : '') +
+              '<div style="font-size:7px;color:#2a6a4a;">📍 ' + (r.lat ? r.lat.toFixed(5) : '–') + ', ' + (r.lng ? r.lng.toFixed(5) : '–') + '</div>' +
+            '</div>' +
+            '<div style="font-family:var(--title);font-size:9px;color:#00c864;font-weight:700;">' + (r.veces || r.hits || 1) + 'x</div>' +
+          '</div>';
+        }).join('') +
+        '</div>';
+    })
+    .catch(function(e) {
+      el.innerHTML = '<div style="font-size:8px;color:#ff4466;">Error: ' + e.message + '</div>';
+    });
+}
+window._renderCallesAprende = _renderCallesAprende;
 
 function mkStatBox(label, val, color) {
   return '<div style="background:#060d18;border:1px solid ' + color + '33;border-radius:4px;padding:10px;text-align:center;">' +

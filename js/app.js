@@ -112,6 +112,20 @@ function verTab(cual) {
 
 window.verTab = verTab;
 
+// ── Sub-tabs de BD (Corpus / Data) ──
+function verBDSubtab(cual) {
+  ['corpus','data'].forEach(function(s) {
+    var el = document.getElementById('bd-' + s);
+    var btn = document.getElementById('bd-stab-' + s);
+    if (el)  el.style.display  = (s === cual) ? 'block' : 'none';
+    if (btn) btn.classList.toggle('activo', s === cual);
+  });
+  if (cual === 'data' && typeof iniciarData === 'function') {
+    iniciarData();
+  }
+}
+window.verBDSubtab = verBDSubtab;
+
 // ═══════════════════════════════════════════════════════════════
 // TOAST
 // ═══════════════════════════════════════════════════════════════
@@ -127,49 +141,147 @@ function toast(msg, tipo) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// MODAL FACEBOOK
+// MODAL FACEBOOK — con sistema de fuentes predictivo (Firebase)
 // ═══════════════════════════════════════════════════════════════
-var fuenteFB = 'Tinta Negra FB';
+var fuenteFB = '';
+var _fuentesFB = []; // caché local de fuentes
 var makeWebhookURL = '';
 try { makeWebhookURL = localStorage.getItem('make_webhook') || ''; } catch(e) {}
 
+// Fuentes semilla — se migran a Firebase en primera carga
+var _FUENTES_SEMILLA = [
+  'Tinta Negra FB','Gerardo Hernandez','TV Consecuencias','El Pena',
+  'Irapuato Despierta','Noticias al Momento','Opinion Bajio','Noticias Irapuato',
+  'Contacto Noticias','Hermoso Irapuato','Irapuato Alerta','Ciudadano'
+];
+
+// Normalizar nombre: quitar acentos, minúsculas, trim — para deduplicación
+function _normFuente(s) {
+  return (s || '').toLowerCase().trim()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+// Cargar fuentes desde Firebase (colección 'fuentes-fb')
+function cargarFuentesFB() {
+  if (!db) return;
+  db.collection('fuentes-fb').orderBy('veces', 'desc').limit(200).get()
+    .then(function(snap) {
+      var arr = [];
+      snap.forEach(function(doc) { arr.push(doc.data().nombre); });
+      // Si Firebase está vacío, sembrar con fuentes semilla
+      if (arr.length === 0) {
+        _sembrarFuentesFB();
+        _fuentesFB = _FUENTES_SEMILLA.slice();
+      } else {
+        _fuentesFB = arr;
+      }
+    })
+    .catch(function() { _fuentesFB = _FUENTES_SEMILLA.slice(); });
+}
+
+function _sembrarFuentesFB() {
+  if (!db) return;
+  var batch = db.batch();
+  _FUENTES_SEMILLA.forEach(function(nombre) {
+    var key = _normFuente(nombre).replace(/[^a-z0-9]/g, '-').slice(0, 60);
+    batch.set(db.collection('fuentes-fb').doc(key), {
+      nombre: nombre,
+      clave: key,
+      veces: 1,
+      creada: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  });
+  batch.commit().catch(function(){});
+}
+
+// Guardar o incrementar una fuente en Firebase (deduplicada por clave normalizada)
+function guardarFuenteFBEnFirebase(nombre) {
+  if (!db || !nombre.trim()) return;
+  var clave = _normFuente(nombre).replace(/[^a-z0-9]/g, '-').slice(0, 60);
+  // Buscar si ya existe con distinto capitalizado
+  var existe = _fuentesFB.find(function(f){ return _normFuente(f) === _normFuente(nombre); });
+  var nombreFinal = existe || nombre.trim();
+  // Actualizar caché local
+  if (!existe) _fuentesFB.unshift(nombreFinal);
+  db.collection('fuentes-fb').doc(clave).set({
+    nombre: nombreFinal,
+    clave: clave,
+    veces: firebase.firestore.FieldValue.increment(1),
+    ultima: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true }).catch(function(){});
+}
+
+// Autocompletar en el campo de fuente FB
+function onFuenteFBInput(input) {
+  var q = input.value.trim();
+  fuenteFB = q;
+  var lista = document.getElementById('fb-fuente-lista');
+  if (!lista) return;
+  if (q.length < 1) { lista.style.display = 'none'; return; }
+  var qNorm = _normFuente(q);
+  var matches = _fuentesFB.filter(function(f) {
+    return _normFuente(f).indexOf(qNorm) !== -1;
+  }).slice(0, 8);
+  if (matches.length === 0) { lista.style.display = 'none'; return; }
+  lista.innerHTML = matches.map(function(f) {
+    return '<div class="fb-sugg-item" onmousedown="seleccionarFuenteFB(\'' + f.replace(/'/g,"\\'") + '\')">' + f + '</div>';
+  }).join('');
+  lista.style.display = 'block';
+}
+window.onFuenteFBInput = onFuenteFBInput;
+
+function seleccionarFuenteFB(nombre) {
+  fuenteFB = nombre;
+  var inp = document.getElementById('fb-fuente-input');
+  if (inp) inp.value = nombre;
+  var lista = document.getElementById('fb-fuente-lista');
+  if (lista) lista.style.display = 'none';
+}
+window.seleccionarFuenteFB = seleccionarFuenteFB;
+
 function abrirFacebook() {
+  cargarFuentesFB();
   var modal = document.getElementById('fb-modal');
   modal.style.display = 'flex';
-  // Mostrar webhook guardado si existe
   if (makeWebhookURL) {
     document.getElementById('make-webhook-url').value = makeWebhookURL;
     document.getElementById('make-status').textContent = 'Configurado ✓';
     document.getElementById('make-status').style.color = '#00ff88';
   }
+  // Resetear campo de fuente
+  var inp = document.getElementById('fb-fuente-input');
+  if (inp) inp.value = fuenteFB || '';
 }
 window.abrirFacebook = abrirFacebook;
 
 function cerrarFB() {
   document.getElementById('fb-modal').style.display = 'none';
   document.getElementById('fb-resultado').innerHTML = '';
+  var lista = document.getElementById('fb-fuente-lista');
+  if (lista) lista.style.display = 'none';
 }
 window.cerrarFB = cerrarFB;
 
-function selFuenteFB(el, nombre) {
-  fuenteFB = nombre;
-  var opts = document.querySelectorAll('#fb-fuentes .fuente-opt');
-  for (var i = 0; i < opts.length; i++) opts[i].classList.remove('sel');
-  el.classList.add('sel');
-}
+// Mantener compatibilidad (botones viejos ya no existen pero por si acaso)
+function selFuenteFB(el, nombre) { seleccionarFuenteFB(nombre); }
 window.selFuenteFB = selFuenteFB;
 
 function analizarFB() {
   var texto = document.getElementById('fb-texto').value.trim();
   if (!texto) { toast('Pega el texto de la publicacion primero', 'err'); return; }
-  var url = document.getElementById('fb-url').value.trim();
-  var fuente = fuenteFB;
+  // Tomar fuente del input
+  var inp = document.getElementById('fb-fuente-input');
+  var fuente = (inp ? inp.value.trim() : fuenteFB) || 'Facebook';
+  fuenteFB = fuente;
+  // Guardar/incrementar en Firebase
+  guardarFuenteFBEnFirebase(fuente);
 
-  // Cerrar modal y mandar al feed RSS igual que las demás noticias
+  var url = document.getElementById('fb-url').value.trim();
+
   cerrarFB();
   verTab('noticias');
 
-  // Crear tarjeta en el feed igual que RSS
   var item = {
     titulo: texto.slice(0, 100),
     desc: texto,
@@ -181,7 +293,6 @@ function analizarFB() {
   var card = crearTarjetaRSS(item);
   lista.insertBefore(card, lista.firstChild);
 
-  // Analizar con IA exactamente igual que las demás tarjetas
   toast('Analizando con IA...', 'ok');
   analizarConIA(card.id, texto, fuente, url);
 }
