@@ -47,7 +47,7 @@ function iniciarDenue() {
   }
   _denueBindZoom();
   renderDenueCatBtns();
-  cargarDenue(function() { renderDenueMapa(); });
+  cargarDenue(function() { if (!window.denueChoroActivo) renderDenueMapa(); });
 }
 
 function renderDenueCatBtns() {
@@ -100,6 +100,8 @@ function denueSearch(q) {
 window.denueSearch = denueSearch;
 
 function renderDenueMapa(extraFn) {
+  // Si el choropleth MACRO está activo, no renderizar puntos individuales
+  if (window.denueChoroActivo) return;
   if (!denueMapaObj || !DENUE_DATA) return;
   // Limpiar capas previas
   if (denueHeatLayer)    { try{ denueMapaObj.removeLayer(denueHeatLayer);    }catch(e){} denueHeatLayer = null; }

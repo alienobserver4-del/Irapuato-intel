@@ -618,8 +618,21 @@ function denueChoroToggle(mapaLeaflet, btnEl) {
       denueChoroActivo = false;
       if (btnEl) { btnEl.textContent = '🔵 MACRO'; btnEl.classList.remove('on'); }
       var lbl = document.getElementById('denue-modo-label');
-      if (lbl) lbl.textContent = 'MACRO desactivado';
+      if (lbl) lbl.textContent = 'MARKERS · detalle';
+      // Limpiar cualquier capa de markers residual y re-renderizar puntos normales
+      if (typeof denueMarkersLayer !== 'undefined' && denueMarkersLayer) {
+        try { mapaLeaflet.removeLayer(denueMarkersLayer); } catch(e) {}
+        denueMarkersLayer = null;
+      }
+      if (typeof renderDenueMapa === 'function') renderDenueMapa();
     } else {
+      // Limpiar markers individuales DENUE que estuvieran activos
+      if (typeof denueHeatLayer !== 'undefined' && denueHeatLayer) {
+        try { mapaLeaflet.removeLayer(denueHeatLayer); } catch(e) {} denueHeatLayer = null;
+      }
+      if (typeof denueMarkersLayer !== 'undefined' && denueMarkersLayer) {
+        try { mapaLeaflet.removeLayer(denueMarkersLayer); } catch(e) {} denueMarkersLayer = null;
+      }
       denueChoroRender(mapaLeaflet);
       denueChoroActivo = true;
       if (btnEl) { btnEl.textContent = '🔵 MACRO ON'; btnEl.classList.add('on'); }
