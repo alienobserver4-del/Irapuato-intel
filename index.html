@@ -469,7 +469,7 @@
     <div style="display:flex;gap:6px;align-items:center;padding:5px 10px;background:#040c18;border-bottom:1px solid #0a1a2a;flex-shrink:0;">
       <input class="denue-search-input" id="denue-search" type="text" placeholder="🔍 Buscar negocio o actividad..." oninput="denueSearch(this.value)">
       <button class="denue-search-btn" onclick="denueSearch(document.getElementById('denue-search').value)">BUSCAR</button>
-      <button class="denue-modo-btn on" id="denue-modo-btn" onclick="toggleDenueModo()">🔵 MACRO</button>
+      <button class="denue-modo-btn on" id="denue-modo-btn" onclick="denueChoroToggle(denueMapaObj, this)">🔵 MACRO</button>
       <button class="mapa-heat-btn" id="denue-btn-ageb" onclick="geoToggleAgebs(denueMapaObj,this)">📊 POBREZA</button>
     </div>
     <!-- filtros categoría -->
