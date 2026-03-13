@@ -592,10 +592,8 @@ function _renderBDImpl() {
       '</div>';
 
     div.innerHTML =
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">' +
-        '<button style="padding:8px;font-family:var(--title);font-size:8px;font-weight:700;background:rgba(0,200,255,.1);color:#00c8ff;border:1px solid #00c8ff;border-radius:3px;cursor:pointer;" onclick="editarBD(\'' + n.id + '\')">EDITAR</button>' +
-        '<button style="padding:8px;font-family:var(--title);font-size:8px;font-weight:700;background:rgba(255,50,50,.1);color:#ff5050;border:1px solid #ff5050;border-radius:3px;cursor:pointer;" onclick="eliminarBD(\'' + n.id + '\')">ELIMINAR</button>' +
-      '</div>' +
+        // botones EDITAR/ELIMINAR movidos al footer de la tarjeta
+    
       '<span class="bd-tipo ' + (n.tipo||'rumor') + '">' + (n.tipo||'rumor').toUpperCase() + '</span>' +
       (n.tipo2 ? ' <span class="bd-tipo ' + n.tipo2 + '" style="margin-left:4px;opacity:.7;">' + n.tipo2.toUpperCase() + '</span>' : '') +
       (n.tiempo_dia && n.tiempo_dia !== 'desconocido' ? ' <span class="bd-tiempo ' + n.tiempo_dia + '">' + n.tiempo_dia.toUpperCase() + '</span>' : '') +
@@ -621,7 +619,7 @@ function _renderBDImpl() {
           '</div>'
         : '') +
       '</div>' +
-      '<div id="bd-edit-' + n.id + '" style="display:none;margin-top:8px;border-top:1px solid #0d2040;padding-top:8px;">' +
+      '<div style="margin-top:6px;display:flex;gap:4px;align-items:center;padding-top:6px;border-top:1px solid #0a1828;">' + '<button id="bde-toggle-' + n.id + '" onclick="editarBD(\'' + n.id + '\')" style="padding:3px 9px;font-family:var(--title);font-size:6.5px;font-weight:700;letter-spacing:.5px;border-radius:3px;cursor:pointer;border:1px solid #00c8ff55;background:rgba(0,200,255,.08);color:#00c8ff;">✏ EDITAR</button>' + '<button onclick="eliminarBD(\'' + n.id + '\')" style="padding:3px 9px;font-family:var(--title);font-size:6.5px;font-weight:700;letter-spacing:.5px;border-radius:3px;cursor:pointer;border:1px solid #ff505055;background:rgba(255,80,80,.08);color:#ff5050;">🗑 ELIMINAR</button>' + '</div>' + '<div id="bd-edit-' + n.id + '" style="display:none;margin-top:8px;border-top:1px solid #0d2040;padding-top:8px;">' +
         '<select id="bde-tipo-' + n.id + '" class="nc-select" style="margin-bottom:4px;">' +
           '<option value="seguridad"' + (n.tipo==='seguridad'?' selected':'') + '>Seguridad</option>' +
           '<option value="accidente"' + (n.tipo==='accidente'?' selected':'') + '>Accidente</option>' +
@@ -894,8 +892,15 @@ window.cerrarModalBDBtn = cerrarModalBDBtn;
 
 function editarBD(id) {
   var panel = document.getElementById('bd-edit-' + id);
+  var btn   = document.getElementById('bde-toggle-' + id);
   if (!panel) return;
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  var open = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  if (btn) btn.textContent = open ? '✕ CERRAR' : '✏ EDITAR';
+  if (btn) btn.style.color  = open ? '#ff8800' : '#00c8ff';
+  if (btn) btn.style.borderColor = open ? '#ff880055' : '#00c8ff55';
+  if (btn) btn.style.background  = open ? 'rgba(255,136,0,.08)' : 'rgba(0,200,255,.08)';
+  if (open) { setTimeout(function(){ panel.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 80); }
 }
 window.editarBD = editarBD;
 

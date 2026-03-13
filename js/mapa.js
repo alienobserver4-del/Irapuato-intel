@@ -111,6 +111,85 @@ function _cargarDenueColonias(callback) {
     .catch(function() { DENUE_COLONIAS = { colonias: {} }; callback(); });
 }
 
+
+// ── MODO ZONA: nivel más lejano — 7 grandes zonas de Irapuato ──
+// Cada zona es un cluster geográfico de colonias con un centro y radio aproximado
+var _DENUE_ZONAS = [
+  { nombre: 'Centro Histórico',  lat: 20.6795, lng: -101.3540, radio: 1.5 },
+  { nombre: 'Zona Norte',        lat: 20.7050, lng: -101.3540, radio: 2.2 },
+  { nombre: 'Zona Sur',          lat: 20.6520, lng: -101.3540, radio: 2.2 },
+  { nombre: 'Zona Oriente',      lat: 20.6795, lng: -101.3200, radio: 2.0 },
+  { nombre: 'Zona Poniente',     lat: 20.6795, lng: -101.3900, radio: 2.0 },
+  { nombre: 'Corredor Industrial',lat: 20.6900, lng: -101.4200, radio: 2.5 },
+  { nombre: 'Periférico Sur',    lat: 20.6350, lng: -101.3700, radio: 2.5 }
+];
+
+function _distKm(lat1, lng1, lat2, lng2) {
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLng = (lng2 - lng1) * Math.PI / 180 * Math.cos(lat1 * Math.PI / 180);
+  return Math.sqrt(dLat*dLat + dLng*dLng) * 111;
+}
+
+function _zonaDeLatLng(lat, lng) {
+  var minD = 999, best = 0;
+  _DENUE_ZONAS.forEach(function(z, i) {
+    var d = _distKm(lat, lng, z.lat, z.lng);
+    if (d < minD) { minD = d; best = i; }
+  });
+  return best;
+}
+
+function _renderDenueZonas(items, lbl) {
+  if (denueCapas) { denueMapaObj.removeLayer(denueCapas); denueCapas = null; }
+  var cats = {};
+  var zonaCounts = {};
+  var zonaCats   = {};
+
+  items.forEach(function(r) {
+    var zi = _zonaDeLatLng(r[5], r[6]);
+    zonaCounts[zi] = (zonaCounts[zi] || 0) + 1;
+    if (!zonaCats[zi]) zonaCats[zi] = {};
+    zonaCats[zi][r[1]] = (zonaCats[zi][r[1]] || 0) + 1;
+  });
+
+  var tamColors = { micro:'#1a44dd', pequeno:'#0096ff', mediano:'#00c8ff', grande:'#00ffcc', mega:'#00ff88' };
+  var catColors = { 'Menudeo':'#ff4488','Servicios':'#00ccff','Restaurantes':'#ff8800',
+    'Manufactura':'#aa44ff','Gobierno':'#00ff88','Salud':'#ff2255','Educación':'#ffcc00',
+    'Otro':'#3a6aaa' };
+
+  var markers = [];
+  _DENUE_ZONAS.forEach(function(z, i) {
+    var n = zonaCounts[i] || 0;
+    if (n === 0) return;
+    var cats = zonaCats[i] || {};
+    var domCat = Object.keys(cats).sort(function(a,b){return cats[b]-cats[a];})[0] || 'Otro';
+    var color = catColors[domCat] || '#3a6aaa';
+    var r = Math.min(24, Math.max(14, 10 + Math.round(n / 200)));
+
+    var mk = L.circleMarker([z.lat, z.lng], {
+      radius: r, color: color, fillColor: color,
+      fillOpacity: 0.75, weight: 2, opacity: 0.9
+    });
+
+    var pct = items.length > 0 ? ((n/items.length)*100).toFixed(1) : 0;
+    mk.bindPopup(
+      '<div style="font-family:monospace;font-size:10px;min-width:160px;">' +
+      '<div style="font-weight:700;color:' + color + ';font-size:11px;margin-bottom:4px;">' + z.nombre + '</div>' +
+      '<div style="color:#aaa;">' + n.toLocaleString() + ' estab. (' + pct + '%)</div>' +
+      '<div style="color:#888;font-size:9px;margin-top:2px;">Sector dominante: <span style="color:' + color + ';">' + domCat + '</span></div>' +
+      '<div style="color:#555;font-size:8px;margin-top:3px;">Acércate para ver colonias</div>' +
+      '</div>'
+    );
+    markers.push(mk);
+  });
+
+  denueCapas = L.layerGroup(markers).addTo(denueMapaObj);
+
+  var modlbl = document.getElementById('denue-modo-label');
+  if (modlbl) modlbl.textContent = 'ZONAS · aleja para vista regional';
+  if (lbl) lbl.textContent = '7 zonas · ' + items.length.toLocaleString() + ' estab.';
+}
+
 function _renderDenueColonias(items, lbl) {
   _cargarDenueColonias(function() {
     if (_denueColoniasLayer) {
@@ -249,10 +328,16 @@ function renderDenueMapa(extraFn) {
   if (items.length === 0) { if (lbl) lbl.textContent = '0 establecimientos encontrados'; return; }
 
   var zoom = denueMapaObj.getZoom();
-  // zoom < 14 → un marcador por colonia (vista macro ligera)
-  // zoom >= 14 → puntos individuales con popup
+  // zoom < 12  → MODO ZONA:    1 punto por zona (7 áreas de Irapuato)
+  // 12 <= z<15 → MODO COLONIA: 1 punto por colonia
+  // zoom >= 15 → MODO MICRO:   puntos individuales por establecimiento
 
-  if (zoom < 14 && !extraFn) {
+  if (zoom < 12 && !extraFn) {
+    _renderDenueZonas(items, lbl);
+    return;
+  }
+
+  if (zoom < 15 && !extraFn) {
     // ── MODO COLONIA: 1 punto por colonia, color del sector dominante, popup con stats ──
     _renderDenueColonias(items, lbl);
     return;
@@ -368,8 +453,12 @@ function _denueBindZoom() {
     if (denueModo === 'dots' && z >= 15) {
       if (btn) btn.textContent = '📍 PUNTOS (auto)';
       if (lbl2) lbl2.textContent = 'PUNTOS · toca para detalle';
+    } else if (denueModo === 'dots' && z >= 12) {
+      if (btn) btn.textContent = '🔵 COLONIAS';
+      if (lbl2) lbl2.textContent = 'COLONIAS · acércate para puntos';
     } else if (denueModo === 'dots') {
-      if (btn) btn.textContent = '🔵 MACRO';
+      if (btn) btn.textContent = '🗺 ZONAS';
+      if (lbl2) lbl2.textContent = 'ZONAS · acércate para colonias';
     }
   });
 }
