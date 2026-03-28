@@ -1,0 +1,1122 @@
+{
+  "ageb": {
+    "1101700010097": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "110170001010A": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010114": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010148": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010152": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700010167": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700010171": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010186": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010190": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010203": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700010218": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700010237": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010241": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010260": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010275": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010345": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010364": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010379": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010398": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "110170001042A": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010449": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010523": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010538": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700010542": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010557": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010561": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010576": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700010595": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010612": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700010650": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010720": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700010735": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "110170001074A": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010754": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010769": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700010773": {
+      "rango": "(70, 100]",
+      "rango_ext": "(20, 50]",
+      "pct_min": 70,
+      "pct_max": 100,
+      "pct_mid": 85.0
+    },
+    "1101700010788": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700010877": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700010881": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700010896": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010909": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010913": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700010928": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010932": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010947": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700010951": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700010966": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700010970": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700010985": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "110170001099A": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011004": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011023": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011038": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011042": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011061": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011076": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700011095": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700011108": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700011112": {
+      "rango": "(70, 100]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 70,
+      "pct_max": 100,
+      "pct_mid": 85.0
+    },
+    "1101700011127": {
+      "rango": "(70, 100]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 70,
+      "pct_max": 100,
+      "pct_mid": 85.0
+    },
+    "1101700011131": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011146": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700011150": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011165": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "110170001117A": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011184": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700011199": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011201": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011216": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011235": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "110170001124A": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700011254": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011269": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700011273": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011381": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700011396": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011409": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700011413": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011428": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011432": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011447": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011451": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011466": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011470": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700011485": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "110170001149A": {
+      "rango": "(70, 100]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 70,
+      "pct_max": 100,
+      "pct_mid": 85.0
+    },
+    "1101700011502": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011521": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011536": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011659": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011678": {
+      "rango": "(70, 100]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 70,
+      "pct_max": 100,
+      "pct_mid": 85.0
+    },
+    "1101700011682": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "110170001170A": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011714": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011729": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011733": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011752": {
+      "rango": "(70, 100]",
+      "rango_ext": "(20, 50]",
+      "pct_min": 70,
+      "pct_max": 100,
+      "pct_mid": 85.0
+    },
+    "1101700011767": {
+      "rango": "(50, 70]",
+      "rango_ext": "(20, 50]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700011771": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011790": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011803": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011818": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700011841": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011856": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700011860": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700011875": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "110170001188A": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700011911": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700011926": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011930": {
+      "rango": "(70, 100]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 70,
+      "pct_max": 100,
+      "pct_mid": 85.0
+    },
+    "1101700011945": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700011964": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700011979": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700011983": {
+      "rango": "(70, 100]",
+      "rango_ext": "(20, 50]",
+      "pct_min": 70,
+      "pct_max": 100,
+      "pct_mid": 85.0
+    },
+    "1101700011998": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700012017": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700012021": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700012036": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700012089": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700012093": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700012110": {
+      "rango": "(70, 100]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 70,
+      "pct_max": 100,
+      "pct_mid": 85.0
+    },
+    "1101700012159": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700012163": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700012178": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700012182": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700012197": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700012233": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700012286": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700012290": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700012303": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700012322": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700012337": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700012360": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "110170001238A": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700012407": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700012445": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "110170001245A": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    },
+    "1101700012464": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700012479": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101700590792": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700620805": {
+      "rango": "(70, 100]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 70,
+      "pct_max": 100,
+      "pct_mid": 85.0
+    },
+    "1101700681907": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101700812248": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700821292": {
+      "rango": "(70, 100]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 70,
+      "pct_max": 100,
+      "pct_mid": 85.0
+    },
+    "1101700950862": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700952604": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700991339": {
+      "rango": "(50, 70]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 50,
+      "pct_max": 70,
+      "pct_mid": 60.0
+    },
+    "1101700991343": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "110170138081A": {
+      "rango": "(70, 100]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 70,
+      "pct_max": 100,
+      "pct_mid": 85.0
+    },
+    "1101701610326": {
+      "rango": "(70, 100]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 70,
+      "pct_max": 100,
+      "pct_mid": 85.0
+    },
+    "1101701612318": {
+      "rango": "(34, 50]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 34,
+      "pct_max": 50,
+      "pct_mid": 42.0
+    },
+    "1101701812271": {
+      "rango": "(18, 34]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 18,
+      "pct_max": 34,
+      "pct_mid": 26.0
+    },
+    "1101703591362": {
+      "rango": "[ 0, 18]",
+      "rango_ext": "[ 0, 20]",
+      "pct_min": 0,
+      "pct_max": 18,
+      "pct_mid": 9.0
+    }
+  },
+  "municipal": {
+    "2020": {
+      "poblacion": 602842,
+      "pobreza_pct": 35.5,
+      "pobreza_extrema_pct": 4.2,
+      "pobreza_moderada_pct": 31.4,
+      "vulnerable_carencias_pct": 26.6,
+      "carencia_educacion_pct": 13.0,
+      "carencia_salud_pct": 25.1,
+      "carencia_seguridad_social_pct": 44.3,
+      "carencia_vivienda_pct": 6.0,
+      "carencia_alimentacion_pct": 20.5,
+      "ingreso_inferior_lpi_pct": 45.6
+    },
+    "2015": {
+      "poblacion": 579821,
+      "pobreza_pct": 37.2,
+      "pobreza_extrema_pct": 2.9,
+      "pobreza_moderada_pct": 34.3,
+      "vulnerable_carencias_pct": 27.7,
+      "carencia_educacion_pct": 15.1,
+      "carencia_salud_pct": 15.3,
+      "carencia_seguridad_social_pct": 47.5,
+      "carencia_vivienda_pct": 8.0,
+      "carencia_alimentacion_pct": 24.0,
+      "ingreso_inferior_lpi_pct": 49.6
+    },
+    "2010": {
+      "poblacion": 519339,
+      "pobreza_pct": 42.3,
+      "pobreza_extrema_pct": 7.4,
+      "pobreza_moderada_pct": 34.9,
+      "vulnerable_carencias_pct": 25.5,
+      "carencia_educacion_pct": 18.7,
+      "carencia_salud_pct": 25.9,
+      "carencia_seguridad_social_pct": 54.5,
+      "carencia_vivienda_pct": 8.2,
+      "carencia_alimentacion_pct": 24.6,
+      "ingreso_inferior_lpi_pct": 50.7
+    }
+  },
+  "meta": {
+    "fuente": "CONEVAL 2015 (AGEB) / 2020 (municipal)",
+    "municipio": "Irapuato",
+    "clave": "11017",
+    "total_agebs": 153
+  }
+}

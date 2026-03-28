@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IRAPUATO INTEL — Fase 1 v4</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .ingesta-periodo-btn.activo {
+    background: #0a2a3a !important;
+    border-color: #0ff !important;
+    color: #0ff !important;
+    box-shadow: 0 0 6px rgba(0,255,255,.25);
+  }
+  .ingesta-periodo-btn:hover { opacity: .85; }
+  .ingesta-kw-btn {
+    background: #0a1a0a;
+    border: 1px solid #1a4a1a;
+    color: #0a0;
+    padding: 3px 8px;
+    font-size: 9px;
+    cursor: pointer;
+    border-radius: 3px;
+    font-family: var(--mono);
+  }
+  .ingesta-kw-btn:hover { border-color: #0f8; color: #0f8; }
+  .ingesta-kw-btn:disabled { opacity: .4; cursor: not-allowed; }
+/* Movilidad botones ON */
+#mov-btn-gov.on, #mov-btn-manuales.on { background:#0d1f0d!important;color:#00ff88!important;border-color:#00aa55!important; }
+#mov-btn-semaforos.on { background:#1f1d00!important;color:#ffcc00!important;border-color:#aa8800!important; }
+#mov-btn-nodos.on     { background:#1f1000!important;color:#ff8800!important;border-color:#aa5500!important; }
+#mov-btn-sat.on       { background:#0d2a0d!important;color:#00ff88!important;border-color:#00aa55!important; }
+#mov-btn-oscuro.on    { background:#0d0d2a!important;color:#aaaaff!important;border-color:#5555bb!important; }
+#mov-btn-editar.on    { background:#0d0d2a!important;color:#aaaaff!important;border-color:#6666cc!important; }
+#mov-btn-vialidad.on  { background:#0a1f1f!important;color:#44cccc!important;border-color:#226666!important; }
+#mov-subbtn-sem.on    { background:#1f1a00!important;color:#ffcc00!important;border-color:#aa8800!important; }
+#mov-subbtn-via.on    { background:#0a1f1f!important;color:#44cccc!important;border-color:#226666!important; }
+#movp-tipo-v.on       { background:#1a1200!important;color:#ffaa00!important;border-color:#aa7700!important; }
+#movp-tipo-p.on       { background:#001a0d!important;color:#00cc44!important;border-color:#007722!important; }
+</style>
+</head>
+
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="diamond"></div>
+      <span class="logo-txt">IRA INTEL</span>
+    </div>
+    <span class="logo-sub">// CAPTURA DE NOTICIAS v4.3</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+      <span id="gemini-status" onclick="abrirGestorKeys()" style="font-family:var(--title);font-size:6px;padding:3px 8px;border-radius:3px;border:1px solid #1a4a2a;background:rgba(0,255,136,.06);color:#00ff88;cursor:pointer;letter-spacing:1px;" title="Gestionar API Keys">🤖 IA OK</span>
+    </div>
+  </header>
+
+  <!-- TABS -->
+  <div id="tabs">
+    <button class="tab entrada active" onclick="verTab('entrada')">📥 ENTRADA</button>
+    <button class="tab bd" onclick="verTab('bd')">🗄 BD <span id="badge-bd" class="badge" style="display:none">0</span></button>
+    <button class="tab mapa" onclick="verTab('mapa')">&#9685; MOVILIDAD</button>
+    <button class="tab intel" onclick="verTab('intel')">📡 INTEL</button>
+    <button class="tab gob" onclick="verTab('gobierno')">🏛 GOBIERNO</button>
+    <button class="tab denue" onclick="verTab('denue')">📍 ECONOMÍA</button>
+    <button class="tab sesnsp" onclick="verTab('sesnsp')">🔴 SESNSP</button>
+    <button class="tab predic" onclick="verTab('predic')">⚡ PREDIC</button>
+    <button class="tab co" onclick="verTab('co')">🔴 C.ORG</button>
+  </div>
+
+  <!-- PANEL -->
+  <div id="panel">
+
+    <!-- ═══════════ ENTRADA (RSS + MANUAL + INGESTA) ═══════════ -->
+    <div id="sec-entrada" class="seccion activa">
+      <!-- Sub-tabs -->
+      <div id="entrada-subtabs" style="display:flex;background:#060d18;border-bottom:2px solid #0d2040;flex-shrink:0;">
+        <button class="bd-stab activo" id="entrada-stab-rss"     onclick="verEntradaSubtab('rss')">📡 RSS AUTO</button>
+        <button class="bd-stab"        id="entrada-stab-manual"  onclick="verEntradaSubtab('manual')">✍ MANUAL</button>
+        <button class="bd-stab"        id="entrada-stab-ingesta" onclick="verEntradaSubtab('ingesta')">📦 INGESTA</button>
+      </div>
+
+      <!-- ── RSS ── -->
+      <div id="entrada-rss" style="display:block;">
+        <div class="sec-header">// FUENTES RSS — <span>AUTOMÁTICO</span></div>
+        <div class="rss-controles">
+          <button class="rss-btn rss-sol" onclick="cargarRSS('sol_local')">SOL LOCAL</button>
+          <button class="rss-btn rss-sol" onclick="cargarRSS('sol_policiaca')">POLICIACA</button>
+          <button class="rss-btn rss-am" onclick="cargarRSS('am_irapuato')">AM IRA</button>
+          <button class="rss-btn rss-am" onclick="cargarRSS('am_sucesos')">SUCESOS</button>
+          <button class="rss-btn rss-correo" onclick="cargarRSS('correo')">CORREO</button>
+          <button class="rss-btn" style="color:#ff6600;border-color:#ff6600;background:rgba(255,102,0,.08);" onclick="cargarRSS('tinta')">TINTA</button>
+          <button class="rss-btn" style="color:#ff6600;border-color:#ff6600;background:rgba(255,102,0,.08);" onclick="cargarRSS('am_policia')">AM POL</button>
+          <button class="rss-btn" style="color:#ff44aa;border-color:#ff44aa;background:rgba(255,68,170,.08);" onclick="cargarRSS('correo_seg')">COR SEG</button>
+          <button class="rss-btn" style="color:#aa44ff;border-color:#aa44ff;background:rgba(170,68,255,.08);" onclick="cargarRSS('silla_rota')">SILLA</button>
+          <button class="rss-btn" style="color:#00ddaa;border-color:#00ddaa;background:rgba(0,221,170,.08);" onclick="cargarRSS('zona_franca')">Z.FRANCA</button>
+          <button class="rss-btn" style="color:#1877f2;border-color:#1877f2;background:rgba(24,119,242,.08);" onclick="abrirFacebook()">FB</button>
+          <button class="rss-btn" style="color:var(--cyan);border-color:var(--cyan);background:transparent;" onclick="cargarTodas()">TODAS</button>
+        </div>
+        <div id="rss-filtro-fecha" style="display:flex;align-items:center;gap:6px;padding:6px 0 2px;flex-wrap:wrap;">
+          <span style="font-family:var(--title);font-size:6px;color:var(--muted);letter-spacing:1px;white-space:nowrap;">🗓 ANTIGÜEDAD MÁX:</span>
+          <button class="rss-fecha-btn activo" onclick="setRssMaxDias(7,this)">7 DÍAS</button>
+          <button class="rss-fecha-btn" onclick="setRssMaxDias(30,this)">1 MES</button>
+          <button class="rss-fecha-btn" onclick="setRssMaxDias(60,this)">2 MESES</button>
+          <button class="rss-fecha-btn" onclick="setRssMaxDias(90,this)">3 MESES</button>
+          <span id="rss-fecha-label" style="margin-left:auto;font-size:7px;color:#3a7ab8;font-family:var(--mono);">máx 7 días</span>
+        </div>
+        <div id="rss-estado" class="rss-estado">Elige una fuente para cargar noticias.</div>
+        <div id="lista-rss"></div>
+      </div><!-- fin entrada-rss -->
+
+      <!-- ── MANUAL ── -->
+      <div id="entrada-manual" style="display:none;">
+        <div class="sec-header">// ENTRADA MANUAL — <span>PEGAR TEXTO COMPLETO</span></div>
+        <div class="manual-form">
+          <div>
+            <div class="m-label">FUENTE</div>
+            <div class="fuente-grid">
+              <div class="fuente-opt sel" onclick="selFuente(this,'El Sol de Irapuato')">El Sol de Irapuato</div>
+              <div class="fuente-opt" onclick="selFuente(this,'AM Guanajuato')">AM Guanajuato</div>
+              <div class="fuente-opt" onclick="selFuente(this,'Periódico Correo')">Periódico Correo</div>
+              <div class="fuente-opt" onclick="selFuente(this,'Tinta Negra')">Tinta Negra</div>
+              <div class="fuente-opt" onclick="selFuente(this,'WhatsApp')">WhatsApp</div>
+              <div class="fuente-opt" onclick="selFuente(this,'Facebook')">Facebook</div>
+              <div class="fuente-opt" onclick="selFuente(this,'Municipio')">Municipio</div>
+              <div class="fuente-opt" onclick="selFuente(this,'Otro')">Otro</div>
+            </div>
+          </div>
+          <div>
+            <div class="m-label">URL DE LA NOTICIA (opcional)</div>
+            <input class="m-input" id="m-url" type="url" placeholder="https://...">
+          </div>
+          <div>
+            <div class="m-label" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>TEXTO COMPLETO — copia todo el artículo y pégalo aquí</span>
+              <button onclick="limpiarTextoManual()" style="font-family:var(--title);font-size:6px;padding:3px 8px;background:rgba(0,200,255,.08);color:var(--cyan);border:1px solid #00ccff44;border-radius:3px;cursor:pointer;letter-spacing:1px;">✦ LIMPIAR</button>
+            </div>
+            <textarea class="m-textarea" id="m-texto" oninput="actualizarStatsManual()" placeholder="Abre la noticia en el navegador → selecciona todo el texto (Ctrl+A) → copia (Ctrl+C) → pega aquí (Ctrl+V)&#10;&#10;No importa si trae publicidad o menús, el botón LIMPIAR los elimina automáticamente.&#10;&#10;También puedes pegar mensajes de WhatsApp o Facebook."></textarea>
+            <div id="m-texto-stats" style="font-family:var(--mono);font-size:7px;color:#2a5a7a;margin-top:3px;height:12px;"></div>
+          </div>
+          <button class="btn-analizar" id="btn-analizar" onclick="analizarManual()">🤖 ANALIZAR CON IA →</button>
+          <div id="resultado-manual"></div>
+        </div>
+      </div><!-- fin entrada-manual -->
+
+      <!-- ── INGESTA ── -->
+      <div id="entrada-ingesta" style="display:none;overflow-y:auto;height:calc(100vh - 130px);">
+        <div id="sec-ingesta-inner"></div>
+      </div><!-- fin entrada-ingesta -->
+
+    </div><!-- fin sec-entrada -->
+
+    <!-- ═══════════ APRENDIZAJE ═══════════ -->
+    <div id="sec-aprende" class="seccion" style="display:none;"></div>
+
+    <!-- ═══════════ BASE DE DATOS (BD) con sub-tabs ═══════════ -->
+    <div id="sec-bd" class="seccion">
+      <!-- Sub-tabs BD -->
+      <div id="bd-subtabs" style="display:flex;background:#060d18;border-bottom:2px solid #0d2040;flex-shrink:0;">
+        <button class="bd-stab activo" id="bd-stab-corpus"  onclick="verBDSubtab('corpus')">🗄 CORPUS</button>
+        <button class="bd-stab"        id="bd-stab-data"    onclick="verBDSubtab('data')">📊 DATA</button>
+        <button class="bd-stab"        id="bd-stab-aprende" onclick="verBDSubtab('aprende')">🧠 APRENDE</button>
+      </div>
+
+      <!-- ── Subpestaña CORPUS ── -->
+      <div id="bd-corpus" style="display:block;">
+        <div class="sec-header">// CORPUS — <span>NOTICIAS APROBADAS</span></div>
+
+        <div class="bd-stats">
+          <div class="bd-stat tot">
+            <div class="bd-stat-n" id="stat-tot">0</div>
+            <div class="bd-stat-l">TOTAL</div>
+          </div>
+          <div class="bd-stat seg">
+            <div class="bd-stat-n" id="stat-seg">0</div>
+            <div class="bd-stat-l">SEGURIDAD</div>
+          </div>
+          <div class="bd-stat acc">
+            <div class="bd-stat-n" id="stat-acc">0</div>
+            <div class="bd-stat-l">ACCIDENTE</div>
+          </div>
+          <div class="bd-stat eve">
+            <div class="bd-stat-n" id="stat-eve">0</div>
+            <div class="bd-stat-l">EVENTO</div>
+          </div>
+        </div>
+
+        <div class="bd-filtros">
+          <button class="filtro-btn sel" onclick="filtrarBD('todos',this)">TODOS</button>
+          <button class="filtro-btn" onclick="filtrarBD('seguridad',this)">SEGURIDAD</button>
+          <button class="filtro-btn" onclick="filtrarBD('accidente',this)">ACCIDENTE</button>
+          <button class="filtro-btn" onclick="filtrarBD('evento',this)">EVENTO</button>
+          <button class="filtro-btn" onclick="filtrarBD('rumor',this)">RUMOR</button>
+          <button class="filtro-btn" onclick="filtrarBD('desaparecido',this)">DESAPARECIDO</button>
+          <button class="filtro-btn" onclick="filtrarBD('gobierno',this)">GOBIERNO</button>
+          <button class="filtro-btn" onclick="filtrarBD('politica',this)">POLÍTICA</button>
+          <button class="filtro-btn" onclick="filtrarBD('salud',this)">SALUD</button>
+          <button class="filtro-btn" onclick="filtrarBD('transporte',this)">TRANSPORTE</button>
+          <button class="filtro-btn" onclick="filtrarBD('ambiental',this)">AMBIENTAL</button>
+          <button class="filtro-btn" onclick="filtrarBD('corrupcion',this)">CORRUPCIÓN</button>
+          <button class="filtro-btn" onclick="filtrarBD('crimen_organizado',this)">C.ORGANIZADO</button>
+        </div>
+
+        <!-- Controles de ordenamiento -->
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 0 4px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:4px;">
+          <span style="font-family:var(--title);font-size:6px;color:var(--muted);letter-spacing:1px;white-space:nowrap;">&#9650; ORDENAR:</span>
+          <button class="bd-orden-btn activo" id="orden-captura" onclick="ordenarBD('captura',this)">&#128197; CAPTURA</button>
+          <button class="bd-orden-btn" id="orden-suceso" onclick="ordenarBD('suceso',this)">&#9201; SUCESO</button>
+          <button class="bd-orden-btn" id="orden-confianza" onclick="ordenarBD('confianza',this)">&#9650; CONFIANZA</button>
+          <span id="bd-orden-label" style="margin-left:auto;font-size:7px;color:#3a7ab8;font-family:var(--mono);">fecha captura &#8595;</span>
+        </div>
+
+        <!-- Buscador predictivo corpus -->
+        <div style="position:relative;margin-bottom:6px;">
+          <input id="bd-buscador" type="text" autocomplete="off"
+            placeholder="🔍 Buscar por título, colonia, calle, fuente…"
+            oninput="bdBuscarInput(this.value)" onfocus="bdBuscarInput(this.value)" onblur="setTimeout(bdBuscarCerrarAC,200)"
+            style="width:100%;box-sizing:border-box;background:#060d18;border:1px solid #1a3050;border-radius:3px;padding:7px 10px;font-family:monospace;font-size:8px;color:#c0e8ff;outline:none;caret-color:#00c8ff;">
+          <div id="bd-ac-lista" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:200;background:#060d18;border:1px solid #1a3050;border-top:none;border-radius:0 0 4px 4px;max-height:220px;overflow-y:auto;"></div>
+        </div>
+
+        <div id="lista-bd">
+          <div class="vacio">
+            <div class="vacio-ico">🗄</div>
+            Aún no hay noticias aprobadas.<br>
+            Analiza y aprueba desde las otras secciones.
+          </div>
+        </div>
+      </div><!-- /bd-corpus -->
+
+      <!-- ── Subpestaña DATA ── -->
+      <div id="bd-data" style="display:none;padding:12px;">
+        <div class="sec-header" style="margin:-12px -12px 12px;">// DATA — <span>ANÁLISIS DEL CORPUS</span></div>
+        <!-- El contenido es renderizado por data.js -->
+        <div id="data-contenedor">
+          <div style="text-align:center;padding:30px 0;color:#2a4a6a;font-family:var(--mono);font-size:8px;">
+            Cargando análisis...
+          </div>
+        </div>
+      </div><!-- /bd-data -->
+
+      <!-- ── Subpestaña APRENDE ── -->
+      <div id="bd-aprende" style="display:none;padding:12px;overflow-y:auto;height:calc(100vh - 130px);">
+        <div class="sec-header" style="margin:-12px -12px 12px;">// APRENDE — <span>SESGO EDITORIAL + IA</span></div>
+        <!-- Renderizado por aprende.js → aprendeRenderPanel() -->
+      </div><!-- /bd-aprende -->
+
+    </div><!-- /sec-bd -->
+
+  </div><!-- /panel -->
+
+<!-- SECCIÓN GOBIERNO (fuera de #panel como intel/mapa para altura real) -->
+<div id="sec-gobierno" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:100;background:var(--bg);flex-direction:column;">
+  <!-- Sub-tabs Gobierno -->
+  <div id="gob-subtabs" style="display:flex;background:#060d18;border-bottom:1px solid #0d2040;flex-shrink:0;position:relative;z-index:110;">
+    <button class="gob-stab active" id="gstab-ayto" onclick="verGobSubtab('ayuntamiento')">🏛 AYUNTAMIENTO</button>
+    <button class="gob-stab" id="gstab-mapa" onclick="verGobSubtab('mapa')">🗺 MAPA POLÍTICO</button>
+  </div>
+  <!-- Panel Ayuntamiento -->
+  <div id="gsec-ayuntamiento" style="flex:1;overflow-y:auto;padding:12px 14px;">
+    <!-- Contador electoral (días desde elección / avance trienio) -->
+    <div id="gob-contador" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;"></div>
+    <!-- Contador de fuerzas por partido: PAN / Morena / PRI / MC -->
+    <div id="gob-contador-partidos" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:14px;"></div>
+    <!-- Cabildo: tarjetas expandibles (renderGobCabildo escribe aqui) -->
+    <div id="gob-cabildo-lista" style="display:flex;flex-direction:column;gap:0;"></div>
+    <!-- Noticias gobierno aprobadas -->
+    <div style="font-family:var(--title);font-size:8px;color:#00ccff;letter-spacing:1px;margin:16px 0 8px;">// NOTICIAS DE GOBIERNO (BD APROBADAS)</div>
+    <div id="gob-noticias-lista" style="display:flex;flex-direction:column;gap:7px;"></div>
+  </div>
+  <!-- Panel Mapa Político -->
+  <div id="gsec-mapa" style="flex:1;display:none;flex-direction:column;position:relative;">
+    <!-- Barra de filtros tipo -->
+    <div style="display:flex;align-items:center;gap:4px;padding:5px 10px;background:rgba(0,10,30,.95);border-bottom:1px solid #0d2040;flex-shrink:0;overflow-x:auto;">
+      <button class="mapa-filtro-btn" style="color:#c040ff;border-color:#c040ff;" id="gpol-btn-pol" onclick="filtrarGobMapa('politica',this)">🗳 POLÍTICA</button>
+      <button class="mapa-filtro-btn" style="color:#0096ff;border-color:#0096ff;" id="gpol-btn-gob" onclick="filtrarGobMapa('gobierno',this)">🏛 GOBIERNO</button>
+      <button class="mapa-filtro-btn todos activo" id="gpol-btn-todos" onclick="filtrarGobMapa('todos',this)">TODOS</button>
+      <!-- Layer distritos -->
+      <button class="mapa-heat-btn" id="gob-btn-ageb" onclick="geoToggleAgebs(gobMapaObj,this)">📊 POBREZA</button>
+      <button class="mapa-heat-btn" id="gob-btn-riesgo" onclick="analisisChoroToggle(gobMapaObj,this)">⚠ RIESGO</button>
+      <button id="btn-distritos" onclick="toggleDistritosLayer()" style="margin-left:auto;padding:5px 9px;font-family:var(--title);font-size:6px;letter-spacing:1px;border-radius:3px;cursor:pointer;border:1px solid #ffcc00;background:rgba(3,5,10,.88);color:#ffcc00;white-space:nowrap;flex-shrink:0;">⬡ DISTRITOS OFF</button>
+    </div>
+    <div id="gob-mapa-leaflet" style="flex:1;width:100%;background:#060d18;"></div>
+    <div style="position:absolute;bottom:0;left:0;right:0;z-index:1000;background:rgba(3,5,10,.9);border-top:1px solid #0d2040;padding:5px 12px;font-size:7px;color:#3a5a7a;font-family:var(--title);letter-spacing:1px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      <span style="color:#c040ff;">●</span><span id="gpol-cnt-pol">0</span> POLÍTICA
+      <span style="color:#0096ff;">●</span><span id="gpol-cnt-gob">0</span> GOBIERNO
+      <span style="margin-left:auto;color:#00ccff;" id="gpol-cnt-tot">0 eventos</span>
+    </div>
+  </div>
+</div>
+</div><!-- /app -->
+
+<!-- MODAL DETALLE BD -->
+<div id="bd-modal" class="bd-modal-overlay" onclick="cerrarModalBD(event)">
+  <div class="bd-modal-box">
+    <button class="bd-modal-close" onclick="cerrarModalBDBtn()">&#10005; CERRAR</button>
+    <div id="bd-modal-contenido"></div>
+  </div>
+</div>
+
+<!-- MODAL NOTICIA RELACIONADA -->
+<div id="rel-modal" class="rel-modal" onclick="cerrarRelModal(event)">
+  <div class="rel-modal-box">
+    <button class="rel-modal-close" onclick="cerrarRelModalBtn()">&#10005;</button>
+    <div id="rel-modal-contenido"></div>
+  </div>
+</div>
+
+<!-- MODAL FACEBOOK -->
+<div id="fb-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:9000;flex-direction:column;">
+  <div style="background:#060d18;border-bottom:1px solid #0d2040;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+    <span style="font-family:'Orbitron',monospace;font-size:9px;color:#1877f2;letter-spacing:2px;">📘 CAPTURA DESDE FACEBOOK</span>
+    <button onclick="cerrarFB()" style="margin-left:auto;background:transparent;border:none;color:#2a4a6a;font-size:18px;cursor:pointer;">✕</button>
+  </div>
+  <div style="padding:14px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;flex:1;">
+
+    <!-- Instrucciones -->
+    <div style="background:#030810;border:1px solid #0a1a30;border-radius:4px;padding:10px 12px;">
+      <div style="font-family:'Orbitron',monospace;font-size:7px;color:#2a4a6a;letter-spacing:1px;margin-bottom:8px;">// CÓMO CAPTURAR DE FACEBOOK</div>
+      <div style="font-size:9px;color:#7a9ab8;line-height:1.8;">
+        1. Abre Facebook en otra pestaña<br>
+        2. Encuentra la publicación de interés<br>
+        3. Mantén presionado el texto → Seleccionar todo<br>
+        4. Copia y pega aquí abajo<br>
+        5. Elige la página fuente y analiza
+      </div>
+    </div>
+
+    <!-- Accesos directos -->
+    <div style="font-family:'Orbitron',monospace;font-size:7px;color:#2a4a6a;letter-spacing:1px;margin-bottom:4px;">// PÁGINAS MONITOREADAS</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;">
+      <a href="https://www.facebook.com/entintanegra" target="_blank"
+         style="display:flex;align-items:center;gap:5px;padding:6px 7px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:7px;color:#1877f2;">Tinta Negra</div>
+          <div style="font-size:6px;color:#1a3a5a;">Periodismo local Irapuato</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/gerardopublicidad" target="_blank"
+         style="display:flex;align-items:center;gap:5px;padding:6px 7px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:7px;color:#1877f2;">Gerardo Hernandez</div>
+          <div style="font-size:6px;color:#1a3a5a;">Diario Irapuato - rumores</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/1H6kbEWJUk/" target="_blank"
+         style="display:flex;align-items:center;gap:5px;padding:6px 7px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:7px;color:#1877f2;">TV Consecuencias</div>
+          <div style="font-size:6px;color:#1a3a5a;">Gerardo Hernandez canal</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/17uqenDHWj/" target="_blank"
+         style="display:flex;align-items:center;gap:5px;padding:6px 7px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:7px;color:#1877f2;">El Pena</div>
+          <div style="font-size:6px;color:#1a3a5a;">Noticias locales</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/1C8pKKg2sa/" target="_blank"
+         style="display:flex;align-items:center;gap:5px;padding:6px 7px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:7px;color:#1877f2;">Irapuato Despierta</div>
+          <div style="font-size:6px;color:#1a3a5a;">Noticias ciudadanas</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/1DJsrhMTzN/" target="_blank"
+         style="display:flex;align-items:center;gap:5px;padding:6px 7px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:7px;color:#1877f2;">Noticias al Momento</div>
+          <div style="font-size:6px;color:#1a3a5a;">Irapuato en tiempo real</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/1L6QABV2ET/" target="_blank"
+         style="display:flex;align-items:center;gap:5px;padding:6px 7px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:7px;color:#1877f2;">Opinion Bajio</div>
+          <div style="font-size:6px;color:#1a3a5a;">Analisis regional</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/18MYcsA77F/" target="_blank"
+         style="display:flex;align-items:center;gap:5px;padding:6px 7px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:7px;color:#1877f2;">Noticias Irapuato</div>
+          <div style="font-size:6px;color:#1a3a5a;">Cobertura local</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/1Do2RxjVWd/" target="_blank"
+         style="display:flex;align-items:center;gap:5px;padding:6px 7px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:7px;color:#1877f2;">Contacto Noticias</div>
+          <div style="font-size:6px;color:#1a3a5a;">Noticias Irapuato</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/14X4foy2MFP/" target="_blank"
+         style="display:flex;align-items:center;gap:5px;padding:6px 7px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:7px;color:#1877f2;">Hermoso Irapuato</div>
+          <div style="font-size:6px;color:#1a3a5a;">GTO noticias</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+      <a href="https://www.facebook.com/share/1Dv9tXQH7D/" target="_blank"
+         style="display:flex;align-items:center;gap:5px;padding:6px 7px;background:#030810;border:1px solid #1877f2;border-radius:3px;text-decoration:none;">
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:7px;color:#1877f2;">Irapuato Alerta</div>
+          <div style="font-size:6px;color:#1a3a5a;">Alertas de seguridad</div>
+        </div>
+        <span style="color:#2a4a6a;font-size:10px;">&#8599;</span>
+      </a>
+    </div>
+
+    <!-- Campo autocomplete de fuente con Firebase -->
+    <div style="position:relative;">
+      <div style="font-family:'Orbitron',monospace;font-size:7px;color:#2a4a6a;letter-spacing:1px;margin-bottom:6px;">// FUENTE <span style="color:#3a5a7a;font-size:6px;">(escribe para buscar o agregar nueva)</span></div>
+      <input
+        id="fb-fuente-input"
+        type="text"
+        autocomplete="off"
+        placeholder="Ej: Irapuato Alerta, Gerardo Hernandez..."
+        oninput="onFuenteFBInput(this)"
+        onblur="setTimeout(function(){var l=document.getElementById('fb-fuente-lista');if(l)l.style.display='none';},200)"
+        style="width:100%;background:#020810;border:1px solid #1877f2;color:#c0e8ff;font-family:'Share Tech Mono',monospace;font-size:10px;padding:9px 12px;border-radius:3px;box-sizing:border-box;outline:none;"
+      />
+      <div id="fb-fuente-lista" style="display:none;position:absolute;left:0;right:0;top:100%;background:#060d18;border:1px solid #1877f244;border-top:none;border-radius:0 0 4px 4px;z-index:999;max-height:180px;overflow-y:auto;"></div>
+    </div>
+
+    <!-- Textarea -->
+    <div>
+      <div style="font-family:'Orbitron',monospace;font-size:7px;color:#2a4a6a;letter-spacing:1px;margin-bottom:6px;">// PEGA EL TEXTO DE LA PUBLICACIÓN</div>
+      <textarea id="fb-texto"
+        style="width:100%;min-height:130px;background:#020810;border:1px solid #0d2040;color:#c0e8ff;font-family:'Share Tech Mono',monospace;font-size:9px;padding:10px;border-radius:3px;resize:vertical;line-height:1.5;"
+        placeholder="Pega aquí el texto de la publicación de Facebook...&#10;&#10;También puedes pegar capturas transcritas o mensajes de WhatsApp relacionados."></textarea>
+    </div>
+
+    <!-- URL opcional -->
+    <div>
+      <div style="font-family:'Orbitron',monospace;font-size:7px;color:#2a4a6a;letter-spacing:1px;margin-bottom:6px;">// URL DE LA PUBLICACIÓN (opcional)</div>
+      <input id="fb-url" type="url" placeholder="https://facebook.com/..."
+        style="width:100%;background:#020810;border:1px solid #0d2040;color:#c0e8ff;font-family:'Share Tech Mono',monospace;font-size:9px;padding:8px 10px;border-radius:3px;">
+    </div>
+
+    <!-- Botón analizar -->
+    <button onclick="analizarFB()"
+      style="width:100%;padding:13px;font-family:'Orbitron',monospace;font-size:9px;font-weight:700;letter-spacing:2px;background:rgba(24,119,242,.15);color:#1877f2;border:1px solid #1877f2;border-radius:3px;cursor:pointer;">
+      🤖 ANALIZAR CON IA →
+    </button>
+
+    <!-- Resultado -->
+    <div id="fb-resultado"></div>
+
+    <!-- Separador Make.com -->
+    <div style="border-top:1px solid #0d2040;padding-top:12px;margin-top:4px;">
+      <div style="font-family:'Orbitron',monospace;font-size:7px;color:#2a4a6a;letter-spacing:1px;margin-bottom:8px;">// AUTOMATIZACIÓN CON MAKE.COM</div>
+      <div style="font-size:8px;color:#2a4a6a;line-height:1.8;background:#030810;border:1px solid #0d2040;border-radius:3px;padding:10px;">
+        Conecta Make.com para recibir publicaciones de Facebook automáticamente.<br><br>
+        <span style="color:#00ff88;">Estado:</span> <span id="make-status" style="color:#2a4a6a;">No configurado</span>
+      </div>
+      <input id="make-webhook-url" type="url" placeholder="Pega aquí tu webhook de Make.com..."
+        style="width:100%;margin-top:8px;background:#020810;border:1px solid #0d2040;color:#c0e8ff;font-family:'Share Tech Mono',monospace;font-size:8px;padding:8px 10px;border-radius:3px;">
+      <button onclick="guardarWebhook()"
+        style="width:100%;margin-top:6px;padding:9px;font-family:'Orbitron',monospace;font-size:8px;background:rgba(0,255,136,.08);color:#00ff88;border:1px solid #00ff88;border-radius:3px;cursor:pointer;">
+        GUARDAR WEBHOOK
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- SESNSP: Incidencia Delictiva -->
+<div id="sec-sesnsp" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:100;background:var(--bg);flex-direction:column;overflow-y:auto;">
+  <div id="tab-sesnsp-contenido"></div>
+</div>
+
+<!-- PREDIC: tab de predicción territorial Sprint 4 -->
+<div id="sec-predic" style="display:none;position:fixed;top:0;left:0;width:100vw;z-index:100;background:var(--bg);overflow-y:auto;min-height:100vh;">
+  <div style="padding:20px;color:#666;text-align:center;">Cargando predicciones territoriales...</div>
+</div>
+
+<!-- ═══════════ CRIMEN ORGANIZADO ═══════════ -->
+<div id="sec-co" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:100;background:var(--bg);flex-direction:column;">
+
+  <!-- Sub-tabs -->
+  <div id="co-subtabs" style="display:flex;background:#060d18;border-bottom:2px solid #1a0000;flex-shrink:0;">
+    <button class="co-stab activo" id="co-stab-mapa"     onclick="coVerSubtab('mapa')">🗺 TERRITORIO</button>
+    <button class="co-stab"        id="co-stab-actores"  onclick="coVerSubtab('actores')">👤 ACTORES</button>
+    <button class="co-stab"        id="co-stab-eventos"  onclick="coVerSubtab('eventos')">💥 EVENTOS</button>
+    <button class="co-stab"        id="co-stab-red"      onclick="coVerSubtab('red')">🕸 RED</button>
+  </div>
+
+  <!-- ── SUB-TAB: MAPA TERRITORIAL ── -->
+  <div id="co-sec-mapa" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+    <!-- barra de filtros -->
+    <div style="display:flex;align-items:center;gap:4px;padding:5px 10px;background:rgba(0,5,10,.98);border-bottom:1px solid #1a0000;flex-shrink:0;overflow-x:auto;">
+      <button class="co-filtro-btn activo" id="co-f-todos"  onclick="coFiltrarMapa('todos',this)">TODOS</button>
+      <button class="co-filtro-btn" id="co-f-cjng"   onclick="coFiltrarMapa('cjng',this)"   style="color:#ff4444;border-color:#ff4444;">CJNG</button>
+      <button class="co-filtro-btn" id="co-f-csrl"   onclick="coFiltrarMapa('csrl',this)"   style="color:#ff8800;border-color:#ff8800;">CSRL</button>
+      <button class="co-filtro-btn" id="co-f-disp"   onclick="coFiltrarMapa('disputado',this)" style="color:#ffcc00;border-color:#ffcc00;">DISPUTADO</button>
+      <button class="co-filtro-btn" id="co-f-otros"  onclick="coFiltrarMapa('otros',this)"  style="color:#aa88ff;border-color:#aa88ff;">OTROS</button>
+      <!-- capas de contexto -->
+      <button class="mapa-heat-btn" id="co-btn-irz"   onclick="analisisChoroToggle(coMapaObj,this)" style="margin-left:auto;">⚠ RIESGO</button>
+      <button class="mapa-heat-btn" id="co-btn-pob"   onclick="geoToggleAgebs(coMapaObj,this)">📊 POBREZA</button>
+      <button class="mapa-heat-btn" id="co-btn-ev"    onclick="coToggleEventosLayer(this)">💥 EVENTOS</button>
+    </div>
+    <!-- leyenda + controles timeline -->
+    <div style="display:flex;align-items:center;gap:8px;padding:4px 10px;background:rgba(0,3,8,.96);border-bottom:1px solid #0d1020;flex-shrink:0;flex-wrap:wrap;">
+      <span style="font-family:var(--title);font-size:5.5px;color:#3a4a5a;letter-spacing:1px;">CONTROL:</span>
+      <span class="co-leyenda-dot" style="background:#ff3333;">■</span><span class="co-leyenda-txt">CJNG</span>
+      <span class="co-leyenda-dot" style="background:#ff8800;">■</span><span class="co-leyenda-txt">CSRL</span>
+      <span class="co-leyenda-dot" style="background:#aa44ff;">■</span><span class="co-leyenda-txt">Otros</span>
+      <span class="co-leyenda-dot" style="background:#ffcc00;">■</span><span class="co-leyenda-txt">Disputado</span>
+      <span class="co-leyenda-dot" style="background:#333a44;">■</span><span class="co-leyenda-txt">Sin datos</span>
+      <span style="margin-left:auto;font-family:var(--mono);font-size:6px;color:#2a4a6a;" id="co-mapa-label">Cargando...</span>
+    </div>
+    <!-- mapa leaflet -->
+    <div id="co-leaflet" style="flex:1;width:100%;background:#060d18;position:relative;">
+      <!-- Panel flotante detalle AGEB -->
+      <div id="co-ageb-panel" style="display:none;position:absolute;top:10px;right:10px;z-index:1000;width:210px;background:rgba(6,8,16,.96);border:1px solid #2a0000;border-radius:4px;padding:10px 12px;">
+        <div style="font-family:var(--title);font-size:7px;color:#ff4444;letter-spacing:1px;margin-bottom:6px;" id="co-ageb-titulo">AGEB</div>
+        <div id="co-ageb-info" style="font-size:7px;color:#7a9ab8;line-height:1.8;"></div>
+        <button onclick="document.getElementById('co-ageb-panel').style.display='none'" style="margin-top:6px;width:100%;padding:3px;font-family:var(--title);font-size:6px;background:transparent;color:#2a4a6a;border:1px solid #1a2a3a;border-radius:2px;cursor:pointer;">CERRAR</button>
+      </div>
+    </div>
+    <!-- barra info -->
+    <div style="display:flex;align-items:center;gap:12px;padding:5px 12px;background:rgba(3,5,10,.96);border-top:1px solid #0d1020;font-family:var(--title);font-size:6px;letter-spacing:1px;flex-shrink:0;">
+      <span style="color:#ff3333;">■ CJNG</span><span id="co-cnt-cjng" style="color:#7a9ab8;">0</span>
+      <span style="color:#ff8800;">■ CSRL</span><span id="co-cnt-csrl" style="color:#7a9ab8;">0</span>
+      <span style="color:#ffcc00;">■ DISP</span><span id="co-cnt-disp" style="color:#7a9ab8;">0</span>
+      <span style="margin-left:auto;color:#3a6a9a;" id="co-cnt-total">0 AGEBs</span>
+    </div>
+  </div>
+
+  <!-- ── SUB-TAB: ACTORES ── -->
+  <div id="co-sec-actores" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+    <!-- barra filtros actores -->
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(0,5,10,.98);border-bottom:1px solid #1a0000;flex-shrink:0;flex-wrap:wrap;">
+      <button class="co-filtro-btn activo" onclick="coFiltrarActores('todos',this)">TODOS</button>
+      <button class="co-filtro-btn" onclick="coFiltrarActores('cjng',this)"  style="color:#ff4444;border-color:#ff4444;">CJNG</button>
+      <button class="co-filtro-btn" onclick="coFiltrarActores('csrl',this)"  style="color:#ff8800;border-color:#ff8800;">CSRL</button>
+      <button class="co-filtro-btn" onclick="coFiltrarActores('activo',this)" style="color:#ff4466;border-color:#ff4466;">ACTIVOS</button>
+      <button class="co-filtro-btn" onclick="coFiltrarActores('preso',this)"  style="color:#888;border-color:#555;">PRESOS</button>
+      <button class="co-filtro-btn" onclick="coFiltrarActores('abatido',this)" style="color:#555;border-color:#333;">ABATIDOS</button>
+      <!-- buscador -->
+      <input id="co-actor-buscador" type="text" placeholder="🔍 Buscar nombre o alias..."
+        oninput="coFiltrarActoresBuscar(this.value)"
+        style="margin-left:auto;background:#020810;border:1px solid #1a2a3a;color:#c0e8ff;font-family:var(--mono);font-size:7px;padding:4px 8px;border-radius:3px;width:180px;">
+      <button onclick="coNuevoActor()" style="padding:4px 10px;font-family:var(--title);font-size:6px;background:rgba(255,68,68,.1);color:#ff4444;border:1px solid #ff4444;border-radius:3px;cursor:pointer;letter-spacing:1px;white-space:nowrap;">+ ACTOR</button>
+    </div>
+    <!-- tabla actores -->
+    <div style="flex:1;overflow-y:auto;padding:8px 10px;">
+      <div id="co-actores-lista" style="display:flex;flex-direction:column;gap:4px;">
+        <div style="text-align:center;padding:30px;color:#2a4a6a;font-family:var(--mono);font-size:8px;">Cargando actores...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SUB-TAB: EVENTOS ── -->
+  <div id="co-sec-eventos" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+    <!-- barra filtros eventos -->
+    <div style="display:flex;align-items:center;gap:4px;padding:5px 10px;background:rgba(0,5,10,.98);border-bottom:1px solid #1a0000;flex-shrink:0;overflow-x:auto;">
+      <button class="co-filtro-btn activo" onclick="coFiltrarEventos('todos',this)">TODOS</button>
+      <button class="co-filtro-btn" onclick="coFiltrarEventos('masacre',this)"    style="color:#ff0000;">MASACRE</button>
+      <button class="co-filtro-btn" onclick="coFiltrarEventos('ejecucion',this)"  style="color:#ff4444;">EJECUCIÓN</button>
+      <button class="co-filtro-btn" onclick="coFiltrarEventos('detencion',this)"  style="color:#00ccff;">DETENCIÓN</button>
+      <button class="co-filtro-btn" onclick="coFiltrarEventos('narcofosa',this)"  style="color:#888855;">NARCOFOSA</button>
+      <button class="co-filtro-btn" onclick="coFiltrarEventos('narcomanta',this)" style="color:#aa88ff;">NARCOMANTA</button>
+      <button class="co-filtro-btn" onclick="coFiltrarEventos('casa_seguridad',this)" style="color:#ffaa00;">CASA SEG.</button>
+      <button onclick="coNuevoEvento()" style="margin-left:auto;padding:4px 10px;font-family:var(--title);font-size:6px;background:rgba(255,0,0,.1);color:#ff4444;border:1px solid #ff4444;border-radius:3px;cursor:pointer;letter-spacing:1px;white-space:nowrap;">+ EVENTO</button>
+    </div>
+    <!-- lista eventos -->
+    <div style="flex:1;overflow-y:auto;padding:8px 10px;">
+      <div id="co-eventos-lista" style="display:flex;flex-direction:column;gap:5px;">
+        <div style="text-align:center;padding:30px;color:#2a4a6a;font-family:var(--mono);font-size:8px;">Cargando eventos...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SUB-TAB: RED DE ACTORES ── -->
+  <div id="co-sec-red" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:rgba(0,5,10,.98);border-bottom:1px solid #1a0000;flex-shrink:0;">
+      <span style="font-family:var(--title);font-size:6px;color:#3a5a7a;letter-spacing:1px;">GRAFO DE RELACIONES</span>
+      <button onclick="coRenderRed()" style="padding:3px 10px;font-family:var(--title);font-size:6px;background:rgba(170,136,255,.1);color:#aa88ff;border:1px solid #aa88ff;border-radius:3px;cursor:pointer;letter-spacing:1px;">↺ ACTUALIZAR</button>
+      <span style="margin-left:auto;font-size:6px;color:#2a4a6a;font-family:var(--mono);" id="co-red-info">—</span>
+    </div>
+    <canvas id="co-red-canvas" style="flex:1;width:100%;background:#030810;cursor:grab;"></canvas>
+    <!-- leyenda red -->
+    <div style="padding:4px 10px;background:rgba(3,5,10,.96);border-top:1px solid #0d1020;font-family:var(--title);font-size:5.5px;color:#3a5a7a;letter-spacing:1px;display:flex;gap:14px;flex-shrink:0;">
+      <span>● CJNG</span><span style="color:#ff8800;">● CSRL</span><span style="color:#aa88ff;">● OTROS</span>
+      <span style="margin-left:auto;">— mando  ·  - - alianza  ·  ×× rivalidad</span>
+    </div>
+  </div>
+
+</div><!-- /sec-co -->
+
+<!-- MODAL: Nuevo Actor CO -->
+<div id="co-actor-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9500;overflow-y:auto;padding:20px;">
+  <div style="background:#06080f;border:1px solid #2a0000;border-radius:5px;padding:18px;max-width:460px;margin:20px auto;">
+    <div style="font-family:var(--title);font-size:9px;color:#ff4444;letter-spacing:2px;margin-bottom:14px;">👤 REGISTRAR ACTOR</div>
+    <div class="co-campo"><span class="co-label">NOMBRE</span><input class="co-input" id="co-a-nombre" placeholder="Nombre completo"></div>
+    <div class="co-campo"><span class="co-label">ALIAS (separados por coma)</span><input class="co-input" id="co-a-alias" placeholder="El Marro, El 02..."></div>
+    <div class="co-campo"><span class="co-label">ORGANIZACIÓN</span>
+      <select class="co-input" id="co-a-cartel">
+        <option value="cjng">CJNG</option>
+        <option value="csrl">CSRL / Los Marros</option>
+        <option value="cds">Cártel de Sinaloa</option>
+        <option value="cdg">Cártel del Golfo</option>
+        <option value="union_leon">La Unión León</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
+    <div class="co-campo"><span class="co-label">RANGO / POSICIÓN</span><input class="co-input" id="co-a-rango" placeholder="Jefe de plaza, Sicario, Operador..."></div>
+    <div class="co-campo"><span class="co-label">ESTADO</span>
+      <select class="co-input" id="co-a-status">
+        <option value="activo">Activo / Prófugo</option>
+        <option value="preso">Preso</option>
+        <option value="abatido">Abatido</option>
+        <option value="desaparecido">Desaparecido</option>
+      </select>
+    </div>
+    <div class="co-campo"><span class="co-label">ZONA DE OPERACIÓN (colonia o referencia)</span><input class="co-input" id="co-a-zona" placeholder="Irapuato centro, Salamanca..."></div>
+    <div class="co-campo"><span class="co-label">NOTAS</span><textarea class="co-input" id="co-a-notas" rows="2" style="resize:vertical;"></textarea></div>
+    <div class="co-campo"><span class="co-label">FUENTES (URLs separadas por coma)</span><input class="co-input" id="co-a-fuentes" placeholder="https://..."></div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button onclick="coGuardarActor()" style="flex:1;padding:9px;font-family:var(--title);font-size:8px;background:rgba(255,68,68,.15);color:#ff4444;border:1px solid #ff4444;border-radius:3px;cursor:pointer;">💾 GUARDAR</button>
+      <button onclick="document.getElementById('co-actor-modal').style.display='none'" style="padding:9px 16px;font-family:var(--title);font-size:8px;background:transparent;color:#3a5a7a;border:1px solid #1a3a5a;border-radius:3px;cursor:pointer;">CANCELAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nuevo Evento CO -->
+<div id="co-evento-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9500;overflow-y:auto;padding:20px;">
+  <div style="background:#06080f;border:1px solid #2a0000;border-radius:5px;padding:18px;max-width:460px;margin:20px auto;">
+    <div style="font-family:var(--title);font-size:9px;color:#ff4444;letter-spacing:2px;margin-bottom:14px;">💥 REGISTRAR EVENTO</div>
+    <div class="co-campo"><span class="co-label">TIPO DE EVENTO</span>
+      <select class="co-input" id="co-e-tipo">
+        <option value="masacre">Masacre</option>
+        <option value="ejecucion">Ejecución</option>
+        <option value="detencion">Detención</option>
+        <option value="narcofosa">Narcofosa</option>
+        <option value="narcomanta">Narcomanta</option>
+        <option value="casa_seguridad">Casa de seguridad</option>
+        <option value="enfrentamiento">Enfrentamiento</option>
+        <option value="ataque_policia">Ataque a policías</option>
+        <option value="coche_bomba">Coche bomba</option>
+        <option value="extorsion">Extorsión documentada</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
+    <div class="co-campo"><span class="co-label">FECHA (DD/MM/AAAA)</span><input class="co-input" id="co-e-fecha" placeholder="01/07/2020"></div>
+    <div class="co-campo"><span class="co-label">LUGAR (calle, colonia)</span><input class="co-input" id="co-e-lugar" placeholder="Calle Lerdo, Arandas"></div>
+    <div class="co-campo" style="display:flex;gap:8px;">
+      <div style="flex:1;"><span class="co-label">LAT</span><input class="co-input" id="co-e-lat" placeholder="20.6795"></div>
+      <div style="flex:1;"><span class="co-label">LNG</span><input class="co-input" id="co-e-lng" placeholder="-101.3540"></div>
+    </div>
+    <div class="co-campo"><span class="co-label">GRUPO(S) RESPONSABLE(S)</span><input class="co-input" id="co-e-grupos" placeholder="CJNG, CSRL..."></div>
+    <div class="co-campo"><span class="co-label">VÍCTIMAS (número)</span><input class="co-input" id="co-e-victimas" type="number" placeholder="0"></div>
+    <div class="co-campo"><span class="co-label">RESUMEN</span><textarea class="co-input" id="co-e-resumen" rows="3" style="resize:vertical;" placeholder="Descripción breve del evento..."></textarea></div>
+    <div class="co-campo"><span class="co-label">CONFIANZA</span>
+      <select class="co-input" id="co-e-confianza">
+        <option value="alta">Alta (fuente oficial / múltiples medios)</option>
+        <option value="media">Media (1-2 medios)</option>
+        <option value="baja">Baja (rumor / una fuente)</option>
+      </select>
+    </div>
+    <div class="co-campo"><span class="co-label">NOTICIA VINCULADA (ID en BD)</span><input class="co-input" id="co-e-noticia-id" placeholder="Firestore doc ID opcional"></div>
+    <div class="co-campo"><span class="co-label">FUENTES</span><input class="co-input" id="co-e-fuentes" placeholder="https://..."></div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button onclick="coGuardarEvento()" style="flex:1;padding:9px;font-family:var(--title);font-size:8px;background:rgba(255,68,68,.15);color:#ff4444;border:1px solid #ff4444;border-radius:3px;cursor:pointer;">💾 GUARDAR</button>
+      <button onclick="document.getElementById('co-evento-modal').style.display='none'" style="padding:9px 16px;font-family:var(--title);font-size:8px;background:transparent;color:#3a5a7a;border:1px solid #1a3a5a;border-radius:3px;cursor:pointer;">CANCELAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- INGESTA vive ahora dentro de sec-entrada → entrada-ingesta → sec-ingesta-inner -->
+
+<!-- DENUE: fuera de #panel igual que intel/mapa -->
+<div id="sec-denue" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:100;background:var(--bg);flex-direction:column;">
+
+  <!-- SUB-TABS: MAPA / BASE DENUE / ESTADÍSTICAS -->
+  <div class="ec-stab-bar">
+    <button class="ec-stab active" id="ec-stab-mapa" onclick="verEcSubtab('mapa')">🗺 MAPA</button>
+    <button class="ec-stab" id="ec-stab-analisis" onclick="verEcSubtab('analisis')">🗂 BASE DENUE 2025</button>
+    <button class="ec-stab" id="ec-stab-stats" onclick="verEcSubtab('stats')">📊 ESTADÍSTICAS</button>
+  </div>
+
+  <!-- ── SUB-TAB: MAPA ── -->
+  <div id="ec-mapa-wrap" class="visible">
+    <!-- buscador + modo -->
+    <div style="display:flex;gap:6px;align-items:center;padding:5px 10px;background:#040c18;border-bottom:1px solid #0a1a2a;flex-shrink:0;">
+      <input class="denue-search-input" id="denue-search" type="text" placeholder="🔍 Buscar negocio o actividad..." oninput="denueSearch(this.value)">
+      <button class="denue-search-btn" onclick="denueSearch(document.getElementById('denue-search').value)">BUSCAR</button>
+      <button class="denue-modo-btn on" id="denue-modo-btn" onclick="denueChoroToggle(denueMapaObj, this)">🔵 MACRO</button>
+      <button class="mapa-heat-btn" id="denue-btn-ageb" onclick="geoToggleAgebs(denueMapaObj,this)">📊 POBREZA</button>
+      <button class="mapa-heat-btn" id="denue-btn-riesgo" onclick="analisisChoroToggle(denueMapaObj,this)">⚠ RIESGO</button>
+    </div>
+    <!-- filtros categoría -->
+    <div class="denue-barra" id="denue-cats-bar"></div>
+    <!-- filtros tamaño -->
+    <div style="display:flex;align-items:center;gap:4px;padding:3px 10px;background:#020810;border-bottom:1px solid #0a1a2a;flex-shrink:0;overflow-x:auto;">
+      <span style="font-family:var(--title);font-size:5.5px;color:#2a4a6a;letter-spacing:1px;white-space:nowrap;margin-right:2px;">TAMAÑO:</span>
+      <button class="denue-size-btn activo" onclick="filtrarDenueSize(0,this)">TODOS</button>
+      <button class="denue-size-btn" onclick="filtrarDenueSize(1,this)">MICRO 0-5</button>
+      <button class="denue-size-btn" onclick="filtrarDenueSize(3,this)">PEQUEÑO 11-30</button>
+      <button class="denue-size-btn" onclick="filtrarDenueSize(5,this)">MED 51-100</button>
+      <button class="denue-size-btn" onclick="filtrarDenueSize(6,this)">GRANDE 100+</button>
+    </div>
+    <!-- mapa -->
+    <div style="flex:1;position:relative;">
+      <div id="denue-leaflet" style="width:100%;height:100%;background:#060d18;"></div>
+      <div style="position:absolute;bottom:0;left:0;right:0;z-index:900;background:rgba(3,5,10,.92);border-top:1px solid #0d2040;padding:5px 12px;font-size:7px;color:var(--muted);font-family:var(--title);letter-spacing:1px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <span id="denue-cnt-label" style="color:#ffcc00;">— Cargando DENUE…</span>
+        <span id="denue-modo-label" style="margin-left:auto;color:#3a6a9a;">MACRO · densidad visual</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SUB-TAB: BASE DENUE 2025 ── -->
+  <div id="ec-analisis">
+    <!-- filtros categoría -->
+    <div class="ec-filtros-bar" id="ec-anal-cats"></div>
+    <!-- buscador + tamaño + CSV -->
+    <div class="ec-filtros-bar" style="gap:6px;padding:6px 10px;">
+      <div class="ec-autocomplete-wrap">
+        <input id="ec-anal-search" type="text" class="denue-search-input" style="width:100%;font-size:8px;" placeholder="🔍 Buscar nombre o giro…" oninput="ecAnalAutocompletar(this.value)" onblur="setTimeout(ecAnalCerrarAC,200)" autocomplete="off">
+        <div id="ec-ac-list" class="ec-autocomplete-list" style="display:none;"></div>
+      </div>
+      <select id="ec-anal-size" onchange="ecAnalFiltrar()" style="background:#020810;border:1px solid #0d2040;color:var(--text);font-family:var(--mono);font-size:8px;padding:4px 6px;border-radius:3px;flex-shrink:0;">
+        <option value="0">Todos los tamaños</option>
+        <option value="1">Micro 0-5</option>
+        <option value="2">6-10</option>
+        <option value="3">Pequeño 11-30</option>
+        <option value="4">31-50</option>
+        <option value="5">Med 51-100</option>
+        <option value="6">Grande 100+</option>
+      </select>
+      <button onclick="ecAnalExportar()" style="padding:4px 10px;font-family:var(--title);font-size:6px;letter-spacing:.5px;border-radius:3px;cursor:pointer;border:1px solid #ffcc0055;background:transparent;color:#ffcc0099;white-space:nowrap;flex-shrink:0;">⬇ CSV</button>
+    </div>
+    <!-- tabla -->
+    <div class="ec-tabla-wrap">
+      <table class="ec-tabla">
+        <thead>
+          <tr>
+            <th><button class="ec-sort-btn" onclick="ecAnalSort('cat')">CAT</button></th>
+            <th><button class="ec-sort-btn" onclick="ecAnalSort('nombre')">NOMBRE</button></th>
+            <th><button class="ec-sort-btn" onclick="ecAnalSort('giro')">GIRO</button></th>
+            <th><button class="ec-sort-btn" onclick="ecAnalSort('colonia')">COLONIA</button></th>
+            <th><button class="ec-sort-btn" onclick="ecAnalSort('tam')">EMPL.</button></th>
+          </tr>
+        </thead>
+        <tbody id="ec-tabla-body"></tbody>
+      </table>
+      <div id="ec-tabla-footer" style="font-family:var(--title);font-size:6px;color:#3a6a9a;letter-spacing:1px;padding:6px 2px;"></div>
+    </div>
+  </div>
+
+  <!-- ── SUB-TAB: ESTADÍSTICAS ── -->
+  <div id="ec-stats" style="display:none;flex:1;flex-direction:column;overflow-y:auto;">
+    <div style="padding:8px 10px 4px;font-family:var(--title);font-size:5.5px;letter-spacing:1.5px;color:#3a6a9a;border-bottom:1px solid #0d2040;flex-shrink:0;">
+      IRAPUATO · DENUE 2025 · ESTADÍSTICAS GLOBALES
+    </div>
+    <div id="ec-stats-content" style="padding:8px 10px;display:flex;flex-direction:column;gap:8px;">
+      <div style="font-size:8px;color:#3a5a7a;text-align:center;padding:20px;">Cargando estadísticas…</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- INTEL: fuera de #panel para tener altura real -->
+    <div id="sec-intel">
+      <div id="intel-container" style="display:flex;flex-direction:column;width:100%;height:100%;">
+        <div class="intel-barra-tipo" style="display:flex;align-items:center;gap:4px;padding:5px 10px;flex-shrink:0;overflow-x:auto;">
+          <div id="intel-filtros" style="display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;flex:1;"></div>
+          <button class="mapa-heat-btn" id="intel-btn-heat" onclick="toggleIntelHeat(this)" style="flex-shrink:0;">&#x1F525; CALOR</button>
+          <button class="mapa-heat-btn" id="intel-btn-ageb" onclick="geoToggleAgebs(intelObj,this)" style="flex-shrink:0;">📊 POBREZA</button>
+          <button class="mapa-heat-btn" id="intel-btn-riesgo" onclick="analisisChoroToggle(intelObj,this)" style="flex-shrink:0;">⚠ RIESGO</button>
+        </div>
+        <div class="intel-barra-tiempo" id="intel-tiempo-bar">
+          <span style="color:#3a5a7a;font-family:var(--title);font-size:6px;letter-spacing:1px;white-space:nowrap;padding:2px 0;">🕐</span>
+          <button class="intel-t-btn" onclick="filtrarIntelTiempo(7,this)">7D</button>
+          <button class="intel-t-btn activo" onclick="filtrarIntelTiempo(14,this)">2SEM</button>
+          <button class="intel-t-btn" onclick="filtrarIntelTiempo(30,this)">1MES</button>
+          <button class="intel-t-btn" onclick="filtrarIntelTiempo(90,this)">3M</button>
+          <button class="intel-t-btn" onclick="filtrarIntelTiempo(180,this)">6M</button>
+          <button class="intel-t-btn" onclick="filtrarIntelTiempo(365,this)">1AÑO</button>
+          <button class="intel-t-btn" onclick="filtrarIntelTiempo(0,this)">TODO</button>
+          <span id="intel-t-label" style="margin-left:auto;color:#3a7ab8;font-family:var(--mono);font-size:7px;white-space:nowrap;"></span>
+        </div>
+        <div id="intel-leaflet" style="flex:1;width:100%;background:#060d18;position:relative;">
+          <!-- Panel colapsable predicción Sprint 4 -->
+          <div style="position:absolute;top:10px;right:10px;z-index:1000;width:220px;">
+            <button id="predic-panel-btn" onclick="prediccionTogglePanel()"
+              style="width:100%;background:#0d0d1a;border:1px solid #ff8c00;color:#ff8c00;
+                     font-size:11px;font-weight:700;padding:5px 8px;cursor:pointer;
+                     letter-spacing:.5px;border-radius:3px 3px 0 0;font-family:monospace;">
+              ⚠ ZONAS ACTIVAS ▼
+            </button>
+            <div id="predic-panel-intel"
+              style="background:#0a0a14;border:1px solid #1a1a2e;border-top:none;
+                     padding:8px;display:none;max-height:260px;overflow-y:auto;
+                     border-radius:0 0 3px 3px;">
+            </div>
+          </div>
+        </div>
+        <div class="mapa-info-bar" style="flex-wrap:wrap;">
+          <div id="intel-contadores" style="display:flex;gap:8px;flex-wrap:wrap;flex:1;"></div>
+          <span style="margin-left:auto;color:var(--cyan);" id="intel-cnt-tot">0 noticias</span>
+        </div>
+      </div>
+    </div>
+
+<!-- MOVILIDAD -->
+    <div id="sec-mapa" style="position:fixed;left:0;width:100vw;display:flex;flex-direction:column;overflow:hidden;background:#111;">
+
+      <!-- TOOLBAR: flex-shrink:0 — nunca se comprime -->
+      <div id="mov-toolbar" style="flex-shrink:0;background:#080808;border-bottom:1px solid #181818;display:flex;flex-direction:column;z-index:500;">
+
+        <!-- Fila 1: capas + controles -->
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:5px 8px;box-sizing:border-box;">
+          <span style="font-family:monospace;font-size:9px;color:#2a2a2a;letter-spacing:1px;">CAP</span>
+          <button id="mov-btn-gov" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #00aa55;background:#0d1f0d;color:#00ff88;">&#x1f3db; GOB <span id="mov-cnt-gov" style="opacity:.7;"></span></button>
+          <button id="mov-btn-semaforos" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #2a2a2a;background:#161616;color:#555;">&#x1f6a6; OSM <span id="mov-cnt-semaforos" style="opacity:.7;"></span></button>
+          <button id="mov-btn-manuales" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #00aa55;background:#0d1f0d;color:#00ff88;">&#x1f6a6; CAMPO <span id="mov-cnt-manuales" style="opacity:.7;"></span></button>
+          <button id="mov-btn-nodos" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #2a2a2a;background:#161616;color:#555;">&#x26a0; NOD <span id="mov-cnt-nodos" style="opacity:.7;"></span></button>
+          <button id="mov-btn-vialidad" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #2a4a4a;background:#0a1a1a;color:#44cccc;">&#x1f6e3; VIAL <span id="mov-cnt-vialidad" style="opacity:.7;"></span></button>
+          <span style="color:#1a1a1a;">|</span>
+          <button id="mov-btn-sat" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #2a4a2a;background:#0a1a0a;color:#44aa44;">&#x1f6f0; SAT</button>
+          <button id="mov-btn-oscuro" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #1a1a4a;background:#0a0a1f;color:#6666cc;">&#x1f319; OSC</button>
+          <button id="mov-btn-editar" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #2a2a4a;background:#0d0d1f;color:#6666cc;">&#x270f; EDITAR</button>
+          <span id="mov-status" style="font-family:monospace;font-size:8px;color:#333;margin-left:auto;font-style:italic;"></span>
+        </div>
+
+        <!-- Fila 2: sub-modos edición (oculta por defecto) -->
+        <div id="mov-submodos" style="display:none;align-items:center;gap:6px;padding:4px 8px;background:#050505;border-top:1px solid #1a1a1a;flex-shrink:0;">
+          <span style="font-family:monospace;font-size:8px;color:#444;">MODO:</span>
+          <button id="mov-subbtn-sem" onclick="movilidadSetModoEdicion('sem')" style="font-family:monospace;font-size:10px;padding:4px 14px;border-radius:3px;cursor:pointer;border:1px solid #2a2a2a;background:#161616;color:#555;">&#x1f6a6; SEM</button>
+          <button id="mov-subbtn-via" onclick="movilidadSetModoEdicion('via')" style="font-family:monospace;font-size:10px;padding:4px 14px;border-radius:3px;cursor:pointer;border:1px solid #2a2a2a;background:#161616;color:#555;">&#x1f6e3; VIA</button>
+          <span id="mov-modo-hint" style="font-family:monospace;font-size:8px;color:#333;margin-left:auto;">elige modo</span>
+        </div>
+
+      </div><!-- /toolbar -->
+
+      <!-- MAPA: flex:1 — ocupa todo el espacio restante -->
+      <div id="movilidad-mapa" style="flex:1;position:relative;"></div>
+
+      <!-- PANELES FLOTANTES: position:absolute dentro del sec-mapa -->
+
+      <!-- Panel: nuevo / editar semáforo -->
+      <div id="mov-panel-sem" style="display:none;position:absolute;bottom:60px;right:8px;z-index:600;width:290px;max-height:80vh;background:#0a0a0a;border:1px solid #1e3a1e;border-radius:5px;flex-direction:column;font-family:monospace;font-size:10px;color:#ccc;box-shadow:0 4px 20px #000c;overflow:hidden;">
+        <div style="background:#0d1f0d;padding:7px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a3a1a;flex-shrink:0;">
+          <span id="movp-titulo" style="color:#00ff88;font-size:10px;letter-spacing:1px;">+ Nuevo Semaforo</span>
+          <button onclick="movilidadCerrarPanel()" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;padding:0;">&#x2715;</button>
+        </div>
+        <div style="padding:10px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;flex:1;">
+          <div style="display:flex;gap:5px;">
+            <div style="flex:1;"><div style="color:#444;font-size:8px;margin-bottom:2px;">LAT</div><input id="movp-lat" type="number" step="0.000001" style="width:100%;background:#111;border:1px solid #222;color:#888;font-family:monospace;font-size:9px;padding:4px;border-radius:3px;box-sizing:border-box;"></div>
+            <div style="flex:1;"><div style="color:#444;font-size:8px;margin-bottom:2px;">LNG</div><input id="movp-lng" type="number" step="0.000001" style="width:100%;background:#111;border:1px solid #222;color:#888;font-family:monospace;font-size:9px;padding:4px;border-radius:3px;box-sizing:border-box;"></div>
+          </div>
+          <div><div style="color:#444;font-size:8px;margin-bottom:2px;">CALLE 1</div><input id="movp-calle1" type="text" placeholder="Ej: Blvd. Solidaridad" style="width:100%;background:#111;border:1px solid #222;color:#ccc;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;"></div>
+          <div><div style="color:#444;font-size:8px;margin-bottom:2px;">CALLE 2 (interseccion)</div><input id="movp-calle2" type="text" placeholder="Ej: Av. Lopez Mateos" style="width:100%;background:#111;border:1px solid #222;color:#ccc;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;"></div>
+          <div><div style="color:#444;font-size:8px;margin-bottom:2px;">ESTADO</div>
+            <select id="movp-estado" style="width:100%;background:#111;border:1px solid #222;color:#ccc;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;">
+              <option value="funcionando">Funcionando</option>
+              <option value="mantenimiento">Mantenimiento</option>
+              <option value="apagado">Apagado</option>
+            </select>
+          </div>
+          <input type="hidden" id="movp-tipo-val" value="vehicular">
+          <div style="color:#444;font-size:8px;margin-bottom:2px;">TIPO</div>
+          <div style="display:flex;gap:5px;">
+            <button id="movp-tipo-v" onclick="movilidadToggleTipoSemaforo('vehicular')" style="flex:1;font-family:monospace;font-size:9px;padding:4px;border-radius:3px;cursor:pointer;border:1px solid #ffaa00;background:#1a1200;color:#ffaa00;">&#x1f697; VEHICULAR</button>
+            <button id="movp-tipo-p" onclick="movilidadToggleTipoSemaforo('peatonal')" style="flex:1;font-family:monospace;font-size:9px;padding:4px;border-radius:3px;cursor:pointer;border:1px solid #2a2a2a;background:#161616;color:#555;">&#x1f6b6; PEATONAL</button>
+          </div>
+          <div id="movp-campos-vehicular" style="display:flex;flex-direction:column;gap:4px;">
+            <div style="color:#444;font-size:8px;">TIEMPOS (segundos)</div>
+            <div style="display:flex;gap:5px;">
+              <div style="flex:1;"><div style="color:#00cc44;font-size:8px;margin-bottom:2px;">VERDE</div><input id="movp-verde" type="number" min="0" placeholder="30" style="width:100%;background:#111;border:1px solid #1a3a1a;color:#00cc44;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;"></div>
+              <div style="flex:1;"><div style="color:#ffaa00;font-size:8px;margin-bottom:2px;">AMRLLO</div><input id="movp-amarillo" type="number" min="0" placeholder="5" style="width:100%;background:#111;border:1px solid #3a2a00;color:#ffaa00;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;"></div>
+              <div style="flex:1;"><div style="color:#ff2200;font-size:8px;margin-bottom:2px;">ROJO</div><input id="movp-rojo" type="number" min="0" placeholder="30" style="width:100%;background:#111;border:1px solid #3a1100;color:#ff2200;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;"></div>
+            </div>
+          </div>
+          <div id="movp-campos-peatonal" style="display:none;flex-direction:column;gap:4px;">
+            <div style="color:#444;font-size:8px;">TIEMPOS PEATONAL (seg)</div>
+            <div style="display:flex;gap:5px;">
+              <div style="flex:1;"><div style="color:#00cc44;font-size:8px;margin-bottom:2px;">PASO</div><input id="movp-paso" type="number" min="0" placeholder="25" style="width:100%;background:#111;border:1px solid #1a3a1a;color:#00cc44;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;"></div>
+              <div style="flex:1;"><div style="color:#ff2200;font-size:8px;margin-bottom:2px;">PAUSA</div><input id="movp-pausa" type="number" min="0" placeholder="40" style="width:100%;background:#111;border:1px solid #3a1100;color:#ff2200;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;"></div>
+            </div>
+          </div>
+          <div><div style="color:#444;font-size:8px;margin-bottom:2px;">GRUPO SINCRONIZACION</div><input id="movp-grupo" type="text" placeholder="corredor-solidaridad" style="width:100%;background:#111;border:1px solid #222;color:#ccc;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;"></div>
+          <div><div style="color:#444;font-size:8px;margin-bottom:2px;">FOTO URL</div><input id="movp-foto" type="text" placeholder="https://..." style="width:100%;background:#111;border:1px solid #222;color:#ccc;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;"></div>
+          <div><div style="color:#444;font-size:8px;margin-bottom:2px;">NOTAS</div><textarea id="movp-notas" rows="2" style="width:100%;background:#111;border:1px solid #222;color:#ccc;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;resize:none;"></textarea></div>
+        </div>
+        <div style="padding:7px 10px;border-top:1px solid #1a1a1a;display:flex;gap:6px;flex-shrink:0;">
+          <button id="movp-btn-guardar" onclick="movilidadGuardarSemaforo()" style="flex:1;font-family:monospace;font-size:10px;padding:6px;background:#0d2a0d;color:#00ff88;border:1px solid #00aa55;border-radius:3px;cursor:pointer;">GUARDAR</button>
+          <button onclick="movilidadCerrarPanel()" style="font-family:monospace;font-size:10px;padding:6px 10px;background:#1a1a1a;color:#555;border:1px solid #2a2a2a;border-radius:3px;cursor:pointer;">CANCELAR</button>
+        </div>
+      </div>
+
+      <!-- Panel: observación de campo -->
+      <div id="mov-panel-obs" style="display:none;position:absolute;bottom:60px;right:8px;z-index:601;width:260px;background:#0a0a0a;border:1px solid #1a2a1a;border-radius:5px;flex-direction:column;font-family:monospace;font-size:10px;color:#ccc;box-shadow:0 4px 20px #000c;">
+        <div style="background:#0d1a0d;padding:7px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a2a1a;">
+          <span style="color:#00ff88;font-size:10px;letter-spacing:1px;">OBSERVACION DE CAMPO</span>
+          <button onclick="movilidadCerrarObs()" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;padding:0;">&#x2715;</button>
+        </div>
+        <div style="padding:10px;display:flex;flex-direction:column;gap:7px;">
+          <div><div style="color:#444;font-size:8px;margin-bottom:3px;">HORA LOCAL</div><input id="movobs-hora" type="time" style="width:100%;background:#111;border:1px solid #222;color:#ccc;font-family:monospace;font-size:12px;padding:5px;border-radius:3px;box-sizing:border-box;"></div>
+          <div>
+            <div style="color:#444;font-size:8px;margin-bottom:3px;">LUZ OBSERVADA</div>
+            <div style="display:flex;gap:5px;">
+              <div id="movobs-luz-v" onclick="movilidadSelLuz('verde')" style="flex:1;background:#001a0d;border:2px solid #00cc44;border-radius:4px;padding:6px;text-align:center;font-size:9px;color:#00cc44;cursor:pointer;">VERDE</div>
+              <div id="movobs-luz-a" onclick="movilidadSelLuz('amarillo')" style="flex:1;background:#1a1200;border:2px solid #333;border-radius:4px;padding:6px;text-align:center;font-size:9px;color:#555;cursor:pointer;">AMRLLO</div>
+              <div id="movobs-luz-r" onclick="movilidadSelLuz('rojo')" style="flex:1;background:#1a0000;border:2px solid #333;border-radius:4px;padding:6px;text-align:center;font-size:9px;color:#555;cursor:pointer;">ROJO</div>
+            </div>
+            <input type="hidden" id="movobs-luz" value="verde">
+          </div>
+          <div><div style="color:#444;font-size:8px;margin-bottom:3px;">NOTAS</div><input id="movobs-notas" type="text" placeholder="trafico alto, ciclo lento..." style="width:100%;background:#111;border:1px solid #222;color:#ccc;font-family:monospace;font-size:10px;padding:5px;border-radius:3px;box-sizing:border-box;"></div>
+        </div>
+        <div style="padding:7px 10px;border-top:1px solid #1a1a1a;display:flex;gap:6px;">
+          <button id="movobs-btn-guardar" onclick="movilidadGuardarObservacion()" style="flex:1;font-family:monospace;font-size:10px;padding:6px;background:#0d2a0d;color:#00ff88;border:1px solid #00aa55;border-radius:3px;cursor:pointer;">GUARDAR</button>
+          <button onclick="movilidadCerrarObs()" style="font-family:monospace;font-size:10px;padding:6px 10px;background:#1a1a1a;color:#555;border:1px solid #2a2a2a;border-radius:3px;cursor:pointer;">CANCELAR</button>
+        </div>
+      </div>
+
+      <!-- Panel: control de trazado VIA -->
+      <div id="mov-panel-trazado" style="display:none;position:absolute;bottom:8px;left:8px;z-index:650;background:#0a0a0a;border:1px solid #1a3a3a;border-radius:5px;font-family:monospace;box-shadow:0 4px 16px #000c;min-width:220px;">
+        <div style="background:#0d1f1f;padding:5px 10px;border-bottom:1px solid #1a3a3a;display:flex;align-items:center;gap:8px;">
+          <span style="color:#44cccc;font-size:9px;letter-spacing:1px;">&#x1f6e3; TRAZANDO</span>
+          <span id="trazado-cnt" style="color:#336666;font-size:9px;">0 pts</span>
+          <span id="trazado-hint" style="color:#2a4a4a;font-size:8px;margin-left:auto;">2x-click=fin</span>
+        </div>
+        <div style="padding:6px 8px;display:flex;gap:5px;align-items:center;">
+          <button id="trazado-btn-undo" onclick="vialidadUndo()" title="Ctrl+Z" style="font-family:monospace;font-size:11px;padding:5px 10px;border-radius:3px;cursor:pointer;border:1px solid #333;background:#161616;color:#888;">&#x21B6; UNDO</button>
+          <button id="trazado-btn-redo" onclick="vialidadRedo()" title="Ctrl+Y" style="font-family:monospace;font-size:11px;padding:5px 10px;border-radius:3px;cursor:pointer;border:1px solid #333;background:#161616;color:#555;">&#x21B7; REDO</button>
+          <button onclick="vialidadTerminarDesdeBtn()" style="font-family:monospace;font-size:11px;padding:5px 12px;border-radius:3px;cursor:pointer;border:1px solid #226666;background:#0d2a2a;color:#44cccc;font-weight:700;">&#x2713; LISTO</button>
+          <button onclick="vialidadCancelarDesdeBtn()" style="font-family:monospace;font-size:11px;padding:5px 10px;border-radius:3px;cursor:pointer;border:1px solid #2a1a1a;background:#1a0d0d;color:#aa4444;">&#x2715;</button>
+        </div>
+      </div>
+
+      <!-- Panel: nuevo / editar segmento vial -->
+      <div id="mov-panel-via" style="display:none;position:absolute;bottom:60px;left:8px;z-index:600;width:260px;max-height:80vh;background:#0a0a0a;border:1px solid #1a3a3a;border-radius:5px;flex-direction:column;font-family:monospace;font-size:10px;color:#ccc;box-shadow:0 4px 20px #000c;overflow:hidden;">
+        <div style="background:#0d1f1f;padding:7px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a3a3a;flex-shrink:0;">
+          <span id="movvia-titulo" style="color:#44cccc;font-size:10px;letter-spacing:1px;">+ Nuevo Segmento</span>
+          <button onclick="movilidadCerrarPanelVia()" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;padding:0;">&#x2715;</button>
+        </div>
+        <div style="padding:10px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;flex:1;">
+          <div style="color:#336666;font-size:8px;font-style:italic;" id="movvia-cnt-pts">0 puntos</div>
+          <div><div style="color:#444;font-size:8px;margin-bottom:2px;">NOMBRE DE CALLE</div><input id="movvia-nombre" type="text" placeholder="Ej: Blvd. Torres Landa" style="width:100%;background:#111;border:1px solid #1a3a3a;color:#ccc;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;"></div>
+          <div><div style="color:#444;font-size:8px;margin-bottom:2px;">SENTIDO</div>
+            <select id="movvia-sentido" style="width:100%;background:#111;border:1px solid #222;color:#ccc;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;">
+              <option value="uno">&#x2192; Un sentido</option>
+              <option value="dos">&#x21C4; Doble sentido</option>
+            </select>
+          </div>
+          <div><div style="color:#444;font-size:8px;margin-bottom:2px;">CARRILES</div>
+            <select id="movvia-carriles" style="width:100%;background:#111;border:1px solid #222;color:#ccc;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;">
+              <option value="1">1 carril</option>
+              <option value="2" selected>2 carriles</option>
+              <option value="3">3 carriles</option>
+              <option value="4">4 carriles</option>
+            </select>
+          </div>
+          <div><div style="color:#444;font-size:8px;margin-bottom:2px;">VEL. MAX (km/h)</div>
+            <select id="movvia-vel" style="width:100%;background:#111;border:1px solid #222;color:#ccc;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;">
+              <option value="20">20 km/h</option>
+              <option value="30">30 km/h</option>
+              <option value="40" selected>40 km/h</option>
+              <option value="50">50 km/h</option>
+              <option value="60">60 km/h</option>
+              <option value="80">80 km/h</option>
+            </select>
+          </div>
+          <div><div style="color:#444;font-size:8px;margin-bottom:2px;">NOTAS</div><textarea id="movvia-notas" rows="2" style="width:100%;background:#111;border:1px solid #222;color:#ccc;font-family:monospace;font-size:10px;padding:4px;border-radius:3px;box-sizing:border-box;resize:none;"></textarea></div>
+        </div>
+        <div style="padding:7px 10px;border-top:1px solid #1a1a1a;display:flex;gap:6px;flex-shrink:0;">
+          <button id="movvia-btn-guardar" onclick="vialidadGuardar()" style="flex:1;font-family:monospace;font-size:10px;padding:6px;background:#0d2a2a;color:#44cccc;border:1px solid #226666;border-radius:3px;cursor:pointer;">GUARDAR</button>
+          <button onclick="movilidadCerrarPanelVia()" style="font-family:monospace;font-size:10px;padding:6px 10px;background:#1a1a1a;color:#555;border:1px solid #2a2a2a;border-radius:3px;cursor:pointer;">CANCELAR</button>
+        </div>
+      </div>
+
+      <!-- Panel: confirmación borrar -->
+      <div id="mov-panel-confirmar" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:700;background:rgba(0,0,0,.75);flex-direction:column;align-items:center;justify-content:center;">
+        <div style="background:#0f0808;border:1px solid #aa2222;border-radius:5px;padding:20px;min-width:240px;text-align:center;font-family:monospace;">
+          <div id="mov-confirmar-label" style="color:#ff4444;font-size:11px;margin-bottom:12px;"></div>
+          <div style="color:#444;font-size:9px;margin-bottom:16px;">Esta accion no se puede deshacer.</div>
+          <div style="display:flex;gap:8px;justify-content:center;">
+            <button onclick="movilidadConfirmarBorrarOk()" style="font-family:monospace;font-size:10px;padding:7px 16px;background:#2a0808;color:#ff4444;border:1px solid #aa2222;border-radius:3px;cursor:pointer;">BORRAR</button>
+            <button onclick="movilidadConfirmarBorrarCancelar()" style="font-family:monospace;font-size:10px;padding:7px 16px;background:#1a1a1a;color:#888;border:1px solid #2a2a2a;border-radius:3px;cursor:pointer;">CANCELAR</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /sec-mapa -->
+
+<div id="toast"></div>
+
+<!-- MODAL GESTOR DE KEYS -->
+<div id="modal-keys" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;overflow-y:auto;padding:20px;">
+  <div style="background:#060f1e;border:1px solid #00f5ff44;border-radius:6px;padding:20px;max-width:480px;margin:20px auto;">
+    <div style="font-family:'Orbitron',monospace;font-size:10px;color:#00f5ff;letter-spacing:2px;margin-bottom:16px;">🔑 GESTOR DE API KEYS GEMINI</div>
+    <div style="font-size:8px;color:#5a8aaa;margin-bottom:12px;line-height:1.7;">
+      Cada cuenta Google en <strong style="color:#00ccff">aistudio.google.com</strong> genera una key gratuita con cuota diaria propia.<br>
+      Con 3-4 keys rotando tienes análisis ilimitado para uso diario.
+    </div>
+    <div id="keys-lista" style="margin-bottom:12px;"></div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <input id="nueva-key-input" placeholder="Pega aquí tu nueva API key (AIzaSy...)" type="password"
+        style="flex:1;background:#030810;border:1px solid #1a3a5a;color:#c0e8ff;font-family:'Share Tech Mono',monospace;font-size:9px;padding:7px 10px;border-radius:3px;outline:none;">
+      <button onclick="agregarKeyDesdeModal()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 12px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid #00ff8844;border-radius:3px;cursor:pointer;white-space:nowrap;letter-spacing:1px;">+ AGREGAR</button>
+    </div>
+    <div style="font-size:7px;color:#2a5a4a;margin-bottom:10px;line-height:1.8;">
+      💡 Crear key Gemini gratis: <strong style="color:#00ccff">aistudio.google.com</strong> → Get API Key<br>
+      Las keys se guardan en tu navegador. Cada cuenta Google = 1 key con cuota propia.
+    </div>
+    <div style="border-top:1px solid #0d2040;padding-top:10px;margin-bottom:10px;">
+      <div style="font-family:'Orbitron',monospace;font-size:8px;color:#ff8800;letter-spacing:1px;margin-bottom:4px;">🔀 OPENROUTER — PRINCIPAL <span style="color:#3a5a3a;font-size:6px;">(rota automático entre keys)</span> <span id="or-keys-count" style="color:#ff880099;font-size:6px;"></span></div>
+      <div style="font-size:7px;color:#5a6a4a;margin-bottom:6px;line-height:1.7;">
+        Registro gratis en <strong style="color:#ffaa44">openrouter.ai</strong> · Cada cuenta = 1 key · ~200 req/día gratis por key
+      </div>
+      <div id="or-keys-lista" style="margin-bottom:8px;max-height:100px;overflow-y:auto;"></div>
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        <input id="or-key-input" placeholder="sk-or-v1-..." type="password"
+          style="flex:1;background:#030810;border:1px solid #2a3a1a;color:#c0e8ff;font-family:'Share Tech Mono',monospace;font-size:9px;padding:7px 10px;border-radius:3px;outline:none;">
+        <button onclick="agregarORKey()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 12px;background:rgba(255,136,0,.1);color:#ff8800;border:1px solid #ff880044;border-radius:3px;cursor:pointer;white-space:nowrap;letter-spacing:1px;">+ AGREGAR</button>
+      </div>
+      <div id="or-key-status" style="font-size:7px;color:#3a5a3a;margin-top:2px;min-height:12px;"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="probarKeysOR()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 14px;background:rgba(255,136,0,.08);color:#ff8800;border:1px solid #ff880033;border-radius:3px;cursor:pointer;letter-spacing:1px;">🧪 PROBAR OR</button>
+      <button onclick="probarKeys()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 14px;background:rgba(0,200,255,.08);color:#00f5ff;border:1px solid #00ccff44;border-radius:3px;cursor:pointer;letter-spacing:1px;">🧪 PROBAR GEMINI</button>
+      <button onclick="cerrarGestorKeys()" style="font-family:'Orbitron',monospace;font-size:7px;padding:6px 14px;background:rgba(255,0,0,.08);color:#ff4466;border:1px solid #ff446644;border-radius:3px;cursor:pointer;letter-spacing:1px;">CERRAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SCRIPTS ═══════════ -->
+<!-- Leaflet -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<!-- simpleheat + leaflet.heat (browser-only, sin CommonJS/AMD) -->
+<script>
+try {
+function simpleheat(canvas){if(!(this instanceof simpleheat)){return new simpleheat(canvas);}this._canvas=canvas=typeof canvas==='string'?document.getElementById(canvas):canvas;this._ctx=canvas.getContext('2d');this._width=canvas.width;this._height=canvas.height;this._max=1;this._data=[];}simpleheat.prototype={defaultRadius:25,defaultGradient:{0.4:'blue',0.6:'cyan',0.7:'lime',0.8:'yellow',1:'red'},data:function(data){this._data=data;return this;},max:function(max){this._max=max;return this;},add:function(point){this._data.push(point);return this;},clear:function(){this._data=[];return this;},radius:function(r,blur){blur=blur===undefined?15:blur;var circle=this._circle=this._createCanvas(),ctx=circle.getContext('2d'),r2=this._r=r+blur;circle.width=circle.height=r2*2;ctx.shadowOffsetX=ctx.shadowOffsetY=r2*2;ctx.shadowBlur=blur;ctx.shadowColor='black';ctx.beginPath();ctx.arc(-r2,0,r,0,Math.PI*2,true);ctx.closePath();ctx.fill();return this;},resize:function(){this._width=this._canvas.width;this._height=this._canvas.height;},gradient:function(grad){var canvas=this._createCanvas(),ctx=canvas.getContext('2d'),gradient=ctx.createLinearGradient(0,0,0,256);canvas.width=1;canvas.height=256;for(var i in grad){gradient.addColorStop(+i,grad[i]);}ctx.fillStyle=gradient;ctx.fillRect(0,0,1,256);this._grad=ctx.getImageData(0,0,1,256).data;return this;},minOpacity:function(minOpacity){this._minOpacity=minOpacity;return this;},draw:function(minOpacity){if(!this._circle){this.radius(this.defaultRadius);}if(!this._grad){this.gradient(this.defaultGradient);}var ctx=this._ctx;ctx.clearRect(0,0,this._width,this._height);for(var i=0,len=this._data.length,p;i<len;i++){p=this._data[i];ctx.globalAlpha=Math.min(Math.max(p[2]/this._max,minOpacity===undefined?0.05:minOpacity),1);ctx.drawImage(this._circle,p[0]-this._r,p[1]-this._r);}var colored=ctx.getImageData(0,0,this._width,this._height);this._colorize(colored.data,this._grad);ctx.putImageData(colored,0,0);return this;},_colorize:function(pixels,gradient){for(var i=3,len=pixels.length,j;i<len;i+=4){j=pixels[i]*4;if(j){pixels[i-3]=gradient[j];pixels[i-2]=gradient[j+1];pixels[i-1]=gradient[j+2];}}},_createCanvas:function(){return document.createElement('canvas');}};
+(function(){
+  if(typeof window.L === 'undefined') return;
+  var HeatLayer = (L.Layer ? L.Layer : L.Class).extend({
+    initialize:function(latlngs,options){this._latlngs=latlngs;L.setOptions(this,options);},
+    setLatLngs:function(latlngs){this._latlngs=latlngs;return this.redraw();},
+    addLatLng:function(latlng){this._latlngs.push(latlng);return this.redraw();},
+    redraw:function(){if(this._heat&&!this._frame&&this._map){this._frame=L.Util.requestAnimFrame(this._redraw,this);}return this;},
+    onAdd:function(map){this._map=map;if(!this._canvas){this._initCanvas();}map.getPanes().overlayPane.appendChild(this._canvas);map.on('moveend',this._reset,this);this._reset();},
+    onRemove:function(map){map.getPanes().overlayPane.removeChild(this._canvas);map.off('moveend',this._reset,this);},
+    addTo:function(map){map.addLayer(this);return this;},
+    _initCanvas:function(){var canvas=this._canvas=L.DomUtil.create('canvas','leaflet-heatmap-layer leaflet-layer');var size=this._map.getSize();canvas.width=size.x;canvas.height=size.y;var s=canvas.style;s.position='absolute';s.left='0';s.top='0';s.zIndex=200;this._heat=simpleheat(canvas);if(this.options.radius){this._heat.radius(this.options.radius);}if(this.options.gradient){this._heat.gradient(this.options.gradient);}},
+    _reset:function(){var tl=this._map.containerPointToLayerPoint([0,0]);L.DomUtil.setPosition(this._canvas,tl);var size=this._map.getSize();if(this._heat._width!==size.x){this._canvas.width=this._heat._width=size.x;}if(this._heat._height!==size.y){this._canvas.height=this._heat._height=size.y;}this._redraw();},
+    _redraw:function(){this._frame=null;if(!this._map)return;var data=[],r=this._heat._r||25,size=this._map.getSize(),bounds=new L.Bounds(L.point([-r,-r]),size.add([r,r]));for(var i=0;i<this._latlngs.length;i++){var ll=this._latlngs[i];var pt=this._map.latLngToContainerPoint(ll);if(bounds.contains(pt)){data.push([Math.round(pt.x),Math.round(pt.y),ll[2]||1]);}}this._heat.clear();if(data.length){this._heat.data(data).draw(this.options.minOpacity||0.05);}this._frame=null;}
+  });
+  L.heatLayer = function(latlngs,options){return new HeatLayer(latlngs,options);};
+}());
+} catch(e) { console.warn('leaflet.heat no disponible:', e.message); }
+</script>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js" defer></script>
+
+<!-- App modules (orden de dependencias) -->
+<script src="js/config.js" defer></script>
+<script src="js/datos.js" defer></script>
+  <script src="js/geo.js" defer></script>
+  <script src="js/censo.js" defer></script>
+<script src="js/analisis.js" defer></script>
+<script src="js/ia.js" defer></script>
+<script src="js/bd.js" defer></script>
+<script src="js/aprende.js" defer></script>
+<script src="js/calles.js" defer></script>
+<script src="js/intel.js" defer></script>
+<script src="js/rss.js" defer></script>
+<script src="js/mapa.js" defer></script>
+<script src="js/gob.js" defer></script>
+<script src="js/data.js" defer></script>
+<script src="js/sesnsp.js" defer></script>
+<script src="js/prediccion.js" defer></script>
+<script src="js/co.js" defer></script>
+<script src="js/ingesta.js" defer></script>
+<script src="js/subtipo_seg.js" defer></script>
+<script src="js/movilidad.js" defer></script>
+<script src="js/app.js" defer></script>
+
+<script>
+function movilidadSelLuz(luz) {
+  var cols = { verde: '#00cc44', amarillo: '#ffaa00', rojo: '#ff2200' };
+  var bgs  = { verde: '#001a0d', amarillo: '#1a1200', rojo: '#1a0000' };
+  ['verde','amarillo','rojo'].forEach(function(l) {
+    var el = document.getElementById('movobs-luz-' + l.charAt(0));
+    if (!el) return;
+    if (l === luz) {
+      el.style.borderColor = cols[l];
+      el.style.color = cols[l];
+      el.style.background = bgs[l];
+    } else {
+      el.style.borderColor = '#333';
+      el.style.color = '#444';
+      el.style.background = bgs[l];
+    }
+  });
+  var inp = document.getElementById('movobs-luz');
+  if (inp) inp.value = luz;
+}
+</script>
+</body>
+</html>
