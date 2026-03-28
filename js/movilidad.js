@@ -8,10 +8,11 @@
 // ═══════════════════════════════════════════════════════════
 var MOVILIDAD = {
   mapa:    null,
-  capas:   { gov: null, semOSM: null, semManuales: null, nodos: null, vialidad: null },
-  toggles: { gov: true, semOSM: false, semManuales: true, nodos: false, vialidad: true },
-  cache:   { semOSM: null, semOSM_ts: 0, TTL: 7*24*3600*1000 },
-  cargando:{ semOSM: false },
+  capas:   { gov: null, semOSM: null, semManuales: null, nodos: null, vialidad: null, redOSM: null },
+  toggles: { gov: true, semOSM: false, semManuales: true, nodos: false, vialidad: true, redOSM: false },
+  cache:   { semOSM: null, semOSM_ts: 0, TTL: 7*24*3600*1000,
+             redOSM: null, redOSM_ts: 0, redOSM_TTL: 30*24*3600*1000 },
+  cargando:{ semOSM: false, redOSM: false },
   edicion: false,
   modoEdicion: 'sem',     // 'sem' | 'via'
   editandoId: null,
@@ -869,6 +870,7 @@ function movilidadBindBotones() {
   b = document.getElementById('mov-btn-manuales');  if(b) b.onclick = movilidadToggleSemManuales;
   b = document.getElementById('mov-btn-nodos');     if(b) b.onclick = movilidadToggleNodos;
   b = document.getElementById('mov-btn-vialidad');  if(b) b.onclick = movilidadToggleVialidad;
+  b = document.getElementById('mov-btn-red-osm');   if(b) b.onclick = movilidadToggleRedOSM;
   b = document.getElementById('mov-btn-sat');    if(b) b.onclick = movilidadToggleSatelital;
   b = document.getElementById('mov-btn-oscuro'); if(b) b.onclick = movilidadToggleOscuro;
   b = document.getElementById('mov-btn-editar');    if(b) b.onclick = movilidadToggleEdicion;
@@ -1470,3 +1472,312 @@ function _movilidadCargarVialidadInit() {
   movilidadCargarVialidad();
 }
 window._movilidadCargarVialidadInit = _movilidadCargarVialidadInit;
+
+// ═══════════════════════════════════════════════════════════
+// RED VIAL OSM — Carga desde Overpass API
+//
+// Capa de solo lectura. Complementa (NO reemplaza) el grafo
+// manual de 'vialidad-irapuato'. Sirve como referencia visual
+// y base para el futuro snap a calles reales.
+//
+// Clasificación visual por tipo de vía:
+//   motorway / trunk          → rojo        #ff2200  peso 5
+//   primary                   → naranja     #ff8800  peso 4
+//   secondary                 → amarillo    #ffcc00  peso 3
+//   tertiary                  → verde-azul  #44ccaa  peso 2
+//   residential / living_street / unclassified → gris-azul #4488aa peso 1.5
+//   service / track / path    → gris        #336655  peso 1  (solo si zoom >= 15)
+//
+// Cache: localStorage 'mov_red_osm_v1' con TTL 30 días.
+// ═══════════════════════════════════════════════════════════
+
+var MOV_RED_OSM_CACHE_KEY = 'mov_red_osm_v1';
+
+// Paleta de colores y pesos por tipo de highway
+var MOV_RED_OSM_ESTILOS = {
+  motorway:        { color: '#ff2200', peso: 5,   opacidad: 0.90 },
+  trunk:           { color: '#ff2200', peso: 5,   opacidad: 0.90 },
+  primary:         { color: '#ff8800', peso: 4,   opacidad: 0.85 },
+  secondary:       { color: '#ffcc00', peso: 3,   opacidad: 0.80 },
+  tertiary:        { color: '#44ccaa', peso: 2,   opacidad: 0.75 },
+  residential:     { color: '#4488aa', peso: 1.5, opacidad: 0.65 },
+  living_street:   { color: '#4488aa', peso: 1.5, opacidad: 0.65 },
+  unclassified:    { color: '#4488aa', peso: 1.5, opacidad: 0.65 },
+  service:         { color: '#336655', peso: 1,   opacidad: 0.50 },
+  track:           { color: '#336655', peso: 1,   opacidad: 0.50 },
+  path:            { color: '#336655', peso: 1,   opacidad: 0.50 },
+  _default:        { color: '#334455', peso: 1,   opacidad: 0.45 }
+};
+
+// Tipos que solo se muestran en zoom >= 15 para no saturar
+var MOV_RED_OSM_ZOOM_ALTO = { service: true, track: true, path: true };
+
+// ─── Toggle ───
+function movilidadToggleRedOSM() {
+  MOVILIDAD.toggles.redOSM = !MOVILIDAD.toggles.redOSM;
+  movilidadActualizarBoton('mov-btn-red-osm', MOVILIDAD.toggles.redOSM);
+  if (!MOVILIDAD.toggles.redOSM) {
+    _redOSMLimpiarCapa();
+    movilidadActualizarContador('red-osm', null);
+    return;
+  }
+  // Intentar desde cache primero
+  if (_redOSMCacheVigente()) {
+    _redOSMRender(MOVILIDAD.cache.redOSM);
+  } else {
+    _redOSMFetch();
+  }
+}
+window.movilidadToggleRedOSM = movilidadToggleRedOSM;
+
+// ─── Cache localStorage ───
+function _redOSMCargarCache() {
+  try {
+    var raw = localStorage.getItem(MOV_RED_OSM_CACHE_KEY);
+    if (!raw) return;
+    var obj = JSON.parse(raw);
+    if (obj && obj.ts && obj.data) {
+      MOVILIDAD.cache.redOSM    = obj.data;
+      MOVILIDAD.cache.redOSM_ts = obj.ts;
+    }
+  } catch(e) {}
+}
+
+function _redOSMGuardarCache(elementos) {
+  try {
+    var payload = JSON.stringify({ ts: Date.now(), data: elementos });
+    localStorage.setItem(MOV_RED_OSM_CACHE_KEY, payload);
+    MOVILIDAD.cache.redOSM    = elementos;
+    MOVILIDAD.cache.redOSM_ts = Date.now();
+  } catch(e) {
+    // localStorage lleno — guardar solo en memoria
+    MOVILIDAD.cache.redOSM    = elementos;
+    MOVILIDAD.cache.redOSM_ts = Date.now();
+    console.log('movilidad: localStorage lleno, cache redOSM solo en memoria');
+  }
+}
+
+function _redOSMCacheVigente() {
+  return MOVILIDAD.cache.redOSM &&
+         MOVILIDAD.cache.redOSM.length > 0 &&
+         (Date.now() - MOVILIDAD.cache.redOSM_ts) < MOVILIDAD.cache.redOSM_TTL;
+}
+
+// ─── Fetch Overpass ───
+// Query: ways con tag highway dentro del bbox de Irapuato.
+// Usamos [out:json][timeout:60] porque la red vial es grande.
+// Se pide 'out body geom' para obtener geometría inline (sin second pass).
+function _redOSMFetch() {
+  if (MOVILIDAD.cargando.redOSM) return;
+  MOVILIDAD.cargando.redOSM = true;
+  movilidadSetStatus('Cargando red vial OSM...');
+
+  var btn = document.getElementById('mov-btn-red-osm');
+  if (btn) btn.textContent = '🛣 RED...';
+
+  // Query Overpass: ways highway en el bbox
+  // Excluimos footway/cycleway/steps para no saturar
+  var query = '[out:json][timeout:60];' +
+    'way["highway"]["highway"!~"^(footway|cycleway|steps|pedestrian|corridor|elevator|escalator|proposed|construction|abandoned|disused)$"]' +
+    '(' + MOV_BBOX + ');' +
+    'out body geom;';
+
+  var url = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query);
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+  xhr.timeout = 65000;
+
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    MOVILIDAD.cargando.redOSM = false;
+
+    if (xhr.status === 200) {
+      try {
+        var respuesta = JSON.parse(xhr.responseText);
+        var elementos = respuesta.elements || [];
+        _redOSMGuardarCache(elementos);
+        _redOSMRender(elementos);
+        movilidadSetStatus('');
+      } catch(e) {
+        movilidadSetStatus('Error al parsear red OSM');
+        if (typeof toast === 'function') toast('Error al parsear la red vial', 'err');
+        if (btn) btn.textContent = '🛣 RED OSM';
+      }
+    } else if (xhr.status === 429) {
+      movilidadSetStatus('Overpass ocupada — espera 1 min');
+      if (typeof toast === 'function') toast('Overpass ocupada, intenta en 1 min', 'warn');
+      MOVILIDAD.toggles.redOSM = false;
+      movilidadActualizarBoton('mov-btn-red-osm', false);
+      if (btn) btn.textContent = '🛣 RED OSM';
+    } else {
+      movilidadSetStatus('Error Overpass (' + xhr.status + ')');
+      if (typeof toast === 'function') toast('Error cargando red vial (' + xhr.status + ')', 'err');
+      MOVILIDAD.toggles.redOSM = false;
+      movilidadActualizarBoton('mov-btn-red-osm', false);
+      if (btn) btn.textContent = '🛣 RED OSM';
+    }
+  };
+
+  xhr.ontimeout = function() {
+    MOVILIDAD.cargando.redOSM = false;
+    movilidadSetStatus('Timeout red OSM');
+    if (typeof toast === 'function') toast('Timeout al cargar red vial', 'warn');
+    MOVILIDAD.toggles.redOSM = false;
+    movilidadActualizarBoton('mov-btn-red-osm', false);
+    var btn2 = document.getElementById('mov-btn-red-osm');
+    if (btn2) btn2.textContent = '🛣 RED OSM';
+  };
+
+  xhr.send();
+}
+
+// ─── Render ───
+// Cada elemento de Overpass con 'geometry' es un array de {lat,lon}.
+// Se construye un L.polyline por segmento.
+// El zoom listener filtra vías de servicio en zoom bajo.
+function _redOSMRender(elementos) {
+  if (!MOVILIDAD.mapa) return;
+  _redOSMLimpiarCapa();
+  if (!MOVILIDAD.toggles.redOSM || !elementos || !elementos.length) return;
+
+  var zoomActual = MOVILIDAD.mapa.getZoom();
+  var grupo = L.layerGroup();
+  var conteo = { total: 0, omitidos: 0 };
+
+  elementos.forEach(function(elem) {
+    if (elem.type !== 'way' || !elem.geometry || elem.geometry.length < 2) return;
+    var tags    = elem.tags || {};
+    var highway = tags.highway || '';
+    var estilo  = MOV_RED_OSM_ESTILOS[highway] || MOV_RED_OSM_ESTILOS['_default'];
+
+    // Filtrar vías de servicio/sendero en zoom bajo
+    if (MOV_RED_OSM_ZOOM_ALTO[highway] && zoomActual < 15) {
+      conteo.omitidos++;
+      return;
+    }
+
+    // Construir array de coords Leaflet desde geometry Overpass
+    var coords = [];
+    for (var i = 0; i < elem.geometry.length; i++) {
+      var pt = elem.geometry[i];
+      if (pt && pt.lat !== undefined && pt.lon !== undefined) {
+        coords.push([pt.lat, pt.lon]);
+      }
+    }
+    if (coords.length < 2) return;
+
+    // Nombre de la vía para popup
+    var nombre = tags.name || tags['name:es'] || '';
+    var maxVel = tags.maxspeed ? tags.maxspeed + ' km/h' : '';
+    var sentido = tags.oneway === 'yes' ? 'Un sentido' :
+                  tags.oneway === '-1'  ? 'Un sentido (inverso)' : 'Doble sentido';
+
+    // Polyline con glow sutil (doble capa: halo + línea)
+    var halo = L.polyline(coords, {
+      color: estilo.color,
+      weight: estilo.peso + 2,
+      opacity: estilo.opacidad * 0.15,
+      interactive: false
+    }).addTo(grupo);
+
+    var linea = L.polyline(coords, {
+      color: estilo.color,
+      weight: estilo.peso,
+      opacity: estilo.opacidad
+    }).addTo(grupo);
+
+    // Popup informativo — compatible con el sistema de segmentos manuales
+    linea.bindPopup(
+      '<div style="font-family:monospace;font-size:11px;color:#e0e0e0;min-width:180px;max-width:260px;">' +
+      '<div style="font-weight:700;color:' + estilo.color + ';font-size:12px;margin-bottom:4px;">' +
+        (nombre ? nombre : '\u2014') +
+      '</div>' +
+      '<div style="color:#888;font-size:9px;margin-bottom:2px;">tipo: <span style="color:' + estilo.color + ';">' + highway + '</span></div>' +
+      (sentido ? '<div style="color:#777;font-size:9px;margin-bottom:2px;">' + sentido + '</div>' : '') +
+      (maxVel  ? '<div style="color:#777;font-size:9px;margin-bottom:2px;">vel. m\u00e1x: ' + maxVel + '</div>' : '') +
+      '<div style="color:#333;font-size:8px;margin-top:6px;font-style:italic;border-top:1px solid #1a1a1a;padding-top:4px;">' +
+        'OSM id: ' + elem.id + ' \u2014 solo lectura' +
+      '</div>' +
+      '<div style="color:#2a2a2a;font-size:8px;margin-top:3px;font-style:italic;">' +
+        'Activa \u270F EDITAR &gt; VIA para trazar segmentos propios sobre esta base' +
+      '</div>' +
+      '</div>',
+      { maxWidth: 280 }
+    );
+
+    conteo.total++;
+  });
+
+  // La capa OSM va DEBAJO de vialidad manual — se agrega antes
+  // Para lograr esto, insertamos en el mapa antes de re-renderizar vialidad
+  MOVILIDAD.capas.redOSM = grupo;
+  grupo.addTo(MOVILIDAD.mapa);
+
+  // Si hay segmentos manuales activos, re-renderizarlos encima
+  if (MOVILIDAD.toggles.vialidad && MOVILIDAD.vialidadData.length) {
+    _vialidadRender();
+  }
+
+  movilidadActualizarContador('red-osm', conteo.total);
+
+  var btn = document.getElementById('mov-btn-red-osm');
+  if (btn) btn.textContent = '🛣 RED OSM';
+
+  if (typeof toast === 'function') {
+    toast(conteo.total + ' tramos OSM cargados', 'ok');
+  }
+
+  // Listener de zoom para filtrar vías de servicio dinámicamente
+  _redOSMBindZoomListener();
+}
+
+// ─── Limpiar capa OSM del mapa ───
+function _redOSMLimpiarCapa() {
+  if (MOVILIDAD.capas.redOSM && MOVILIDAD.mapa) {
+    try { MOVILIDAD.mapa.removeLayer(MOVILIDAD.capas.redOSM); } catch(e) {}
+    MOVILIDAD.capas.redOSM = null;
+  }
+  _redOSMUnbindZoomListener();
+}
+
+// ─── Zoom listener: re-render al cambiar zoom para mostrar/ocultar vías de servicio ───
+var _redOSM_zoomHandler = null;
+
+function _redOSMBindZoomListener() {
+  _redOSMUnbindZoomListener();
+  _redOSM_zoomHandler = function() {
+    if (!MOVILIDAD.toggles.redOSM || !MOVILIDAD.cache.redOSM) return;
+    _redOSMRender(MOVILIDAD.cache.redOSM);
+  };
+  if (MOVILIDAD.mapa) {
+    MOVILIDAD.mapa.on('zoomend', _redOSM_zoomHandler);
+  }
+}
+
+function _redOSMUnbindZoomListener() {
+  if (_redOSM_zoomHandler && MOVILIDAD.mapa) {
+    try { MOVILIDAD.mapa.off('zoomend', _redOSM_zoomHandler); } catch(e) {}
+    _redOSM_zoomHandler = null;
+  }
+}
+
+// ─── Invalidar cache (para forzar recarga manual) ───
+function movilidadInvalidarRedOSM() {
+  try { localStorage.removeItem(MOV_RED_OSM_CACHE_KEY); } catch(e) {}
+  MOVILIDAD.cache.redOSM    = null;
+  MOVILIDAD.cache.redOSM_ts = 0;
+  _redOSMLimpiarCapa();
+  movilidadActualizarContador('red-osm', null);
+  if (MOVILIDAD.toggles.redOSM) {
+    _redOSMFetch();
+  } else {
+    if (typeof toast === 'function') toast('Cache red OSM eliminado', 'ok');
+  }
+}
+window.movilidadInvalidarRedOSM = movilidadInvalidarRedOSM;
+
+// ─── Cargar cache al arrancar (igual que semOSM) ───
+(function() {
+  _redOSMCargarCache();
+}());
