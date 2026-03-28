@@ -421,6 +421,7 @@ function movilidadToggleSemManuales() {
   movilidadActualizarBoton('mov-btn-manuales', MOVILIDAD.toggles.semManuales);
   if (!MOVILIDAD.toggles.semManuales) {
     if (MOVILIDAD.capas.semManuales) { MOVILIDAD.mapa.removeLayer(MOVILIDAD.capas.semManuales); MOVILIDAD.capas.semManuales = null; }
+    _semManualesUnbindZoomListener();
     movilidadActualizarContador('manuales', null);
   } else {
     movilidadRenderSemManuales();
@@ -428,64 +429,134 @@ function movilidadToggleSemManuales() {
 }
 window.movilidadToggleSemManuales = movilidadToggleSemManuales;
 
+// Umbral de zoom a partir del cual se muestran iconos detallados.
+// < SEM_ZOOM_DETALLE : vehicular=cuadrado color, peatonal=círculo azul
+// >= SEM_ZOOM_DETALLE: vehicular=semáforo 3 luces,  peatonal=persona caminando
+var SEM_ZOOM_DETALLE = 16;
+
+// ─── Fábrica de iconos según zoom y tipo ───
+function _semIcono(s, zoom) {
+  var color     = { funcionando: '#00ff88', mantenimiento: '#ffaa00', apagado: '#ff3333' }[s.estado] || '#00ff88';
+  var encendido = s.estado === 'funcionando';
+  var peatonal  = s.tipo === 'peatonal';
+  var detalle   = zoom >= SEM_ZOOM_DETALLE;
+
+  if (detalle) {
+    if (peatonal) {
+      // Icono persona caminando — vista de calle
+      return L.divIcon({
+        className: '', iconSize: [22, 30], iconAnchor: [11, 30], popupAnchor: [0, -32],
+        html: '<div style="display:flex;flex-direction:column;align-items:center;gap:0;">' +
+          // poste
+          '<div style="width:2px;height:6px;background:#444;margin-top:0;"></div>' +
+          // caja semáforo peatonal
+          '<div style="width:18px;height:22px;background:#1a1a1a;border:2px solid ' + color + ';' +
+            'border-radius:4px;box-shadow:0 0 7px ' + color + '99;' +
+            'display:flex;align-items:center;justify-content:center;">' +
+            // figura caminando (unicode 🚶 como texto)
+            '<span style="font-size:13px;line-height:1;filter:' +
+              (encendido ? 'drop-shadow(0 0 3px ' + color + ')' : 'grayscale(1) opacity(0.3)') +
+              ';">\uD83D\uDEB6</span>' +
+          '</div>' +
+        '</div>'
+      });
+    } else {
+      // Semáforo vehicular 3 luces — vista de calle
+      return L.divIcon({
+        className: '', iconSize: [20, 28], iconAnchor: [10, 28], popupAnchor: [0, -30],
+        html: '<div style="position:relative;width:20px;height:28px;">' +
+          '<div style="position:absolute;bottom:0;left:9px;width:2px;height:8px;background:#444;"></div>' +
+          '<div style="position:absolute;top:0;left:2px;width:16px;height:20px;' +
+            'background:#1a1a1a;border:2px solid ' + color + ';border-radius:4px;' +
+            'display:flex;flex-direction:column;align-items:center;justify-content:space-around;padding:2px 0;' +
+            'box-shadow:0 0 7px ' + color + '99;">' +
+            '<div style="width:6px;height:6px;border-radius:50%;background:' + (encendido ? '#ff2200' : '#2a1111') + ';box-shadow:' + (encendido ? '0 0 4px #ff2200' : 'none') + ';"></div>' +
+            '<div style="width:6px;height:6px;border-radius:50%;background:' + (encendido ? '#ffaa00' : '#2a1e00') + ';box-shadow:' + (encendido ? '0 0 4px #ffaa00' : 'none') + ';"></div>' +
+            '<div style="width:6px;height:6px;border-radius:50%;background:' + (encendido ? '#00cc44' : '#001a0d') + ';box-shadow:' + (encendido ? '0 0 4px #00cc44' : 'none') + ';"></div>' +
+          '</div>' +
+        '</div>'
+      });
+    }
+  } else {
+    // Zoom macro
+    if (peatonal) {
+      // Invisible por completo en zoom macro
+      return null;
+    } else {
+      // Cuadrado del color del estado
+      return L.divIcon({
+        className: '', iconSize: [10, 10], iconAnchor: [5, 5], popupAnchor: [0, -7],
+        html: '<div style="width:10px;height:10px;border-radius:2px;' +
+          'background:' + color + ';border:1.5px solid ' + color + ';' +
+          'box-shadow:0 0 5px ' + color + '88;opacity:0.9;"></div>'
+      });
+    }
+  }
+}
+
 function movilidadRenderSemManuales() {
   if (!MOVILIDAD.mapa) return;
   if (MOVILIDAD.capas.semManuales) { MOVILIDAD.mapa.removeLayer(MOVILIDAD.capas.semManuales); MOVILIDAD.capas.semManuales = null; }
   if (!MOVILIDAD.toggles.semManuales) return;
 
+  var zoom  = MOVILIDAD.mapa.getZoom();
   var grupo = L.layerGroup();
-  var ECOL = { funcionando:'#00ff88', mantenimiento:'#ffaa00', apagado:'#ff3333' };
+  var ECOL  = { funcionando: '#00ff88', mantenimiento: '#ffaa00', apagado: '#ff3333' };
 
   MOVILIDAD.semManualesData.forEach(function(s) {
     if (!s.lat || !s.lng) return;
-    var color = ECOL[s.estado] || '#00ff88';
-    var label = s.calle1 ? (s.calle1 + (s.calle2 ? ' x ' + s.calle2 : '')) : 'Sem\u00e1foro';
-    var sid   = s.id;
+    var color    = ECOL[s.estado] || '#00ff88';
+    var label    = s.calle1 ? (s.calle1 + (s.calle2 ? ' x ' + s.calle2 : '')) : (s.tipo === 'peatonal' ? 'Sem\u00e1foro peatonal' : 'Sem\u00e1foro');
+    var sid      = s.id;
+    var peatonal = s.tipo === 'peatonal';
 
-    // Ícono semáforo con 3 luces reales
-    var encendido = s.estado === 'funcionando';
-    var ic = L.divIcon({
-      className: '', iconSize: [20,28], iconAnchor: [10,28], popupAnchor: [0,-30],
-      html: '<div style="position:relative;width:20px;height:28px;">' +
-        '<div style="position:absolute;bottom:0;left:9px;width:2px;height:8px;background:#444;"></div>' +
-        '<div style="position:absolute;top:0;left:2px;width:16px;height:20px;' +
-          'background:#1a1a1a;border:2px solid ' + color + ';border-radius:4px;' +
-          'display:flex;flex-direction:column;align-items:center;justify-content:space-around;padding:2px 0;' +
-          'box-shadow:0 0 7px ' + color + '99;">' +
-          '<div style="width:6px;height:6px;border-radius:50%;background:' + (encendido ? '#ff2200' : '#2a1111') + ';box-shadow:' + (encendido ? '0 0 4px #ff2200' : 'none') + ';"></div>' +
-          '<div style="width:6px;height:6px;border-radius:50%;background:' + (encendido ? '#ffaa00' : '#2a1e00') + ';box-shadow:' + (encendido ? '0 0 4px #ffaa00' : 'none') + ';"></div>' +
-          '<div style="width:6px;height:6px;border-radius:50%;background:' + (encendido ? '#00cc44' : '#001a0d') + ';box-shadow:' + (encendido ? '0 0 4px #00cc44' : 'none') + ';"></div>' +
-        '</div>' +
-      '</div>'
-    });
+    var icono = _semIcono(s, zoom);
+    if (!icono) return; // invisible en este nivel de zoom
 
-    var mk = L.marker([s.lat, s.lng], { icon: ic });
-    var nObs = (s.observaciones ? s.observaciones.length : 0);
+    var mk = L.marker([s.lat, s.lng], { icon: icono });
+
+    var nObs     = (s.observaciones ? s.observaciones.length : 0);
     var predHtml = _movPredHtml(s);
-    var ciclo = (s.t_verde && s.t_amarillo && s.t_rojo)
-      ? (parseInt(s.t_verde||0) + parseInt(s.t_amarillo||0) + parseInt(s.t_rojo||0)) + 's ciclo'
-      : 'Sin tiempos';
+
+    // Ciclo: peatonal usa t_paso+t_pausa, vehicular usa t_verde+t_amarillo+t_rojo
+    var ciclo;
+    if (peatonal) {
+      ciclo = (s.t_paso && s.t_pausa)
+        ? (parseInt(s.t_paso || 0) + parseInt(s.t_pausa || 0)) + 's ciclo'
+        : 'Sin tiempos';
+    } else {
+      ciclo = (s.t_verde && s.t_amarillo && s.t_rojo)
+        ? (parseInt(s.t_verde || 0) + parseInt(s.t_amarillo || 0) + parseInt(s.t_rojo || 0)) + 's ciclo'
+        : 'Sin tiempos';
+    }
+
+    // Título con emoji diferenciado
+    var tituloEmoji = peatonal ? '\uD83D\uDEB6' : '\uD83D\uDEA6';
 
     mk.bindPopup(
       '<div style="font-family:monospace;font-size:11px;color:#e0e0e0;min-width:230px;max-width:290px;">' +
-      // Título y estado
-      '<div style="font-weight:700;color:' + color + ';font-size:12px;margin-bottom:4px;">\uD83D\uDEA6 ' + label + '</div>' +
-      '<span style="background:' + color + '22;border:1px solid ' + color + '55;border-radius:3px;padding:2px 7px;font-size:9px;color:' + color + ';">' + (s.estado||'').toUpperCase() + '</span>' +
-      // Tiempos
-      '<div style="display:flex;gap:5px;margin:7px 0 3px;">' +
-        _movBadgeT('V', s.t_verde,    '#00cc44') +
-        _movBadgeT('A', s.t_amarillo, '#ffaa00') +
-        _movBadgeT('R', s.t_rojo,     '#ff2200') +
-      '</div>' +
+      '<div style="font-weight:700;color:' + color + ';font-size:12px;margin-bottom:4px;">' + tituloEmoji + ' ' + label + '</div>' +
+      '<span style="background:' + color + '22;border:1px solid ' + color + '55;border-radius:3px;padding:2px 7px;font-size:9px;color:' + color + ';">' + (s.estado || '').toUpperCase() + '</span>' +
+      (peatonal
+        ? '<div style="display:flex;gap:5px;margin:7px 0 3px;">' +
+            _movBadgeT('PASO', s.t_paso,  '#00cc44') +
+            _movBadgeT('PAUSA', s.t_pausa, '#ff2200') +
+          '</div>'
+        : '<div style="display:flex;gap:5px;margin:7px 0 3px;">' +
+            _movBadgeT('V', s.t_verde,    '#00cc44') +
+            _movBadgeT('A', s.t_amarillo, '#ffaa00') +
+            _movBadgeT('R', s.t_rojo,     '#ff2200') +
+          '</div>'
+      ) +
       '<div style="color:#444;font-size:9px;margin-bottom:5px;">' + ciclo + ' \u00b7 ' + nObs + ' observaciones</div>' +
       predHtml +
+      (s.osm_way_name ? '<div style="color:#336633;font-size:8px;margin-bottom:3px;">\uD83D\uDEE3 ' + s.osm_way_name + '</div>' : '') +
       (s.notas    ? '<div style="color:#555;font-size:9px;border-top:1px solid #1a1a1a;padding-top:4px;margin-top:4px;">' + s.notas + '</div>' : '') +
       (s.foto_url ? '<div style="margin-top:4px;"><a href="' + s.foto_url + '" target="_blank" style="font-size:9px;color:#44aaff;">\uD83D\uDCF7 Foto</a></div>' : '') +
-      // Botones
       '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;padding-top:6px;border-top:1px solid #1a1a1a;">' +
         '<button onclick="movilidadAgregarObservacion(\'' + sid + '\')" style="font-family:monospace;font-size:9px;padding:3px 8px;background:#0d1f0d;color:#00ff88;border:1px solid #00aa44;border-radius:3px;cursor:pointer;">\uD83D\uDC41 OBSERVAR</button>' +
         '<button onclick="movilidadAbrirPanelEditar(\'' + sid + '\')" style="font-family:monospace;font-size:9px;padding:3px 8px;background:#0d0d2a;color:#8888ff;border:1px solid #4444aa;border-radius:3px;cursor:pointer;">\u270F EDITAR</button>' +
-        '<button onclick="movilidadConfirmarBorrar(\'' + sid + '\',\'' + label.replace(/'/g,'') + '\')" style="font-family:monospace;font-size:9px;padding:3px 8px;background:#2a0d0d;color:#ff4444;border:1px solid #aa2222;border-radius:3px;cursor:pointer;">\uD83D\uDDD1 BORRAR</button>' +
+        '<button onclick="movilidadConfirmarBorrar(\'' + sid + '\',\'' + label.replace(/'/g, '') + '\')" style="font-family:monospace;font-size:9px;padding:3px 8px;background:#2a0d0d;color:#ff4444;border:1px solid #aa2222;border-radius:3px;cursor:pointer;">\uD83D\uDDD1 BORRAR</button>' +
       '</div>' +
       '</div>', { maxWidth: 310 }
     );
@@ -495,6 +566,35 @@ function movilidadRenderSemManuales() {
   MOVILIDAD.capas.semManuales = grupo;
   grupo.addTo(MOVILIDAD.mapa);
   movilidadActualizarContador('manuales', MOVILIDAD.semManualesData.length);
+  _semManualesBindZoomListener();
+}
+
+// ─── Zoom listener para semáforos manuales ───
+// Re-renderiza al cruzar SEM_ZOOM_DETALLE en cualquier dirección.
+var _semManuales_zoomHandler = null;
+var _semManuales_zoomAnterior = null;
+
+function _semManualesBindZoomListener() {
+  _semManualesUnbindZoomListener();
+  _semManuales_zoomAnterior = MOVILIDAD.mapa ? MOVILIDAD.mapa.getZoom() : null;
+  _semManuales_zoomHandler = function() {
+    if (!MOVILIDAD.toggles.semManuales || !MOVILIDAD.mapa) return;
+    var zoomNuevo = MOVILIDAD.mapa.getZoom();
+    var prev = _semManuales_zoomAnterior;
+    _semManuales_zoomAnterior = zoomNuevo;
+    // Solo re-renderizar si se cruzó el umbral en alguna dirección
+    var cruzado = (prev < SEM_ZOOM_DETALLE && zoomNuevo >= SEM_ZOOM_DETALLE) ||
+                  (prev >= SEM_ZOOM_DETALLE && zoomNuevo < SEM_ZOOM_DETALLE);
+    if (cruzado) movilidadRenderSemManuales();
+  };
+  MOVILIDAD.mapa.on('zoomend', _semManuales_zoomHandler);
+}
+
+function _semManualesUnbindZoomListener() {
+  if (_semManuales_zoomHandler && MOVILIDAD.mapa) {
+    try { MOVILIDAD.mapa.off('zoomend', _semManuales_zoomHandler); } catch(e) {}
+    _semManuales_zoomHandler = null;
+  }
 }
 
 function _movBadgeT(letra, val, color) {
