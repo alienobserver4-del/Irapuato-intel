@@ -8,7 +8,7 @@
 // ═══════════════════════════════════════════════════════════
 var MOVILIDAD = {
   mapa:    null,
-  capas:   { gov: null, semOSM: null, semManuales: null, nodos: null, vialidad: null, redOSM: null },
+  capas:   { gov: null, semOSM: null, semManuales: null, nodos: null, vialidad: null, redOSM: null, semBadges: null },
   toggles: { gov: true, semOSM: false, semManuales: true, nodos: false, vialidad: true, redOSM: false },
   cache:   { semOSM: null, semOSM_ts: 0, TTL: 7*24*3600*1000,
              redOSM: null, redOSM_ts: 0, redOSM_TTL: 30*24*3600*1000 },
@@ -545,8 +545,17 @@ function _movPredHtml(s) {
 // ═══════════════════════════════════════════════════════════
 function movilidadAbrirPanelNuevo(lat, lng) {
   MOVILIDAD.editandoId = null;
-  _movMostrarPanel({ lat:lat, lng:lng, calle1:'', calle2:'', estado:'funcionando',
-    t_verde:'', t_amarillo:'', t_rojo:'', foto_url:'', notas:'', grupo_sincronizacion:'' });
+
+  // Intentar snap automático a la red OSM si está cargada
+  var snapResult = _semSnapOSM(lat, lng);
+
+  _movMostrarPanel({
+    lat: lat, lng: lng, calle1: '', calle2: '', estado: 'funcionando',
+    t_verde: '', t_amarillo: '', t_rojo: '', foto_url: '', notas: '',
+    grupo_sincronizacion: '', offset_inicio: '',
+    osm_way_id:   snapResult ? snapResult.id   : '',
+    osm_way_name: snapResult ? snapResult.name : ''
+  });
 }
 window.movilidadAbrirPanelNuevo = movilidadAbrirPanelNuevo;
 
@@ -574,6 +583,24 @@ function _movMostrarPanel(datos) {
   _movSetVal('movp-foto',   datos.foto_url   || '');
   _movSetVal('movp-notas',  datos.notas      || '');
   _movSetVal('movp-grupo',  datos.grupo_sincronizacion || '');
+  _movSetVal('movp-offset', datos.offset_inicio !== undefined ? datos.offset_inicio : '');
+
+  // Asociación OSM
+  var osmId   = datos.osm_way_id   || '';
+  var osmName = datos.osm_way_name || '';
+  _movSetVal('movp-osm-id', osmId);
+  var osmRow  = document.getElementById('movp-osm-row');
+  var osmSpan = document.getElementById('movp-osm-name');
+  if (osmRow && osmSpan) {
+    if (osmId) {
+      osmSpan.textContent = osmName || ('way/' + osmId);
+      osmRow.style.display = 'flex';
+    } else {
+      osmSpan.textContent = '';
+      osmRow.style.display = 'none';
+    }
+  }
+
   var tit = document.getElementById('movp-titulo');
   if (tit) tit.textContent = MOVILIDAD.editandoId ? '\u270F Editar Sem\u00e1foro' : '+ Nuevo Sem\u00e1foro';
   var btn = document.getElementById('movp-btn-guardar');
@@ -1430,6 +1457,12 @@ window.movilidadGuardarSemaforo = function() {
 
   var tipo = (document.getElementById('movp-tipo-val') || {}).value || 'vehicular';
 
+  // Campos de integración OSM
+  var osmId   = (document.getElementById('movp-osm-id')   || {}).value || '';
+  var osmName = (document.getElementById('movp-osm-name') || {}).textContent || '';
+
+  var offsetRaw = parseInt(document.getElementById('movp-offset').value);
+
   var datos = {
     lat: lat, lng: lng, tipo: tipo,
     calle1:  document.getElementById('movp-calle1').value.trim(),
@@ -1438,6 +1471,9 @@ window.movilidadGuardarSemaforo = function() {
     foto_url: document.getElementById('movp-foto').value.trim(),
     notas:   document.getElementById('movp-notas').value.trim(),
     grupo_sincronizacion: document.getElementById('movp-grupo').value.trim(),
+    offset_inicio: isNaN(offsetRaw) ? 0 : offsetRaw,
+    osm_way_id:   osmId,
+    osm_way_name: osmName,
     actualizado: firebase.firestore.FieldValue.serverTimestamp()
   };
 
@@ -1776,6 +1812,202 @@ function movilidadInvalidarRedOSM() {
   }
 }
 window.movilidadInvalidarRedOSM = movilidadInvalidarRedOSM;
+
+// ═══════════════════════════════════════════════════════════
+// INTEGRACIÓN OSM ↔ SEMÁFOROS
+//
+// _semSnapOSM(lat, lng)
+//   Busca el tramo OSM más cercano al punto dado dentro de
+//   SEM_SNAP_RADIO_M metros. Devuelve {id, name} o null.
+//   Opera sobre MOVILIDAD.cache.redOSM (elementos crudos de
+//   Overpass) sin depender de que la capa esté renderizada.
+//
+// movilidadLimpiarSnapOSM()
+//   Desvincula manualmente el semáforo del tramo OSM en el panel.
+//
+// _semOSMBadgesRender()
+//   Dibuja marcadores pequeños sobre los tramos OSM que tienen
+//   semáforos asociados. Se llama desde _redOSMRender() y desde
+//   movilidadRenderSemManuales() para mantener sincronía.
+// ═══════════════════════════════════════════════════════════
+
+var SEM_SNAP_RADIO_M = 40; // metros — radio máximo para snap automático
+
+// ─── Snap espacial: tramo OSM más cercano ───
+// Itera los elementos crudos de Overpass (cache.redOSM).
+// Para cada way calcula la distancia mínima punto-a-segmento
+// recorriendo todos los pares consecutivos de su geometría.
+function _semSnapOSM(lat, lng) {
+  var elementos = MOVILIDAD.cache.redOSM;
+  if (!elementos || !elementos.length) return null;
+
+  var mejorDist = SEM_SNAP_RADIO_M / 1000; // convertir a km (misma unidad que movilidadDistKm)
+  var mejorId   = null;
+  var mejorName = '';
+
+  for (var i = 0; i < elementos.length; i++) {
+    var elem = elementos[i];
+    if (elem.type !== 'way' || !elem.geometry || elem.geometry.length < 2) continue;
+    var tags = elem.tags || {};
+    var geom = elem.geometry;
+
+    // Distancia mínima del punto al polyline completo
+    for (var j = 0; j < geom.length - 1; j++) {
+      var A = geom[j];
+      var B = geom[j + 1];
+      if (!A || !B) continue;
+      var d = _distPuntoSegmento(lat, lng, A.lat, A.lon, B.lat, B.lon);
+      if (d < mejorDist) {
+        mejorDist = d;
+        mejorId   = String(elem.id);
+        mejorName = tags.name || tags['name:es'] || tags.highway || '';
+      }
+    }
+  }
+
+  if (!mejorId) return null;
+  return { id: mejorId, name: mejorName };
+}
+
+// ─── Distancia de punto P a segmento AB (en km) ───
+// Proyección ortogonal sobre el segmento; si cae fuera, usa el extremo más cercano.
+function _distPuntoSegmento(pLat, pLng, aLat, aLng, bLat, bLng) {
+  // Trabajar en coordenadas planas locales (aprox válida para distancias cortas)
+  var kLat = 111.0; // km por grado lat
+  var kLng = 111.0 * Math.cos(pLat * Math.PI / 180); // km por grado lng
+
+  var px = (pLng - aLng) * kLng;
+  var py = (pLat - aLat) * kLat;
+  var dx = (bLng - aLng) * kLng;
+  var dy = (bLat - aLat) * kLat;
+
+  var lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.sqrt(px * px + py * py);
+
+  var t = (px * dx + py * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+
+  var qx = t * dx - px;
+  var qy = t * dy - py;
+  return Math.sqrt(qx * qx + qy * qy);
+}
+
+// ─── Limpiar snap desde botón ✕ en el panel ───
+function movilidadLimpiarSnapOSM() {
+  var osmId  = document.getElementById('movp-osm-id');
+  var osmRow = document.getElementById('movp-osm-row');
+  var osmSpan = document.getElementById('movp-osm-name');
+  if (osmId)   osmId.value = '';
+  if (osmSpan) osmSpan.textContent = '';
+  if (osmRow)  osmRow.style.display = 'none';
+}
+window.movilidadLimpiarSnapOSM = movilidadLimpiarSnapOSM;
+
+// ─── Construir índice osm_way_id → [semáforos] para badges ───
+function _semBuildOSMIndex() {
+  var idx = {};
+  MOVILIDAD.semManualesData.forEach(function(s) {
+    if (!s.osm_way_id) return;
+    if (!idx[s.osm_way_id]) idx[s.osm_way_id] = [];
+    idx[s.osm_way_id].push(s);
+  });
+  return idx;
+}
+
+// ─── Render badges: marcadores sobre intersecciones con semáforo asociado ───
+// Se dibuja sobre la capa redOSM como sublayer separado para no invalidar
+// el grupo principal al actualizar semáforos.
+function _semOSMBadgesRender() {
+  // Limpiar capa anterior de badges
+  if (MOVILIDAD.capas.semBadges && MOVILIDAD.mapa) {
+    try { MOVILIDAD.mapa.removeLayer(MOVILIDAD.capas.semBadges); } catch(e) {}
+    MOVILIDAD.capas.semBadges = null;
+  }
+
+  if (!MOVILIDAD.mapa) return;
+  // Solo dibujar si la red OSM o los semáforos manuales están activos
+  if (!MOVILIDAD.toggles.redOSM && !MOVILIDAD.toggles.semManuales) return;
+
+  var semConOSM = MOVILIDAD.semManualesData.filter(function(s) {
+    return s.osm_way_id && s.lat && s.lng;
+  });
+  if (!semConOSM.length) return;
+
+  var ECOL = { funcionando: '#00ff88', mantenimiento: '#ffaa00', apagado: '#ff3333' };
+  var grupo = L.layerGroup();
+
+  semConOSM.forEach(function(s) {
+    var color  = ECOL[s.estado] || '#00ff88';
+    var ciclo  = (s.t_verde && s.t_amarillo && s.t_rojo)
+      ? (parseInt(s.t_verde || 0) + parseInt(s.t_amarillo || 0) + parseInt(s.t_rojo || 0))
+      : null;
+    var label  = s.calle1 ? (s.calle1 + (s.calle2 ? ' x ' + s.calle2 : '')) : 'Sem\u00e1foro';
+    var osmLabel = s.osm_way_name || ('way/' + s.osm_way_id);
+
+    // Badge pequeño: cuadrado de color con borde blanco
+    var ic = L.divIcon({
+      className: '', iconSize: [10, 10], iconAnchor: [5, 5], popupAnchor: [0, -8],
+      html: '<div style="width:9px;height:9px;border-radius:2px;background:' + color + ';' +
+            'border:1.5px solid #fff;box-shadow:0 0 5px ' + color + '99,' +
+            '0 0 10px ' + color + '44;"></div>'
+    });
+
+    var mk = L.marker([s.lat, s.lng], { icon: ic, zIndexOffset: 50 });
+    mk.bindPopup(
+      '<div style="font-family:monospace;font-size:10px;color:#e0e0e0;min-width:200px;">' +
+      '<div style="font-weight:700;color:' + color + ';font-size:11px;margin-bottom:3px;">' +
+        '\uD83D\uDEA6 ' + label +
+      '</div>' +
+      '<div style="color:#336633;font-size:8px;margin-bottom:3px;">' +
+        '\uD83D\uDEE3 OSM: ' + osmLabel +
+      '</div>' +
+      '<div style="color:#888;font-size:8px;margin-bottom:2px;">' +
+        'Estado: <span style="color:' + color + ';">' + (s.estado || '—') + '</span>' +
+      '</div>' +
+      (ciclo ? '<div style="color:#888;font-size:8px;margin-bottom:2px;">Ciclo: ' + ciclo + 's</div>' : '') +
+      (s.grupo_sincronizacion ? '<div style="color:#666;font-size:8px;">Grupo: ' + s.grupo_sincronizacion +
+        (s.offset_inicio ? ' +' + s.offset_inicio + 's' : '') + '</div>' : '') +
+      '<div style="color:#2a2a2a;font-size:7px;margin-top:5px;border-top:1px solid #1a1a1a;padding-top:3px;">' +
+        'Sem\u00e1foro id: ' + s.id +
+      '</div>' +
+      '</div>',
+      { maxWidth: 240 }
+    );
+    mk.addTo(grupo);
+  });
+
+  MOVILIDAD.capas.semBadges = grupo;
+  grupo.addTo(MOVILIDAD.mapa);
+}
+window._semOSMBadgesRender = _semOSMBadgesRender;
+
+// ─── Inyectar llamada a badges en _redOSMRender ───
+// Se engancha después de que _redOSMRender termina su render principal.
+// Guardamos referencia a la función original y la envolvemos.
+var _origRedOSMRender = _redOSMRender;
+_redOSMRender = function(elementos) {
+  _origRedOSMRender(elementos);
+  _semOSMBadgesRender();
+};
+
+// ─── Inyectar llamada a badges en movilidadRenderSemManuales ───
+// Para que los badges se actualicen cuando cambia el estado de un semáforo.
+var _origRenderSemManuales = movilidadRenderSemManuales;
+movilidadRenderSemManuales = function() {
+  _origRenderSemManuales();
+  _semOSMBadgesRender();
+};
+window.movilidadRenderSemManuales = movilidadRenderSemManuales;
+
+// ─── Info OSM en popup de semáforos manuales ───
+// Patch de movilidadRenderSemManuales ya aplicado arriba.
+// El popup original en movilidadRenderSemManuales muestra el estado
+// pero no la asociación OSM. Extendemos solo el HTML del popup
+// para los semáforos que tienen osm_way_id.
+// Nota: el patch de render completo está en _origRenderSemManuales —
+// para añadir el dato OSM al popup sin duplicar 80 líneas, lo más limpio
+// es que _semOSMBadgesRender proporcione el popup enriquecido en el badge,
+// que es el punto de acceso más natural cuando se trabaja la red vial.
 
 // ─── Cargar cache al arrancar (igual que semOSM) ───
 (function() {
