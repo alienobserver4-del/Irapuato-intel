@@ -2460,13 +2460,84 @@ function rutasMostrarSubtab() {
   var btn = document.getElementById('mov-btn-rutas');
   if (btn) btn.classList.toggle('on', !visible);
   if (!visible) {
-    // Primera vez que abre: cargar rutas
-    rutasCargar(function() {
-      rutaslimpiarInfo();
-    });
+    _rutasInicializarTodo();
   }
 }
 window.rutasMostrarSubtab = rutasMostrarSubtab;
+
+// ─── Inicializar todo en cascada: rutas → colonias → OSM silencioso ───
+function _rutasInicializarTodo() {
+  _rutasSetEstado('Cargando rutas...');
+  rutasCargar(function() {
+    rutaslimpiarInfo();
+    _rutasSetEstado('Cargando colonias...');
+    _rutasCargarColonias(function() {
+      _rutasSetEstado('Cargando red vial...');
+      _rutasOSMSilencioso(function() {
+        _rutasSetEstado('');
+        _rutasIniciarAutocomplete();
+      });
+    });
+  });
+}
+
+// ─── Estado del panel RUTAS ───
+function _rutasSetEstado(msg) {
+  var el = document.getElementById('rutas-estado');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+// ─── Cargar red OSM silenciosamente (sin mostrar capa en mapa) ───
+// Primero intenta desde localStorage (cache 30 días).
+// Si no hay cache, hace fetch a Overpass y guarda en cache.
+// En ningún caso activa la capa visual en el mapa.
+function _rutasOSMSilencioso(callback) {
+  // Ya está en memoria
+  if (MOVILIDAD.cache.redOSM && MOVILIDAD.cache.redOSM.length) {
+    if (callback) callback();
+    return;
+  }
+  // Intentar desde localStorage
+  _redOSMCargarCache();
+  if (MOVILIDAD.cache.redOSM && MOVILIDAD.cache.redOSM.length) {
+    if (callback) callback();
+    return;
+  }
+  // No hay cache — hacer fetch silencioso
+  _rutasSetEstado('Descargando red vial (~30s primera vez)...');
+  var query = '[out:json][timeout:60];' +
+    'way["highway"]["highway"!~"^(footway|cycleway|steps|pedestrian|corridor|elevator|escalator|proposed|construction|abandoned|disused)$"]' +
+    '(' + MOV_BBOX + ');out body geom;';
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query), true);
+  xhr.timeout = 70000;
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    if (xhr.status === 200) {
+      try {
+        var resp = JSON.parse(xhr.responseText);
+        var elems = resp.elements || [];
+        _redOSMGuardarCache(elems);
+        if (typeof toast === 'function') toast('Red vial cargada (' + elems.length + ' tramos)', 'ok');
+      } catch(e) {
+        if (typeof toast === 'function') toast('Error al cargar red vial', 'warn');
+      }
+    } else if (xhr.status === 429) {
+      if (typeof toast === 'function') toast('Overpass ocupada \u2014 reintenta en 1 min', 'warn');
+    } else {
+      if (typeof toast === 'function') toast('Red vial no disponible (' + xhr.status + ')', 'warn');
+    }
+    if (callback) callback();
+  };
+  xhr.ontimeout = function() {
+    if (typeof toast === 'function') toast('Timeout red vial \u2014 el planificador usar\u00e1 s\u00f3lo colonias', 'warn');
+    if (callback) callback();
+  };
+  xhr.send();
+}
+window._rutasOSMSilencioso = _rutasOSMSilencioso;
 
 // ─── Planificador: origen → destino ───
 // Lógica simple de proximidad de texto:
@@ -2801,16 +2872,124 @@ window.rutasSeleccionarDesdeResultado = rutasSeleccionarDesdeResultado;
 // ─── Inicialización del sub-tab rutas ───
 // Se llama desde movilidadOnShow si el sub-tab está visible
 function rutasInit() {
-  if (!RUTAS.loaded) {
-    rutasCargar(function() {
-      rutaslimpiarInfo();
-      if (!RUTAS.coloniasLoaded) _rutasCargarColonias(function(){});
-    });
-  } else if (!RUTAS.coloniasLoaded) {
-    _rutasCargarColonias(function(){});
-  }
+  _rutasInicializarTodo();
 }
 window.rutasInit = rutasInit;
+
+// ─── Autocomplete para inputs del planificador ───
+// Sugiere colonias + calles OSM mientras el usuario escribe.
+// Se enlaza a los inputs #rutas-origen y #rutas-destino.
+
+function _rutasIniciarAutocomplete() {
+  _rutasBindAutocomplete('rutas-origen');
+  _rutasBindAutocomplete('rutas-destino');
+}
+
+function _rutasBindAutocomplete(inputId) {
+  var input = document.getElementById(inputId);
+  if (!input || input._rutasACBound) return;
+  input._rutasACBound = true;
+
+  // Crear lista desplegable
+  var listId = inputId + '-ac';
+  var lista = document.getElementById(listId);
+  if (!lista) {
+    lista = document.createElement('div');
+    lista.id = listId;
+    lista.style.cssText = 'position:absolute;z-index:900;background:#0a0a0a;border:1px solid #2a1a4a;' +
+      'border-radius:3px;width:100%;box-sizing:border-box;max-height:160px;overflow-y:auto;' +
+      'font-family:monospace;font-size:9px;display:none;top:100%;left:0;';
+    input.parentNode.style.position = 'relative';
+    input.parentNode.appendChild(lista);
+  }
+
+  input.addEventListener('input', function() {
+    var q = input.value.trim().toUpperCase().replace(/[.\-]/g, '').replace(/\s+/g, ' ');
+    if (q.length < 2) { lista.style.display = 'none'; return; }
+    var sugs = _rutasSugerencias(q);
+    if (!sugs.length) { lista.style.display = 'none'; return; }
+    lista.innerHTML = '';
+    sugs.forEach(function(s) {
+      var item = document.createElement('div');
+      item.style.cssText = 'padding:5px 8px;cursor:pointer;border-bottom:1px solid #111;color:#ccc;';
+      item.innerHTML = '<span style="color:' + (s.tipo === 'colonia' ? '#8866cc' : '#44aaff') + ';font-size:7px;">' +
+        (s.tipo === 'colonia' ? '&#x1f3d8; COL' : '&#x1f6e3; CALLE') + '</span> ' + s.label;
+      item.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        input.value = s.label;
+        lista.style.display = 'none';
+      });
+      item.addEventListener('mouseover', function() { item.style.background = '#1a0d2a'; });
+      item.addEventListener('mouseout',  function() { item.style.background = ''; });
+      lista.appendChild(item);
+    });
+    lista.style.display = 'block';
+  });
+
+  input.addEventListener('blur', function() {
+    setTimeout(function() { lista.style.display = 'none'; }, 200);
+  });
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { lista.style.display = 'none'; rutasPlanificar(); }
+    if (e.key === 'Escape') lista.style.display = 'none';
+  });
+}
+
+// ─── Generar sugerencias para autocomplete ───
+function _rutasSugerencias(q) {
+  var sugs = [];
+  var vistos = {};
+
+  // 1. Colonias
+  if (RUTAS.colonias) {
+    var ckeys = Object.keys(RUTAS.colonias);
+    for (var i = 0; i < ckeys.length && sugs.length < 5; i++) {
+      if (ckeys[i].indexOf(q) !== -1) {
+        var lbl = _rutasTitleCase(ckeys[i]);
+        if (!vistos[lbl]) { vistos[lbl] = true; sugs.push({ tipo: 'colonia', label: lbl }); }
+      }
+    }
+  }
+
+  // 2. Calles OSM
+  if (sugs.length < 8 && MOVILIDAD.cache.redOSM && MOVILIDAD.cache.redOSM.length) {
+    var vistasCalle = {};
+    for (var w = 0; w < MOVILIDAD.cache.redOSM.length && sugs.length < 10; w++) {
+      var elem = MOVILIDAD.cache.redOSM[w];
+      if (elem.type !== 'way') continue;
+      var tags = elem.tags || {};
+      var nombre = (tags.name || tags['name:es'] || '').toUpperCase().replace(/[.\-]/g, '').replace(/\s+/g, ' ').trim();
+      if (!nombre || vistasCalle[nombre]) continue;
+      if (nombre.indexOf(q) !== -1) {
+        vistasCalle[nombre] = true;
+        sugs.push({ tipo: 'calle', label: _rutasTitleCase(nombre) });
+      }
+    }
+  }
+
+  // 3. Terminales de rutas
+  if (sugs.length < 8 && RUTAS.data && RUTAS.data.length) {
+    for (var t = 0; t < RUTAS.data.length && sugs.length < 12; t++) {
+      var r = RUTAS.data[t];
+      var ti = (r.terminal_ini || '').toUpperCase();
+      var tf = (r.terminal_fin || '').toUpperCase();
+      if (ti && ti.indexOf(q) !== -1 && !vistos[ti]) {
+        vistos[ti] = true;
+        sugs.push({ tipo: 'calle', label: _rutasTitleCase(ti) });
+      }
+      if (tf && tf.indexOf(q) !== -1 && !vistos[tf]) {
+        vistos[tf] = true;
+        sugs.push({ tipo: 'calle', label: _rutasTitleCase(tf) });
+      }
+    }
+  }
+
+  return sugs.slice(0, 10);
+}
+
+function _rutasTitleCase(str) {
+  return str.toLowerCase().replace(/(?:^|\s|[.-])(\S)/g, function(m, c) { return m.slice(0,-1) + c.toUpperCase(); });
+}
 
 // ═══════════════════════════════════════════════════════════
 // INTEGRACIÓN OSM ↔ SEMÁFOROS
