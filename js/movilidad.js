@@ -1941,7 +1941,9 @@ var RUTAS = {
   editandoTrazo: false,
   _editPuntos: [],
   _editPolyline: null,
-  _editConfirmPendiente: false
+  _editConfirmPendiente: false,
+  colonias: null,       // dict nombre→{lat,lng} cargado de denue_colonias.json
+  coloniasLoaded: false
 };
 
 var RUTAS_COLOR_SALIDA  = '#00ccff';
@@ -2074,8 +2076,18 @@ function rutasDibujarEnMapa(ruta, sentido) {
   var puntos = null;
   try { puntos = JSON.parse(localStorage.getItem(key) || 'null'); } catch(e) {}
 
+  // Si no hay trazo guardado, intentar resolver desde cache OSM
   if (!puntos || puntos.length < 2) {
-    movilidadSetStatus('Ruta ' + ruta.id + ' sin trazo \u2014 activa EDITAR > RUTA para trazarla');
+    puntos = _rutasResolverDesdeOSM(ruta, sentido);
+    if (puntos && puntos.length >= 2) {
+      // Guardar en localStorage para no recalcular
+      try { localStorage.setItem(key, JSON.stringify(puntos)); } catch(e) {}
+      if (typeof toast === 'function') toast('Trazo resuelto desde OSM (' + puntos.length + ' pts)', 'ok');
+    }
+  }
+
+  if (!puntos || puntos.length < 2) {
+    movilidadSetStatus('Ruta ' + ruta.id + ' \u2014 sin trazo ni red OSM cargada. Activa RED OSM o traza manualmente.');
     return;
   }
 
@@ -2089,12 +2101,12 @@ function rutasDibujarEnMapa(ruta, sentido) {
 
   // Marker inicio
   var icIni = L.divIcon({ className: '', iconSize: [14,14], iconAnchor: [7,7],
-    html: '<div style="width:12px;height:12px;border-radius:50%;background:#00ff88;border:2px solid #fff;"></div>' });
+    html: '<div style="width:12px;height:12px;border-radius:50%;background:#00ff88;border:2px solid #fff;box-shadow:0 0 6px #00ff8888;"></div>' });
   L.marker(puntos[0], { icon: icIni, title: 'Inicio: ' + ruta.terminal_ini }).addTo(grupo);
 
   // Marker fin
   var icFin = L.divIcon({ className: '', iconSize: [14,14], iconAnchor: [7,7],
-    html: '<div style="width:12px;height:12px;border-radius:50%;background:#ff4444;border:2px solid #fff;"></div>' });
+    html: '<div style="width:12px;height:12px;border-radius:50%;background:#ff4444;border:2px solid #fff;box-shadow:0 0 6px #ff444488;"></div>' });
   L.marker(puntos[puntos.length-1], { icon: icFin, title: 'Fin: ' + ruta.terminal_fin }).addTo(grupo);
 
   linea.bindPopup(
@@ -2110,6 +2122,98 @@ function rutasDibujarEnMapa(ruta, sentido) {
   // Enfocar el mapa al bounds del trazo
   try { MOVILIDAD.mapa.fitBounds(L.polyline(puntos).getBounds(), { padding: [30, 30] }); } catch(e) {}
   movilidadSetStatus('');
+}
+
+// ─── Resolver trazo de ruta desde red OSM en cache ───
+// Para cada calle del JSON busca el/los ways OSM que coincidan
+// por nombre, concatena su geometría en orden y devuelve el array de puntos.
+// Si la red OSM no está cargada devuelve null.
+function _rutasResolverDesdeOSM(ruta, sentido) {
+  var elementos = MOVILIDAD.cache.redOSM;
+  if (!elementos || !elementos.length) return null;
+
+  var calles = ruta[sentido] || [];
+  if (!calles.length) return null;
+
+  // Construir índice nombre→[ways] desde OSM cache
+  var indiceOSM = {};
+  for (var i = 0; i < elementos.length; i++) {
+    var elem = elementos[i];
+    if (elem.type !== 'way' || !elem.geometry || elem.geometry.length < 2) continue;
+    var tags = elem.tags || {};
+    var nombre = (tags.name || tags['name:es'] || '').toLowerCase().trim();
+    if (!nombre) continue;
+    if (!indiceOSM[nombre]) indiceOSM[nombre] = [];
+    indiceOSM[nombre].push(elem);
+  }
+
+  var puntosTotales = [];
+  var ultimoPunto = null;
+
+  for (var j = 0; j < calles.length; j++) {
+    var c = calles[j];
+    if (c.mov === 'INI' || c.mov === 'FIN' || c.mov === 'VU') continue;
+    var nombreCalle = c.calle.toLowerCase().trim();
+
+    // Buscar coincidencia exacta primero, luego parcial
+    var ways = indiceOSM[nombreCalle] || _rutasBuscarWayParcial(indiceOSM, nombreCalle);
+    if (!ways || !ways.length) continue;
+
+    // Elegir el way más cercano al último punto conocido
+    var way = _rutasElegirWayMasCercano(ways, ultimoPunto);
+    if (!way) continue;
+
+    var geom = way.geometry;
+    // Orientar el segmento: si el último punto está más cerca del final, invertir
+    if (ultimoPunto && geom.length >= 2) {
+      var dInicio = movilidadDistKm(ultimoPunto[0], ultimoPunto[1], geom[0].lat, geom[0].lon);
+      var dFin    = movilidadDistKm(ultimoPunto[0], ultimoPunto[1], geom[geom.length-1].lat, geom[geom.length-1].lon);
+      if (dFin < dInicio) {
+        geom = geom.slice().reverse();
+      }
+    }
+
+    for (var k = 0; k < geom.length; k++) {
+      if (geom[k] && geom[k].lat !== undefined) {
+        var pt = [geom[k].lat, geom[k].lon];
+        // Evitar duplicados consecutivos
+        if (!ultimoPunto || movilidadDistKm(ultimoPunto[0], ultimoPunto[1], pt[0], pt[1]) > 0.005) {
+          puntosTotales.push(pt);
+          ultimoPunto = pt;
+        }
+      }
+    }
+  }
+
+  return puntosTotales.length >= 2 ? puntosTotales : null;
+}
+
+function _rutasBuscarWayParcial(indiceOSM, nombre) {
+  // Buscar calles OSM que contengan el nombre o viceversa
+  var resultado = [];
+  var keys = Object.keys(indiceOSM);
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    if (k.indexOf(nombre) !== -1 || nombre.indexOf(k) !== -1) {
+      resultado = resultado.concat(indiceOSM[k]);
+    }
+  }
+  return resultado.length ? resultado : null;
+}
+
+function _rutasElegirWayMasCercano(ways, ultimoPunto) {
+  if (!ultimoPunto) return ways[0];
+  var mejor = ways[0];
+  var mejorDist = Infinity;
+  for (var i = 0; i < ways.length; i++) {
+    var geom = ways[i].geometry;
+    if (!geom || !geom.length) continue;
+    var centro = geom[Math.floor(geom.length / 2)];
+    if (!centro) continue;
+    var d = movilidadDistKm(ultimoPunto[0], ultimoPunto[1], centro.lat, centro.lon);
+    if (d < mejorDist) { mejorDist = d; mejor = ways[i]; }
+  }
+  return mejor;
 }
 
 // ─── Toggle TODAS las rutas ───
@@ -2369,75 +2473,310 @@ window.rutasMostrarSubtab = rutasMostrarSubtab;
 // El usuario escribe una calle de origen y una de destino.
 // El sistema busca qué rutas pasan por ambas calles (o una de ellas)
 // y devuelve recomendaciones con cuántos transbordos necesita.
-function rutasPlanificar() {
-  var origen  = (document.getElementById('rutas-origen')  || {}).value || '';
-  var destino = (document.getElementById('rutas-destino') || {}).value || '';
-  origen  = origen.trim().toLowerCase();
-  destino = destino.trim().toLowerCase();
+// ─── Cargar colonias desde denue_colonias.json ───
+function _rutasCargarColonias(callback) {
+  if (RUTAS.coloniasLoaded) { if (callback) callback(); return; }
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', 'denue_colonias.json', true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    if (xhr.status === 200) {
+      try {
+        var obj = JSON.parse(xhr.responseText);
+        RUTAS.colonias = obj.colonias || {};
+        RUTAS.coloniasLoaded = true;
+      } catch(e) { RUTAS.colonias = {}; RUTAS.coloniasLoaded = true; }
+    } else {
+      RUTAS.colonias = {}; RUTAS.coloniasLoaded = true;
+    }
+    if (callback) callback();
+  };
+  xhr.send();
+}
 
-  if (!origen && !destino) {
-    if (typeof toast === 'function') toast('Escribe origen y/o destino', 'warn');
-    return;
+// ─── Resolver texto de entrada a {lat, lng, tipo, label} ───
+// Acepta: "Blvd. Torres Landa 211", "Floresta", "centro", "calles Guerrero"
+// Retorna null si no pudo resolverse.
+function _rutasResolverLugar(texto) {
+  if (!texto) return null;
+  texto = texto.trim();
+
+  // Separar número al final si existe: "Torres Landa 211" → calle="Torres Landa", num=211
+  var numMatch = texto.match(/^(.*?)\s+(\d+)\s*$/);
+  var nombreBase = numMatch ? numMatch[1].trim() : texto;
+  var numCalle = numMatch ? parseInt(numMatch[2]) : null;
+
+  var nombreUp = nombreBase.toUpperCase().replace(/[.\-]/g, '').replace(/\s+/g, ' ').trim();
+
+  // 1. Buscar en colonias (coincidencia exacta o parcial)
+  if (RUTAS.colonias) {
+    var claves = Object.keys(RUTAS.colonias);
+    // Exacta
+    for (var i = 0; i < claves.length; i++) {
+      if (claves[i] === nombreUp) {
+        var col = RUTAS.colonias[claves[i]];
+        return { lat: col.lat, lng: col.lng, tipo: 'colonia', label: claves[i] };
+      }
+    }
+    // Parcial — nombre contenido en clave o viceversa
+    var mejorColonia = null;
+    var mejorLon = 999;
+    for (var j = 0; j < claves.length; j++) {
+      var k = claves[j];
+      if (k.indexOf(nombreUp) !== -1 || nombreUp.indexOf(k) !== -1) {
+        var lon = Math.abs(k.length - nombreUp.length);
+        if (lon < mejorLon) { mejorLon = lon; mejorColonia = k; }
+      }
+    }
+    if (mejorColonia) {
+      var c = RUTAS.colonias[mejorColonia];
+      return { lat: c.lat, lng: c.lng, tipo: 'colonia', label: mejorColonia };
+    }
   }
-  if (!RUTAS.loaded || !RUTAS.data.length) {
-    if (typeof toast === 'function') toast('Cargando rutas...', 'warn');
-    rutasCargar(function() { rutasPlanificar(); });
+
+  // 2. Buscar en red OSM por nombre de calle
+  if (MOVILIDAD.cache.redOSM && MOVILIDAD.cache.redOSM.length) {
+    var nombreLow = nombreBase.toLowerCase();
+    var mejorWay = null;
+    var mejorScore = 999;
+    for (var w = 0; w < MOVILIDAD.cache.redOSM.length; w++) {
+      var elem = MOVILIDAD.cache.redOSM[w];
+      if (elem.type !== 'way' || !elem.geometry) continue;
+      var tags = elem.tags || {};
+      var wNombre = (tags.name || tags['name:es'] || '').toLowerCase();
+      if (!wNombre) continue;
+      if (wNombre.indexOf(nombreLow) !== -1 || nombreLow.indexOf(wNombre) !== -1) {
+        var score = Math.abs(wNombre.length - nombreLow.length);
+        if (score < mejorScore) { mejorScore = score; mejorWay = elem; }
+      }
+    }
+    if (mejorWay) {
+      var geom = mejorWay.geometry;
+      // Si hay número de calle, interpolar en el segmento (aproximación: porcentaje del recorrido)
+      var ptIdx = Math.floor(geom.length / 2);
+      if (numCalle !== null && geom.length > 1) {
+        // Interpolar: número dentro del rango usual 1-2000
+        var pct = Math.min(1, Math.max(0, numCalle / 2000));
+        ptIdx = Math.floor(pct * (geom.length - 1));
+      }
+      var pt = geom[ptIdx];
+      if (pt) {
+        var wTag = mejorWay.tags || {};
+        var wLabel = (wTag.name || wTag['name:es'] || 'Calle') + (numCalle ? ' #' + numCalle : '');
+        return { lat: pt.lat, lng: pt.lon, tipo: 'calle', label: wLabel };
+      }
+    }
+  }
+
+  // 3. Buscar como terminal de ruta
+  if (RUTAS.data && RUTAS.data.length) {
+    var termLow = nombreBase.toLowerCase();
+    for (var t = 0; t < RUTAS.data.length; t++) {
+      var r = RUTAS.data[t];
+      if ((r.terminal_ini || '').toLowerCase().indexOf(termLow) !== -1) {
+        // Intentar obtener coords desde OSM o trazo guardado
+        var ptsS = null;
+        try { ptsS = JSON.parse(localStorage.getItem('ruta_' + r.id + '_salida') || 'null'); } catch(e) {}
+        if (ptsS && ptsS.length) return { lat: ptsS[0][0], lng: ptsS[0][1], tipo: 'terminal', label: r.terminal_ini };
+      }
+    }
+  }
+
+  return null;
+}
+
+// ─── Calcular distancia mínima de un punto a un trazo de ruta ───
+function _rutasDistanciaATrazo(lat, lng, puntos) {
+  if (!puntos || puntos.length < 1) return Infinity;
+  var min = Infinity;
+  for (var i = 0; i < puntos.length; i++) {
+    var d = movilidadDistKm(lat, lng, puntos[i][0], puntos[i][1]);
+    if (d < min) min = d;
+  }
+  return min;
+}
+
+// ─── Buscar rutas cercanas a un punto [lat,lng] ───
+// Devuelve array de {ruta, distancia, sentido} ordenado por proximidad
+function _rutasMasCercanas(lat, lng, maxDist) {
+  maxDist = maxDist || 2.0; // km
+  var resultados = [];
+  RUTAS.data.forEach(function(r) {
+    ['salida', 'retorno'].forEach(function(sentido) {
+      var key = 'ruta_' + r.id + '_' + sentido;
+      var puntos = null;
+      try { puntos = JSON.parse(localStorage.getItem(key) || 'null'); } catch(e) {}
+      // Si no hay trazo, intentar resolver desde OSM
+      if (!puntos || puntos.length < 2) {
+        puntos = _rutasResolverDesdeOSM(r, sentido);
+      }
+      if (!puntos || puntos.length < 2) return;
+      var dist = _rutasDistanciaATrazo(lat, lng, puntos);
+      if (dist <= maxDist) {
+        resultados.push({ ruta: r, distancia: dist, sentido: sentido, puntos: puntos });
+      }
+    });
+  });
+  resultados.sort(function(a, b) { return a.distancia - b.distancia; });
+  return resultados;
+}
+
+function rutasPlanificar() {
+  var origenTxt  = (document.getElementById('rutas-origen')  || {}).value || '';
+  var destinoTxt = (document.getElementById('rutas-destino') || {}).value || '';
+  origenTxt  = origenTxt.trim();
+  destinoTxt = destinoTxt.trim();
+
+  if (!origenTxt && !destinoTxt) {
+    if (typeof toast === 'function') toast('Escribe origen y/o destino', 'warn');
     return;
   }
 
   var resultDiv = document.getElementById('rutas-resultado');
   if (!resultDiv) return;
+  resultDiv.innerHTML = '<div style="color:#555;font-size:9px;padding:4px 0;">Buscando...</div>';
 
-  // Rutas que pasan por origen
-  var porOrigen = [];
-  // Rutas que pasan por destino
-  var porDestino = [];
-  // Rutas que pasan por ambos
-  var porAmbos = [];
-
-  RUTAS.data.forEach(function(r) {
-    var todasCalles = (r.salida || []).concat(r.retorno || []).map(function(c) {
-      return c.calle.toLowerCase();
+  if (!RUTAS.loaded || !RUTAS.data.length) {
+    rutasCargar(function() {
+      _rutasCargarColonias(function() { rutasPlanificar(); });
     });
-    var tieneOrigen  = origen  ? todasCalles.some(function(c){ return c.indexOf(origen)  !== -1; }) : true;
-    var tieneDestino = destino ? todasCalles.some(function(c){ return c.indexOf(destino) !== -1; }) : true;
-
-    if (tieneOrigen && tieneDestino) porAmbos.push(r);
-    else if (tieneOrigen)  porOrigen.push(r);
-    else if (tieneDestino) porDestino.push(r);
-  });
-
-  if (!porAmbos.length && !porOrigen.length && !porDestino.length) {
-    resultDiv.innerHTML = '<div style="color:#555;font-size:9px;padding:8px 0;">Sin coincidencias para esas calles.</div>';
+    return;
+  }
+  if (!RUTAS.coloniasLoaded) {
+    _rutasCargarColonias(function() { rutasPlanificar(); });
     return;
   }
 
+  // Resolver coordenadas de origen y destino
+  var lugarOrigen  = origenTxt  ? _rutasResolverLugar(origenTxt)  : null;
+  var lugarDestino = destinoTxt ? _rutasResolverLugar(destinoTxt) : null;
+
   var html = '';
 
-  if (porAmbos.length) {
-    html += '<div style="color:#00ff88;font-size:8px;margin-bottom:4px;">RUTA DIRECTA (' + porAmbos.length + ')</div>';
-    porAmbos.forEach(function(r) {
-      html += _rutaResultadoCard(r, '#00ff88', 'Pasa por origen y destino');
+  // Si no resolvió por coords, caer en búsqueda por texto en calles del JSON
+  var usarGeo = (lugarOrigen || lugarDestino);
+
+  if (usarGeo) {
+    // Modo geográfico: buscar rutas cercanas a cada punto
+    var cercanas_origen  = lugarOrigen  ? _rutasMasCercanas(lugarOrigen.lat,  lugarOrigen.lng,  2.5) : [];
+    var cercanas_destino = lugarDestino ? _rutasMasCercanas(lugarDestino.lat, lugarDestino.lng, 2.5) : [];
+
+    // Mapas de ruta_id → entrada
+    var idxOrigen  = {};
+    var idxDestino = {};
+    cercanas_origen.forEach(function(e)  { if (!idxOrigen[e.ruta.id])  idxOrigen[e.ruta.id]  = e; });
+    cercanas_destino.forEach(function(e) { if (!idxDestino[e.ruta.id]) idxDestino[e.ruta.id] = e; });
+
+    // Rutas que cubren ambos
+    var directas = [];
+    Object.keys(idxOrigen).forEach(function(id) {
+      if (idxDestino[id]) {
+        directas.push({
+          ruta: idxOrigen[id].ruta,
+          dOri: idxOrigen[id].distancia,
+          dDes: idxDestino[id].distancia
+        });
+      }
     });
+    directas.sort(function(a,b){ return (a.dOri+a.dDes)-(b.dOri+b.dDes); });
+
+    // Header de puntos resueltos
+    html += '<div style="background:#0a0f0a;border:1px solid #1a3a1a;border-radius:3px;padding:5px 7px;margin-bottom:6px;">';
+    if (lugarOrigen)  html += '<div style="color:#44aa44;font-size:8px;">&#x1f4cd; Origen: <span style="color:#aaa;">' + lugarOrigen.label  + ' (' + lugarOrigen.tipo  + ')</span></div>';
+    if (lugarDestino) html += '<div style="color:#ff6644;font-size:8px;">&#x1f3af; Destino: <span style="color:#aaa;">' + lugarDestino.label + ' (' + lugarDestino.tipo + ')</span></div>';
+    html += '</div>';
+
+    if (directas.length) {
+      html += '<div style="color:#00ff88;font-size:8px;margin-bottom:4px;">&#x2714; RUTA DIRECTA (' + directas.length + ')</div>';
+      directas.slice(0,5).forEach(function(e) {
+        var desc = 'A ' + (e.dOri * 1000).toFixed(0) + 'm de origen · ' + (e.dDes * 1000).toFixed(0) + 'm de destino';
+        html += _rutaResultadoCard(e.ruta, '#00ff88', desc);
+      });
+    }
+
+    // Rutas solo con origen (proponer transbordo)
+    var soloOrigen = Object.keys(idxOrigen).filter(function(id){ return !idxDestino[id]; });
+    if (soloOrigen.length && lugarDestino) {
+      html += '<div style="color:#ffcc00;font-size:8px;margin:6px 0 4px;">&#x21c4; TOMA ESTA + TRANSBORDO (pasan cerca de tu origen)</div>';
+      soloOrigen.slice(0,3).forEach(function(id) {
+        var e = idxOrigen[id];
+        // Buscar ruta de transbordo
+        var transDesc = _rutasBuscarTransbordo(e, idxDestino, cercanas_destino);
+        html += _rutaResultadoCard(e.ruta, '#ffcc00', transDesc || ('A ' + (e.distancia*1000).toFixed(0) + 'm de tu origen'));
+      });
+    }
+
+    // Sin rutas cercanas
+    if (!directas.length && !soloOrigen.length) {
+      if (!lugarOrigen || !lugarDestino) {
+        html += '<div style="color:#555;font-size:9px;padding:6px 0;">No se encontraron rutas cercanas. Activa RED OSM para mejorar la b\u00fasqueda.</div>';
+      } else {
+        // Mostrar las más cercanas aunque no pasen exactamente
+        html += '<div style="color:#ff8800;font-size:8px;margin-bottom:4px;">Ninguna ruta pasa cerca — m\u00e1s pr\u00f3ximas a tu origen:</div>';
+        cercanas_origen.slice(0,3).forEach(function(e) {
+          html += _rutaResultadoCard(e.ruta, '#ff8800', 'A ' + (e.distancia*1000).toFixed(0) + 'm de tu origen');
+        });
+        if (!cercanas_origen.length) {
+          html += '<div style="color:#555;font-size:9px;">Activa RED OSM para calcular trazos autom\u00e1ticamente.</div>';
+        }
+      }
+    }
+
+  } else {
+    // Modo texto puro: buscar por nombre de calle en JSON
+    var orLow = origenTxt.toLowerCase();
+    var deLow = destinoTxt.toLowerCase();
+    var porAmbos = [], porOrigen = [], porDestino = [];
+
+    RUTAS.data.forEach(function(r) {
+      var calles = (r.salida || []).concat(r.retorno || []).map(function(c){ return c.calle.toLowerCase(); });
+      var tO = orLow  ? calles.some(function(c){ return c.indexOf(orLow)  !== -1; }) : true;
+      var tD = deLow  ? calles.some(function(c){ return c.indexOf(deLow)  !== -1; }) : true;
+      if (tO && tD) porAmbos.push(r);
+      else if (tO) porOrigen.push(r);
+      else if (tD) porDestino.push(r);
+    });
+
+    if (!porAmbos.length && !porOrigen.length && !porDestino.length) {
+      html = '<div style="color:#555;font-size:9px;padding:8px 0;">Sin coincidencias. Intenta con otro nombre de calle o colonia.</div>';
+    } else {
+      if (porAmbos.length) {
+        html += '<div style="color:#00ff88;font-size:8px;margin-bottom:4px;">RUTA DIRECTA (' + porAmbos.length + ')</div>';
+        porAmbos.forEach(function(r){ html += _rutaResultadoCard(r, '#00ff88', 'Pasa por origen y destino'); });
+      }
+      if (porOrigen.length && deLow) {
+        html += '<div style="color:#ffcc00;font-size:8px;margin:6px 0 4px;">PASA POR ORIGEN</div>';
+        porOrigen.slice(0,4).forEach(function(r){ html += _rutaResultadoCard(r, '#ffcc00', 'Combinar con otra para llegar a destino'); });
+      }
+      if (porDestino.length && orLow) {
+        html += '<div style="color:#ff8800;font-size:8px;margin:6px 0 4px;">PASA POR DESTINO</div>';
+        porDestino.slice(0,3).forEach(function(r){ html += _rutaResultadoCard(r, '#ff8800', 'Conecta con destino desde otro punto'); });
+      }
+    }
   }
 
-  if (porOrigen.length && destino) {
-    html += '<div style="color:#ffcc00;font-size:8px;margin:6px 0 4px;">PASA POR ORIGEN (combinar con otra)</div>';
-    porOrigen.slice(0, 4).forEach(function(r) {
-      html += _rutaResultadoCard(r, '#ffcc00', 'Toma esta + transbordo para ' + destino);
-    });
-  }
-
-  if (porDestino.length && origen) {
-    html += '<div style="color:#ff8800;font-size:8px;margin:6px 0 4px;">PASA POR DESTINO (viene de otro punto)</div>';
-    porDestino.slice(0, 3).forEach(function(r) {
-      html += _rutaResultadoCard(r, '#ff8800', 'Conecta con destino desde otro punto');
-    });
-  }
-
-  resultDiv.innerHTML = html;
+  resultDiv.innerHTML = html || '<div style="color:#555;font-size:9px;">Sin resultados.</div>';
 }
 window.rutasPlanificar = rutasPlanificar;
+
+// ─── Buscar transbordo entre rutas ───
+function _rutasBuscarTransbordo(entradaOrigen, idxDestino, cercanas_destino) {
+  // Buscar si alguna ruta del destino comparte calles con la ruta del origen
+  var rutaO = entradaOrigen.ruta;
+  var callesO = (rutaO.salida || []).concat(rutaO.retorno || []).map(function(c){ return c.calle.toLowerCase(); });
+  var mejorTransbordo = null;
+
+  Object.keys(idxDestino).forEach(function(id) {
+    var rutaD = idxDestino[id].ruta;
+    var callesD = (rutaD.salida || []).concat(rutaD.retorno || []).map(function(c){ return c.calle.toLowerCase(); });
+    var comunes = callesO.filter(function(c){ return callesD.indexOf(c) !== -1; });
+    if (comunes.length && !mejorTransbordo) {
+      mejorTransbordo = 'Transbordo posible a Ruta ' + rutaD.id + ' en ' + comunes[0].toUpperCase();
+    }
+  });
+
+  return mejorTransbordo || ('Combinar con ruta a ' + (cercanas_destino.length ? cercanas_destino[0].ruta.id : '?'));
+}
 
 function _rutaResultadoCard(r, color, desc) {
   return '<div onclick="rutasSeleccionarDesdeResultado(\'' + r.id + '\')" ' +
@@ -2462,7 +2801,14 @@ window.rutasSeleccionarDesdeResultado = rutasSeleccionarDesdeResultado;
 // ─── Inicialización del sub-tab rutas ───
 // Se llama desde movilidadOnShow si el sub-tab está visible
 function rutasInit() {
-  if (!RUTAS.loaded) rutasCargar(function() { rutaslimpiarInfo(); });
+  if (!RUTAS.loaded) {
+    rutasCargar(function() {
+      rutaslimpiarInfo();
+      if (!RUTAS.coloniasLoaded) _rutasCargarColonias(function(){});
+    });
+  } else if (!RUTAS.coloniasLoaded) {
+    _rutasCargarColonias(function(){});
+  }
 }
 window.rutasInit = rutasInit;
 
