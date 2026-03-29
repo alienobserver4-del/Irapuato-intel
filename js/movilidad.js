@@ -9,7 +9,7 @@
 var MOVILIDAD = {
   mapa:    null,
   capas:   { gov: null, semOSM: null, semManuales: null, nodos: null, vialidad: null, redOSM: null, semBadges: null },
-  toggles: { gov: true, semOSM: false, semManuales: true, nodos: false, vialidad: true, redOSM: false },
+  toggles: { gov: false, semOSM: false, semManuales: false, nodos: false, vialidad: true, redOSM: false },
   cache:   { semOSM: null, semOSM_ts: 0, TTL: 7*24*3600*1000,
              redOSM: null, redOSM_ts: 0, redOSM_TTL: 30*24*3600*1000 },
   cargando:{ semOSM: false, redOSM: false },
@@ -115,7 +115,7 @@ function movilidadInit() {
     setTimeout(function() {
       MOVILIDAD.mapa.invalidateSize({ animate: false });
       MOVILIDAD.mapa.setView(MOV_CENTRO, 12, { animate: false });
-      movilidadRenderGov();
+      if (MOVILIDAD.toggles.gov) movilidadRenderGov();
       movilidadCargarSemManuales();
       movilidadCargarVialidad();
     }, 600);
@@ -993,7 +993,6 @@ function movilidadSetStatus(msg) {
 function movilidadBindBotones() {
   var b;
   b = document.getElementById('mov-btn-gov');       if(b) b.onclick = movilidadToggleGov;
-  b = document.getElementById('mov-btn-semaforos'); if(b) b.onclick = movilidadToggleSemOSM;
   b = document.getElementById('mov-btn-manuales');  if(b) b.onclick = movilidadToggleSemManuales;
   b = document.getElementById('mov-btn-nodos');     if(b) b.onclick = movilidadToggleNodos;
   b = document.getElementById('mov-btn-vialidad');  if(b) b.onclick = movilidadToggleVialidad;
@@ -1914,6 +1913,560 @@ function movilidadInvalidarRedOSM() {
 window.movilidadInvalidarRedOSM = movilidadInvalidarRedOSM;
 
 // ═══════════════════════════════════════════════════════════
+// MÓDULO RUTAS DE TRANSPORTE PÚBLICO
+//
+// Datos: rutas_transporte.json (46 rutas)
+// Cada ruta: { id, nombre, terminal_ini, terminal_fin,
+//              salida:[{mov,calle}], retorno:[{mov,calle}] }
+//
+// Sub-tab RUTAS en la sección movilidad:
+//   - Selector de ruta → info (terminales, calles)
+//   - Polyline en mapa con salida/retorno coloreados
+//   - Toggle TODAS las rutas visible a la vez
+//   - Planificador: origen → destino → rutas recomendadas
+//
+// Edición de trazos con confirmación anti-accidental.
+// Los trazos de ruta se sincronizan con segmentos de vialidad
+// si el usuario lo autoriza.
+// ═══════════════════════════════════════════════════════════
+
+var RUTAS = {
+  data:      [],        // array de objetos ruta del JSON
+  loaded:    false,
+  capaActiva: null,     // L.layerGroup con polylines de ruta activa
+  capaTodas:  null,     // L.layerGroup con todas las rutas
+  todasVisible: false,
+  rutaSelId: null,      // id de la ruta activa en el panel
+  sentidoActivo: 'salida', // 'salida' | 'retorno'
+  editandoTrazo: false,
+  _editPuntos: [],
+  _editPolyline: null,
+  _editConfirmPendiente: false
+};
+
+var RUTAS_COLOR_SALIDA  = '#00ccff';
+var RUTAS_COLOR_RETORNO = '#ff6600';
+var RUTAS_COLOR_TODAS   = [
+  '#ff4466','#ff8800','#ffcc00','#44ff88','#00ccff','#aa44ff',
+  '#ff44cc','#44ccff','#88ff44','#ff6644','#44ffcc','#cc44ff'
+];
+
+// ─── Cargar JSON de rutas ───
+function rutasCargar(callback) {
+  if (RUTAS.loaded) { if (callback) callback(); return; }
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', 'rutas_transporte.json', true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
+    if (xhr.status === 200) {
+      try {
+        RUTAS.data = JSON.parse(xhr.responseText);
+        RUTAS.loaded = true;
+        rutasLlenarSelector();
+        if (callback) callback();
+      } catch(e) {
+        if (typeof toast === 'function') toast('Error al cargar rutas_transporte.json', 'err');
+      }
+    } else {
+      if (typeof toast === 'function') toast('No se encontro rutas_transporte.json', 'err');
+    }
+  };
+  xhr.send();
+}
+window.rutasCargar = rutasCargar;
+
+// ─── Llenar selector de rutas ───
+function rutasLlenarSelector() {
+  var sel = document.getElementById('rutas-selector');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">-- Selecciona una ruta --</option>';
+  RUTAS.data.forEach(function(r) {
+    var opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = r.id + ': ' + r.nombre;
+    sel.appendChild(opt);
+  });
+}
+
+// ─── Seleccionar ruta desde selector ───
+function rutasSeleccionar(id) {
+  RUTAS.rutaSelId = id;
+  var ruta = null;
+  RUTAS.data.forEach(function(r) { if (r.id === id) ruta = r; });
+  if (!ruta) { rutaslimpiarInfo(); return; }
+  rutasMostrarInfo(ruta);
+  rutasDibujarEnMapa(ruta, RUTAS.sentidoActivo);
+}
+window.rutasSeleccionar = rutasSeleccionar;
+
+// ─── Mostrar info de la ruta en el panel ───
+function rutasMostrarInfo(ruta) {
+  var div = document.getElementById('rutas-info');
+  if (!div) return;
+
+  var sentido = RUTAS.sentidoActivo;
+  var calles = ruta[sentido] || [];
+  var htmlCalles = calles.map(function(c) {
+    var col = c.mov === 'INI' ? '#00ff88' :
+              c.mov === 'FIN' ? '#ff4444' :
+              c.mov === 'VD'  ? '#44aaff' :
+              c.mov === 'VI'  ? '#ffaa44' :
+              c.mov === 'VU'  ? '#aa44ff' :
+              c.mov === 'FTE' ? '#888888' : '#555';
+    return '<div style="display:flex;gap:4px;align-items:center;padding:2px 0;border-bottom:1px solid #111;">' +
+      '<span style="color:' + col + ';font-size:7px;width:22px;flex-shrink:0;text-align:right;">' + c.mov + '</span>' +
+      '<span style="color:#ccc;font-size:9px;">' + c.calle + '</span></div>';
+  }).join('');
+
+  div.innerHTML =
+    '<div style="color:#00ccff;font-weight:700;font-size:10px;margin-bottom:4px;">' + ruta.id + ': ' + ruta.nombre + '</div>' +
+    '<div style="display:flex;gap:4px;margin-bottom:5px;">' +
+      '<div style="flex:1;background:#0a1a0a;border:1px solid #1a3a1a;border-radius:3px;padding:4px;">' +
+        '<div style="color:#444;font-size:7px;">INICIO</div>' +
+        '<div style="color:#00ff88;font-size:8px;">' + (ruta.terminal_ini || '—') + '</div>' +
+      '</div>' +
+      '<div style="flex:1;background:#1a0a0a;border:1px solid #3a1a1a;border-radius:3px;padding:4px;">' +
+        '<div style="color:#444;font-size:7px;">DESTINO</div>' +
+        '<div style="color:#ff6644;font-size:8px;">' + (ruta.terminal_fin || '—') + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="color:#444;font-size:8px;margin-bottom:3px;">' + calles.length + ' tramos \u2014 ' + sentido.toUpperCase() + '</div>' +
+    '<div style="max-height:200px;overflow-y:auto;font-family:monospace;">' + htmlCalles + '</div>';
+}
+
+function rutaslimpiarInfo() {
+  var div = document.getElementById('rutas-info');
+  if (div) div.innerHTML = '<div style="color:#333;font-size:9px;font-style:italic;padding:8px 0;">Selecciona una ruta para ver detalle</div>';
+}
+
+// ─── Cambiar sentido activo (SALIDA / RETORNO) ───
+function rutasCambiarSentido(sentido) {
+  RUTAS.sentidoActivo = sentido;
+  var btnS = document.getElementById('rutas-btn-salida');
+  var btnR = document.getElementById('rutas-btn-retorno');
+  if (btnS) btnS.classList.toggle('on', sentido === 'salida');
+  if (btnR) btnR.classList.toggle('on', sentido === 'retorno');
+
+  if (RUTAS.rutaSelId) {
+    var ruta = null;
+    RUTAS.data.forEach(function(r) { if (r.id === RUTAS.rutaSelId) ruta = r; });
+    if (ruta) {
+      rutasMostrarInfo(ruta);
+      rutasDibujarEnMapa(ruta, sentido);
+    }
+  }
+}
+window.rutasCambiarSentido = rutasCambiarSentido;
+
+// ─── Dibujar polyline de una ruta en el mapa ───
+// Las calles del JSON son listas de nombres — no tenemos coords por calle.
+// La polyline se construye desde los puntos de edición si existen,
+// o se muestra solo la info textual hasta que el usuario trace el recorrido.
+function rutasDibujarEnMapa(ruta, sentido) {
+  if (!MOVILIDAD.mapa) return;
+  // Limpiar capa ruta activa
+  if (RUTAS.capaActiva) {
+    try { MOVILIDAD.mapa.removeLayer(RUTAS.capaActiva); } catch(e) {}
+    RUTAS.capaActiva = null;
+  }
+
+  var key = 'ruta_' + ruta.id + '_' + sentido;
+  var puntos = null;
+  try { puntos = JSON.parse(localStorage.getItem(key) || 'null'); } catch(e) {}
+
+  if (!puntos || puntos.length < 2) {
+    movilidadSetStatus('Ruta ' + ruta.id + ' sin trazo \u2014 activa EDITAR > RUTA para trazarla');
+    return;
+  }
+
+  var color = sentido === 'salida' ? RUTAS_COLOR_SALIDA : RUTAS_COLOR_RETORNO;
+  var grupo = L.layerGroup();
+
+  // Halo + línea
+  L.polyline(puntos, { color: color, weight: 6, opacity: 0.15, interactive: false }).addTo(grupo);
+  var linea = L.polyline(puntos, { color: color, weight: 3, opacity: 0.9, dashArray: '8 4' });
+  linea.addTo(grupo);
+
+  // Marker inicio
+  var icIni = L.divIcon({ className: '', iconSize: [14,14], iconAnchor: [7,7],
+    html: '<div style="width:12px;height:12px;border-radius:50%;background:#00ff88;border:2px solid #fff;"></div>' });
+  L.marker(puntos[0], { icon: icIni, title: 'Inicio: ' + ruta.terminal_ini }).addTo(grupo);
+
+  // Marker fin
+  var icFin = L.divIcon({ className: '', iconSize: [14,14], iconAnchor: [7,7],
+    html: '<div style="width:12px;height:12px;border-radius:50%;background:#ff4444;border:2px solid #fff;"></div>' });
+  L.marker(puntos[puntos.length-1], { icon: icFin, title: 'Fin: ' + ruta.terminal_fin }).addTo(grupo);
+
+  linea.bindPopup(
+    '<div style="font-family:monospace;font-size:10px;color:#e0e0e0;">' +
+    '<div style="font-weight:700;color:' + color + ';margin-bottom:3px;">' + ruta.id + ': ' + ruta.nombre + '</div>' +
+    '<div style="color:#888;font-size:8px;">' + sentido.toUpperCase() + ' \u2014 ' + puntos.length + ' puntos</div>' +
+    '</div>'
+  );
+
+  RUTAS.capaActiva = grupo;
+  grupo.addTo(MOVILIDAD.mapa);
+
+  // Enfocar el mapa al bounds del trazo
+  try { MOVILIDAD.mapa.fitBounds(L.polyline(puntos).getBounds(), { padding: [30, 30] }); } catch(e) {}
+  movilidadSetStatus('');
+}
+
+// ─── Toggle TODAS las rutas ───
+function rutasToggleTodas() {
+  RUTAS.todasVisible = !RUTAS.todasVisible;
+  var btn = document.getElementById('rutas-btn-todas');
+  if (btn) btn.classList.toggle('on', RUTAS.todasVisible);
+
+  if (RUTAS.capaTodas) {
+    try { MOVILIDAD.mapa.removeLayer(RUTAS.capaTodas); } catch(e) {}
+    RUTAS.capaTodas = null;
+  }
+  if (!RUTAS.todasVisible) { movilidadSetStatus(''); return; }
+
+  if (!RUTAS.loaded || !RUTAS.data.length) {
+    rutasCargar(function() { _rutasDibujarTodas(); });
+  } else {
+    _rutasDibujarTodas();
+  }
+}
+window.rutasToggleTodas = rutasToggleTodas;
+
+function _rutasDibujarTodas() {
+  if (!MOVILIDAD.mapa) return;
+  var grupo = L.layerGroup();
+  var trazadas = 0;
+
+  RUTAS.data.forEach(function(r, idx) {
+    var color = RUTAS_COLOR_TODAS[idx % RUTAS_COLOR_TODAS.length];
+    ['salida','retorno'].forEach(function(sentido) {
+      var key = 'ruta_' + r.id + '_' + sentido;
+      var puntos = null;
+      try { puntos = JSON.parse(localStorage.getItem(key) || 'null'); } catch(e) {}
+      if (!puntos || puntos.length < 2) return;
+      var linea = L.polyline(puntos, { color: color, weight: 2, opacity: 0.7 });
+      linea.bindPopup('<div style="font-family:monospace;font-size:10px;color:#e0e0e0;">' +
+        '<b style="color:' + color + ';">' + r.id + ': ' + r.nombre + '</b><br>' +
+        '<span style="color:#888;font-size:8px;">' + sentido.toUpperCase() + '</span></div>');
+      linea.addTo(grupo);
+      trazadas++;
+    });
+  });
+
+  RUTAS.capaTodas = grupo;
+  grupo.addTo(MOVILIDAD.mapa);
+  movilidadSetStatus(trazadas + ' trazos activos');
+  if (!trazadas) {
+    if (typeof toast === 'function') toast('Ninguna ruta tiene trazo guardado aun', 'warn');
+  }
+}
+
+// ─── Editor de trazo de ruta ───
+// Activa un modo de trazado especial para rutas (no vialidad).
+// Al terminar pide confirmación antes de guardar para evitar cambios accidentales.
+function rutasIniciarEdicion(id, sentido) {
+  if (!MOVILIDAD.mapa) return;
+  RUTAS.editandoTrazo = true;
+  RUTAS._editRutaId   = id || RUTAS.rutaSelId;
+  RUTAS._editSentido  = sentido || RUTAS.sentidoActivo;
+  RUTAS._editPuntos   = [];
+  RUTAS._editConfirmPendiente = false;
+
+  // Cargar puntos existentes si los hay
+  var key = 'ruta_' + RUTAS._editRutaId + '_' + RUTAS._editSentido;
+  try {
+    var prev = JSON.parse(localStorage.getItem(key) || 'null');
+    if (prev && prev.length) RUTAS._editPuntos = prev.slice();
+  } catch(e) {}
+
+  _rutasDibujarPreview();
+
+  // Activar modo click en el mapa
+  RUTAS._clickHandler = function(e) {
+    if (!RUTAS.editandoTrazo) return;
+    var lat = e.latlng.lat, lng = e.latlng.lng;
+    RUTAS._editPuntos.push([lat, lng]);
+    _rutasDibujarPreview();
+    movilidadSetStatus('Ruta ' + RUTAS._editRutaId + ' \u2014 ' + RUTAS._editPuntos.length + ' pts \u2014 2x-click=fin');
+  };
+  MOVILIDAD.mapa.on('click', RUTAS._clickHandler);
+
+  // Doble click = terminar
+  RUTAS._dblclickHandler = function(e) {
+    if (!RUTAS.editandoTrazo) return;
+    L.DomEvent.stopPropagation(e);
+    rutasTerminarEdicion();
+  };
+  MOVILIDAD.mapa.on('dblclick', RUTAS._dblclickHandler);
+
+  // Mostrar panel de edición ruta
+  var pRuta = document.getElementById('mov-panel-ruta-edit');
+  if (pRuta) {
+    document.getElementById('mov-ruta-edit-label').textContent =
+      'Trazando: ' + RUTAS._editRutaId + ' (' + RUTAS._editSentido + ')';
+    pRuta.style.display = 'flex';
+  }
+
+  movilidadSetStatus('Trazando ruta ' + RUTAS._editRutaId + ' \u2014 click=punto, 2x=fin');
+  if (typeof toast === 'function') toast('Modo trazo ruta activo', 'ok');
+}
+window.rutasIniciarEdicion = rutasIniciarEdicion;
+
+function _rutasDibujarPreview() {
+  if (RUTAS._editPolyline) {
+    try { MOVILIDAD.mapa.removeLayer(RUTAS._editPolyline); } catch(e) {}
+    RUTAS._editPolyline = null;
+  }
+  if (RUTAS._editPuntos.length >= 1) {
+    var color = RUTAS._editSentido === 'salida' ? RUTAS_COLOR_SALIDA : RUTAS_COLOR_RETORNO;
+    RUTAS._editPolyline = L.polyline(RUTAS._editPuntos, {
+      color: color, weight: 3, dashArray: '6 4', opacity: 0.9
+    }).addTo(MOVILIDAD.mapa);
+  }
+}
+
+// Deshacer último punto durante edición de ruta
+function rutasEditUndo() {
+  if (!RUTAS._editPuntos.length) return;
+  RUTAS._editPuntos.pop();
+  _rutasDibujarPreview();
+  movilidadSetStatus(RUTAS._editPuntos.length + ' pts');
+}
+window.rutasEditUndo = rutasEditUndo;
+
+// Cancelar edición sin guardar
+function rutasCancelarEdicion() {
+  _rutasLimpiarEdicion();
+  movilidadSetStatus('');
+  if (typeof toast === 'function') toast('Edici\u00f3n de ruta cancelada', 'warn');
+}
+window.rutasCancelarEdicion = rutasCancelarEdicion;
+
+// Terminar trazado → pedir confirmación
+function rutasTerminarEdicion() {
+  if (RUTAS._editPuntos.length < 2) {
+    if (typeof toast === 'function') toast('Necesitas al menos 2 puntos', 'warn');
+    return;
+  }
+  // Desconectar handlers de mapa
+  if (RUTAS._clickHandler) { MOVILIDAD.mapa.off('click', RUTAS._clickHandler); RUTAS._clickHandler = null; }
+  if (RUTAS._dblclickHandler) { MOVILIDAD.mapa.off('dblclick', RUTAS._dblclickHandler); RUTAS._dblclickHandler = null; }
+
+  // Mostrar panel de confirmación de ruta
+  var panelConf = document.getElementById('mov-panel-ruta-confirm');
+  if (panelConf) {
+    var color = RUTAS._editSentido === 'salida' ? RUTAS_COLOR_SALIDA : RUTAS_COLOR_RETORNO;
+    document.getElementById('mov-ruta-confirm-msg').innerHTML =
+      'Guardar trazo de <span style="color:' + color + ';">' +
+      RUTAS._editRutaId + ' \u2014 ' + RUTAS._editSentido.toUpperCase() +
+      '</span><br><span style="color:#888;font-size:8px;">' +
+      RUTAS._editPuntos.length + ' puntos \u2014 Esta acci\u00f3n reemplaza el trazo existente</span>';
+    panelConf.style.display = 'flex';
+  }
+  // Ocultar panel de edición
+  var pRuta = document.getElementById('mov-panel-ruta-edit');
+  if (pRuta) pRuta.style.display = 'none';
+}
+window.rutasTerminarEdicion = rutasTerminarEdicion;
+
+// Confirmar guardar trazo
+function rutasConfirmarGuardar() {
+  var key = 'ruta_' + RUTAS._editRutaId + '_' + RUTAS._editSentido;
+  try {
+    localStorage.setItem(key, JSON.stringify(RUTAS._editPuntos));
+    if (typeof toast === 'function') toast('Trazo guardado: ' + RUTAS._editRutaId, 'ok');
+  } catch(e) {
+    if (typeof toast === 'function') toast('Error al guardar trazo', 'err');
+  }
+
+  // Cerrar confirmación y refrescar vista
+  var panelConf = document.getElementById('mov-panel-ruta-confirm');
+  if (panelConf) panelConf.style.display = 'none';
+
+  _rutasLimpiarEdicion();
+
+  // Sincronizar con capa vialidad si la ruta tiene nombre de calle coincidente
+  _rutasSyncVialidad(RUTAS._editRutaId, RUTAS._editSentido, RUTAS._editPuntos);
+
+  // Redibujar ruta activa
+  if (RUTAS.rutaSelId === RUTAS._editRutaId) {
+    var ruta = null;
+    RUTAS.data.forEach(function(r) { if (r.id === RUTAS._editRutaId) ruta = r; });
+    if (ruta) rutasDibujarEnMapa(ruta, RUTAS._editSentido);
+  }
+  if (RUTAS.todasVisible) _rutasDibujarTodas();
+}
+window.rutasConfirmarGuardar = rutasConfirmarGuardar;
+
+// Cancelar confirmación — volver a edición
+function rutasCancelarConfirmar() {
+  var panelConf = document.getElementById('mov-panel-ruta-confirm');
+  if (panelConf) panelConf.style.display = 'none';
+  _rutasLimpiarEdicion();
+  movilidadSetStatus('');
+}
+window.rutasCancelarConfirmar = rutasCancelarConfirmar;
+
+function _rutasLimpiarEdicion() {
+  RUTAS.editandoTrazo = false;
+  if (RUTAS._editPolyline) {
+    try { MOVILIDAD.mapa.removeLayer(RUTAS._editPolyline); } catch(e) {}
+    RUTAS._editPolyline = null;
+  }
+  if (RUTAS._clickHandler) { try { MOVILIDAD.mapa.off('click', RUTAS._clickHandler); } catch(e) {} RUTAS._clickHandler = null; }
+  if (RUTAS._dblclickHandler) { try { MOVILIDAD.mapa.off('dblclick', RUTAS._dblclickHandler); } catch(e) {} RUTAS._dblclickHandler = null; }
+  RUTAS._editPuntos = [];
+  var pRuta = document.getElementById('mov-panel-ruta-edit');
+  if (pRuta) pRuta.style.display = 'none';
+}
+
+// ─── Sincronización opcional con vialidad manual ───
+// Si el usuario traza una ruta y existe un segmento en vialidad-irapuato
+// con el mismo nombre de calle, propone actualizarlo también.
+// No fuerza — solo toast informativo; el usuario puede ignorarlo.
+function _rutasSyncVialidad(rutaId, sentido, puntos) {
+  // Buscar calles de esa ruta/sentido
+  var ruta = null;
+  RUTAS.data.forEach(function(r) { if (r.id === rutaId) ruta = r; });
+  if (!ruta) return;
+  var callesRuta = (ruta[sentido] || []).map(function(c) { return c.calle.toLowerCase().trim(); });
+  if (!callesRuta.length || !MOVILIDAD.vialidadData.length) return;
+
+  // Buscar segmentos de vialidad que coincidan con alguna calle de la ruta
+  var matches = MOVILIDAD.vialidadData.filter(function(seg) {
+    if (!seg.nombre) return false;
+    var n = seg.nombre.toLowerCase().trim();
+    return callesRuta.indexOf(n) !== -1;
+  });
+
+  if (matches.length) {
+    if (typeof toast === 'function') {
+      toast(matches.length + ' segmentos vial coinciden con ruta ' + rutaId +
+        ' \u2014 abre VIA para actualizar si lo deseas', 'warn');
+    }
+  }
+}
+
+// ─── Sub-tab RUTAS: mostrar / ocultar ───
+function rutasMostrarSubtab() {
+  var cont = document.getElementById('rutas-subtab');
+  if (!cont) return;
+  var visible = cont.style.display !== 'none';
+  cont.style.display = visible ? 'none' : 'flex';
+  var btn = document.getElementById('mov-btn-rutas');
+  if (btn) btn.classList.toggle('on', !visible);
+  if (!visible) {
+    // Primera vez que abre: cargar rutas
+    rutasCargar(function() {
+      rutaslimpiarInfo();
+    });
+  }
+}
+window.rutasMostrarSubtab = rutasMostrarSubtab;
+
+// ─── Planificador: origen → destino ───
+// Lógica simple de proximidad de texto:
+// El usuario escribe una calle de origen y una de destino.
+// El sistema busca qué rutas pasan por ambas calles (o una de ellas)
+// y devuelve recomendaciones con cuántos transbordos necesita.
+function rutasPlanificar() {
+  var origen  = (document.getElementById('rutas-origen')  || {}).value || '';
+  var destino = (document.getElementById('rutas-destino') || {}).value || '';
+  origen  = origen.trim().toLowerCase();
+  destino = destino.trim().toLowerCase();
+
+  if (!origen && !destino) {
+    if (typeof toast === 'function') toast('Escribe origen y/o destino', 'warn');
+    return;
+  }
+  if (!RUTAS.loaded || !RUTAS.data.length) {
+    if (typeof toast === 'function') toast('Cargando rutas...', 'warn');
+    rutasCargar(function() { rutasPlanificar(); });
+    return;
+  }
+
+  var resultDiv = document.getElementById('rutas-resultado');
+  if (!resultDiv) return;
+
+  // Rutas que pasan por origen
+  var porOrigen = [];
+  // Rutas que pasan por destino
+  var porDestino = [];
+  // Rutas que pasan por ambos
+  var porAmbos = [];
+
+  RUTAS.data.forEach(function(r) {
+    var todasCalles = (r.salida || []).concat(r.retorno || []).map(function(c) {
+      return c.calle.toLowerCase();
+    });
+    var tieneOrigen  = origen  ? todasCalles.some(function(c){ return c.indexOf(origen)  !== -1; }) : true;
+    var tieneDestino = destino ? todasCalles.some(function(c){ return c.indexOf(destino) !== -1; }) : true;
+
+    if (tieneOrigen && tieneDestino) porAmbos.push(r);
+    else if (tieneOrigen)  porOrigen.push(r);
+    else if (tieneDestino) porDestino.push(r);
+  });
+
+  if (!porAmbos.length && !porOrigen.length && !porDestino.length) {
+    resultDiv.innerHTML = '<div style="color:#555;font-size:9px;padding:8px 0;">Sin coincidencias para esas calles.</div>';
+    return;
+  }
+
+  var html = '';
+
+  if (porAmbos.length) {
+    html += '<div style="color:#00ff88;font-size:8px;margin-bottom:4px;">RUTA DIRECTA (' + porAmbos.length + ')</div>';
+    porAmbos.forEach(function(r) {
+      html += _rutaResultadoCard(r, '#00ff88', 'Pasa por origen y destino');
+    });
+  }
+
+  if (porOrigen.length && destino) {
+    html += '<div style="color:#ffcc00;font-size:8px;margin:6px 0 4px;">PASA POR ORIGEN (combinar con otra)</div>';
+    porOrigen.slice(0, 4).forEach(function(r) {
+      html += _rutaResultadoCard(r, '#ffcc00', 'Toma esta + transbordo para ' + destino);
+    });
+  }
+
+  if (porDestino.length && origen) {
+    html += '<div style="color:#ff8800;font-size:8px;margin:6px 0 4px;">PASA POR DESTINO (viene de otro punto)</div>';
+    porDestino.slice(0, 3).forEach(function(r) {
+      html += _rutaResultadoCard(r, '#ff8800', 'Conecta con destino desde otro punto');
+    });
+  }
+
+  resultDiv.innerHTML = html;
+}
+window.rutasPlanificar = rutasPlanificar;
+
+function _rutaResultadoCard(r, color, desc) {
+  return '<div onclick="rutasSeleccionarDesdeResultado(\'' + r.id + '\')" ' +
+    'style="cursor:pointer;padding:5px 8px;border:1px solid ' + color + '22;border-radius:3px;' +
+    'background:#0a0a0a;margin-bottom:3px;">' +
+    '<div style="color:' + color + ';font-size:9px;font-weight:700;">' + r.id + ': ' + r.nombre + '</div>' +
+    '<div style="color:#555;font-size:7px;">' + r.terminal_ini + ' \u2192 ' + r.terminal_fin + '</div>' +
+    '<div style="color:#444;font-size:7px;font-style:italic;">' + desc + '</div>' +
+    '</div>';
+}
+
+function rutasSeleccionarDesdeResultado(id) {
+  var sel = document.getElementById('rutas-selector');
+  if (sel) sel.value = id;
+  rutasSeleccionar(id);
+  // Scroll al selector
+  var info = document.getElementById('rutas-info');
+  if (info) info.scrollIntoView({ behavior: 'smooth' });
+}
+window.rutasSeleccionarDesdeResultado = rutasSeleccionarDesdeResultado;
+
+// ─── Inicialización del sub-tab rutas ───
+// Se llama desde movilidadOnShow si el sub-tab está visible
+function rutasInit() {
+  if (!RUTAS.loaded) rutasCargar(function() { rutaslimpiarInfo(); });
+}
+window.rutasInit = rutasInit;
+
+// ═══════════════════════════════════════════════════════════
 // INTEGRACIÓN OSM ↔ SEMÁFOROS
 //
 // _semSnapOSM(lat, lng)
@@ -2025,8 +2578,9 @@ function _semOSMBadgesRender() {
   }
 
   if (!MOVILIDAD.mapa) return;
-  // Solo dibujar si la red OSM o los semáforos manuales están activos
-  if (!MOVILIDAD.toggles.redOSM && !MOVILIDAD.toggles.semManuales) return;
+  // Solo dibujar si semáforos manuales (CAMPO) están activos
+  // El toggle semManuales es el controlador principal — si CAMPO está off, no mostrar badges
+  if (!MOVILIDAD.toggles.semManuales) return;
 
   var semConOSM = MOVILIDAD.semManualesData.filter(function(s) {
     return s.osm_way_id && s.lat && s.lng;
