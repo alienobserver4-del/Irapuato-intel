@@ -39,8 +39,11 @@
 #mov-btn-editar.on    { background:#0d0d2a!important;color:#aaaaff!important;border-color:#6666cc!important; }
 #mov-btn-vialidad.on  { background:#0a1f1f!important;color:#44cccc!important;border-color:#226666!important; }
 #mov-btn-red-osm.on   { background:#0a1a10!important;color:#44ccaa!important;border-color:#226644!important; }
+#mov-btn-rutas.on     { background:#1a0d2a!important;color:#aa88ff!important;border-color:#6644aa!important; }
 #mov-subbtn-sem.on    { background:#1f1a00!important;color:#ffcc00!important;border-color:#aa8800!important; }
 #mov-subbtn-via.on    { background:#0a1f1f!important;color:#44cccc!important;border-color:#226666!important; }
+#rutas-btn-salida.on  { background:#0a1a2a!important;color:#00ccff!important;border-color:#0066aa!important; }
+#rutas-btn-retorno.on { background:#2a1000!important;color:#ff6600!important;border-color:#aa3300!important; }
 #movp-tipo-v.on       { background:#1a1200!important;color:#ffaa00!important;border-color:#aa7700!important; }
 #movp-tipo-p.on       { background:#001a0d!important;color:#00cc44!important;border-color:#007722!important; }
 </style>
@@ -832,12 +835,12 @@
         <!-- Fila 1: capas + controles -->
         <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:5px 8px;box-sizing:border-box;">
           <span style="font-family:monospace;font-size:9px;color:#2a2a2a;letter-spacing:1px;">CAP</span>
-          <button id="mov-btn-gov" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #00aa55;background:#0d1f0d;color:#00ff88;">&#x1f3db; GOB <span id="mov-cnt-gov" style="opacity:.7;"></span></button>
-          <button id="mov-btn-semaforos" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #2a2a2a;background:#161616;color:#555;">&#x1f6a6; OSM <span id="mov-cnt-semaforos" style="opacity:.7;"></span></button>
-          <button id="mov-btn-manuales" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #00aa55;background:#0d1f0d;color:#00ff88;">&#x1f6a6; CAMPO <span id="mov-cnt-manuales" style="opacity:.7;"></span></button>
+          <button id="mov-btn-gov" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #2a2a2a;background:#161616;color:#555;">&#x1f3db; GOB <span id="mov-cnt-gov" style="opacity:.7;"></span></button>
+          <button id="mov-btn-manuales" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #2a2a2a;background:#161616;color:#555;">&#x1f6a6; CAMPO <span id="mov-cnt-manuales" style="opacity:.7;"></span></button>
           <button id="mov-btn-nodos" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #2a2a2a;background:#161616;color:#555;">&#x26a0; NOD <span id="mov-cnt-nodos" style="opacity:.7;"></span></button>
           <button id="mov-btn-vialidad" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #2a4a4a;background:#0a1a1a;color:#44cccc;">&#x1f6e3; VIAL <span id="mov-cnt-vialidad" style="opacity:.7;"></span></button>
           <button id="mov-btn-red-osm" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #1a3a2a;background:#0a1410;color:#44ccaa;">&#x1f6e3; RED OSM <span id="mov-cnt-red-osm" style="opacity:.7;"></span></button>
+          <button id="mov-btn-rutas" onclick="rutasMostrarSubtab()" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #2a1a4a;background:#100a1f;color:#8866cc;">&#x1f68c; RUTAS</button>
           <span style="color:#1a1a1a;">|</span>
           <button id="mov-btn-sat" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #2a4a2a;background:#0a1a0a;color:#44aa44;">&#x1f6f0; SAT</button>
           <button id="mov-btn-oscuro" style="font-family:monospace;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;border:1px solid #1a1a4a;background:#0a0a1f;color:#6666cc;">&#x1f319; OSC</button>
@@ -1010,6 +1013,99 @@
             <button onclick="movilidadConfirmarBorrarOk()" style="font-family:monospace;font-size:10px;padding:7px 16px;background:#2a0808;color:#ff4444;border:1px solid #aa2222;border-radius:3px;cursor:pointer;">BORRAR</button>
             <button onclick="movilidadConfirmarBorrarCancelar()" style="font-family:monospace;font-size:10px;padding:7px 16px;background:#1a1a1a;color:#888;border:1px solid #2a2a2a;border-radius:3px;cursor:pointer;">CANCELAR</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Panel flotante: edición de trazo de ruta -->
+      <div id="mov-panel-ruta-edit" style="display:none;position:absolute;bottom:8px;right:8px;z-index:650;background:#0a0a0a;border:1px solid #2a1a4a;border-radius:5px;font-family:monospace;box-shadow:0 4px 16px #000c;min-width:240px;">
+        <div style="background:#100a1f;padding:5px 10px;border-bottom:1px solid #2a1a4a;display:flex;align-items:center;gap:8px;">
+          <span style="color:#8866cc;font-size:9px;letter-spacing:1px;">&#x1f68c; TRAZANDO RUTA</span>
+          <span id="mov-ruta-edit-label" style="color:#555;font-size:8px;"></span>
+        </div>
+        <div style="padding:6px 8px;display:flex;gap:5px;align-items:center;">
+          <button onclick="rutasEditUndo()" style="font-family:monospace;font-size:11px;padding:5px 10px;border-radius:3px;cursor:pointer;border:1px solid #333;background:#161616;color:#888;">&#x21B6; UNDO</button>
+          <button onclick="rutasTerminarEdicion()" style="font-family:monospace;font-size:11px;padding:5px 12px;border-radius:3px;cursor:pointer;border:1px solid #446688;background:#0d1a2a;color:#66aaff;font-weight:700;">&#x2713; LISTO</button>
+          <button onclick="rutasCancelarEdicion()" style="font-family:monospace;font-size:11px;padding:5px 10px;border-radius:3px;cursor:pointer;border:1px solid #2a1a1a;background:#1a0d0d;color:#aa4444;">&#x2715;</button>
+        </div>
+        <div style="padding:0 8px 5px;color:#444;font-size:8px;">Click=punto &nbsp; 2x-click=terminar</div>
+      </div>
+
+      <!-- Panel flotante: confirmación de trazo de ruta -->
+      <div id="mov-panel-ruta-confirm" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;z-index:710;background:rgba(0,0,0,.8);flex-direction:column;align-items:center;justify-content:center;">
+        <div style="background:#080812;border:1px solid #4433aa;border-radius:5px;padding:20px;min-width:260px;text-align:center;font-family:monospace;">
+          <div id="mov-ruta-confirm-msg" style="color:#ccc;font-size:11px;margin-bottom:10px;line-height:1.5;"></div>
+          <div style="color:#333;font-size:8px;margin-bottom:16px;">El trazo anterior ser&#225; reemplazado.</div>
+          <div style="display:flex;gap:8px;justify-content:center;">
+            <button onclick="rutasConfirmarGuardar()" style="font-family:monospace;font-size:10px;padding:7px 16px;background:#0d0d2a;color:#8866cc;border:1px solid #4433aa;border-radius:3px;cursor:pointer;">GUARDAR TRAZO</button>
+            <button onclick="rutasCancelarConfirmar()" style="font-family:monospace;font-size:10px;padding:7px 16px;background:#1a1a1a;color:#555;border:1px solid #2a2a2a;border-radius:3px;cursor:pointer;">CANCELAR</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-tab RUTAS: panel deslizante sobre el mapa -->
+      <div id="rutas-subtab" style="display:none;position:absolute;top:0;right:0;bottom:0;z-index:600;width:300px;background:#080808;border-left:1px solid #1a1a2a;flex-direction:column;font-family:monospace;font-size:10px;overflow:hidden;">
+
+        <!-- Header -->
+        <div style="background:#100a1f;padding:8px 12px;border-bottom:1px solid #2a1a4a;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:#8866cc;font-size:10px;letter-spacing:1px;">&#x1f68c; RUTAS DE TRANSPORTE</span>
+          <button onclick="rutasMostrarSubtab()" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;padding:0;">&#x2715;</button>
+        </div>
+
+        <div style="flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px;">
+
+          <!-- Selector de ruta -->
+          <div>
+            <div style="color:#444;font-size:8px;margin-bottom:3px;">SELECCIONA RUTA</div>
+            <select id="rutas-selector" onchange="rutasSeleccionar(this.value)" style="width:100%;background:#111;border:1px solid #2a1a4a;color:#ccc;font-family:monospace;font-size:9px;padding:4px;border-radius:3px;box-sizing:border-box;">
+              <option value="">-- Cargando... --</option>
+            </select>
+          </div>
+
+          <!-- Toggle salida / retorno -->
+          <div style="display:flex;gap:5px;">
+            <button id="rutas-btn-salida" onclick="rutasCambiarSentido('salida')" class="on" style="flex:1;font-family:monospace;font-size:9px;padding:5px;border-radius:3px;cursor:pointer;border:1px solid #0066aa;background:#0a1a2a;color:#00ccff;">&#x2192; SALIDA</button>
+            <button id="rutas-btn-retorno" onclick="rutasCambiarSentido('retorno')" style="flex:1;font-family:monospace;font-size:9px;padding:5px;border-radius:3px;cursor:pointer;border:1px solid #2a2a2a;background:#161616;color:#555;">&#x2190; RETORNO</button>
+          </div>
+
+          <!-- Info de ruta seleccionada -->
+          <div id="rutas-info" style="color:#333;font-size:9px;font-style:italic;padding:4px 0;">Selecciona una ruta para ver detalle</div>
+
+          <!-- Botón trazar ruta -->
+          <div style="border-top:1px solid #1a1a1a;padding-top:6px;">
+            <button onclick="rutasIniciarEdicion(null, null)" style="width:100%;font-family:monospace;font-size:9px;padding:6px;border-radius:3px;cursor:pointer;border:1px solid #334466;background:#0a0f1f;color:#6688cc;">&#x270f; TRAZAR RECORRIDO EN MAPA</button>
+          </div>
+
+          <!-- Toggle todas las rutas -->
+          <div>
+            <button id="rutas-btn-todas" onclick="rutasToggleTodas()" style="width:100%;font-family:monospace;font-size:9px;padding:5px;border-radius:3px;cursor:pointer;border:1px solid #2a2a3a;background:#0d0d14;color:#555;">&#x25A6; VER TODAS LAS RUTAS</button>
+          </div>
+
+          <!-- Separador planificador -->
+          <div style="border-top:1px solid #1a1a1a;padding-top:6px;">
+            <div style="color:#336;font-size:8px;letter-spacing:1px;margin-bottom:5px;">// PLANIFICADOR DE VIAJE</div>
+            <div style="color:#444;font-size:7px;margin-bottom:3px;">&#x1f4CD; &iexcl;D&#243;nde est&#225;s? (calle o colonia)</div>
+            <input id="rutas-origen" type="text" placeholder="Ej: Blvd. Torres Landa" style="width:100%;background:#0a0a0a;border:1px solid #1a1a2a;color:#ccc;font-family:monospace;font-size:9px;padding:4px;border-radius:3px;box-sizing:border-box;margin-bottom:5px;">
+            <div style="color:#444;font-size:7px;margin-bottom:3px;">&#x1f3af; &#xbf;A d&#243;nde quieres ir? (calle o colonia)</div>
+            <input id="rutas-destino" type="text" placeholder="Ej: Central de Abastos" style="width:100%;background:#0a0a0a;border:1px solid #1a1a2a;color:#ccc;font-family:monospace;font-size:9px;padding:4px;border-radius:3px;box-sizing:border-box;margin-bottom:5px;">
+            <button onclick="rutasPlanificar()" style="width:100%;font-family:monospace;font-size:9px;padding:6px;border-radius:3px;cursor:pointer;border:1px solid #335533;background:#0a140a;color:#44aa44;">&#x1f50d; BUSCAR RUTAS</button>
+          </div>
+
+          <!-- Resultado del planificador -->
+          <div id="rutas-resultado" style="font-family:monospace;"></div>
+
+          <!-- Leyenda MOV -->
+          <div style="border-top:1px solid #111;padding-top:5px;">
+            <div style="color:#222;font-size:7px;letter-spacing:1px;margin-bottom:3px;">LEYENDA MOVIMIENTOS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;font-size:7px;">
+              <span style="color:#00ff88;">INI</span><span style="color:#555;">Inicio de ruta</span>
+              <span style="color:#ff4444;">FIN</span><span style="color:#555;">Fin de ruta</span>
+              <span style="color:#44aaff;">VD</span><span style="color:#555;">Vuelta derecha</span>
+              <span style="color:#ffaa44;">VI</span><span style="color:#555;">Vuelta izquierda</span>
+              <span style="color:#aa44ff;">VU</span><span style="color:#555;">Vuelta en U</span>
+              <span style="color:#888;">FTE</span><span style="color:#555;">De frente</span>
+            </div>
+          </div>
+
         </div>
       </div>
 
